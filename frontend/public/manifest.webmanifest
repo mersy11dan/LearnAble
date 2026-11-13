@@ -1,0 +1,13 @@
+{
+  "name": "LearnAble",
+  "short_name": "LearnAble",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#081526",
+  "theme_color": "#081526",
+  "lang": "en",
+  "description": "Offline-first accessible learning for Ethiopian learners",
+  "icons": [
+    { "src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}
