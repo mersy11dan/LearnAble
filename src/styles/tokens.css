@@ -1,0 +1,94 @@
+/*
+  LearnAble tokens. One source of truth.
+  Components use these names and do not invent colors, sizes, or shadows.
+
+  Color pairs checked against WCAG 2.2 AA (normal text needs 4.5:1):
+  ink #172033 on paper #f2f0ea is 14.3:1
+  navy-ink #f7f4ee on navy #1b3048 is 12.2:1
+  moss #0e5a42 on paper is 7.2:1
+  focus #0b3d91 on paper is 8.8:1
+  muted #3d4d63 on paper is 7.6:1
+  caption #ffee00 on stage #111111 is 17.2:1
+  paper on stage is 18.4:1
+  High contrast flips the same names to black, white, and yellow.
+*/
+
+:root {
+  --color-paper: #f2f0ea;
+  --color-ink: #172033;
+  --color-navy: #1b3048;
+  --color-navy-ink: #f7f4ee;
+  --color-line: #d5d0c6;
+  --color-moss: #0e5a42;
+  --color-focus: #0b3d91;
+  --color-muted: #3d4d63;
+  --color-caption: #ffee00;
+  --color-stage: #111111;
+  --color-surface: #ffffff;
+
+  --font-text: "Atkinson Hyperlegible", "Noto Sans Ethiopic", sans-serif;
+  --font-display: Literata, "Noto Serif Ethiopic", serif;
+
+  --text-xs: 0.875rem;
+  --text-sm: 1rem;
+  --text-md: 1.125rem;
+  --text-lg: 1.5rem;
+  --text-xl: 2rem;
+  --text-2xl: clamp(2.15rem, 4.2vw, 3.35rem);
+  --leading-body: 1.55;
+  --leading-display: 1.12;
+  --tracking-display: -0.025em;
+
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.5rem;
+  --space-6: 2.5rem;
+  --space-7: 4rem;
+  --measure: 68ch;
+  --page: 76rem;
+
+  --radius-none: 0;
+  --size-target: 2.75rem;
+
+  --elevation-flat: none;
+  --elevation-float: 4px 4px 0 var(--color-navy);
+
+  --motion-fast: 120ms;
+  --motion-ease: ease-out;
+
+  --focus-width: 3px;
+  --focus-offset: 3px;
+  --focus-color: var(--color-focus);
+
+  color-scheme: light;
+  font-family: var(--font-text);
+  font-size: 100%;
+  line-height: var(--leading-body);
+}
+
+html[data-text="large"] {
+  font-size: 125%;
+}
+
+html[data-contrast="high"] {
+  --color-paper: #000000;
+  --color-ink: #ffffff;
+  --color-navy: #000000;
+  --color-navy-ink: #ffffff;
+  --color-line: #ffffff;
+  --color-moss: #ffee00;
+  --color-focus: #ffee00;
+  --color-muted: #ffffff;
+  --color-caption: #ffee00;
+  --color-stage: #000000;
+  --color-surface: #000000;
+  --elevation-float: 4px 4px 0 #ffffff;
+  --focus-color: #ffee00;
+  color-scheme: dark;
+}
+
+html[data-motion="reduce"] {
+  --motion-fast: 0ms;
+}

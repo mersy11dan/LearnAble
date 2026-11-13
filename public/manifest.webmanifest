@@ -1,0 +1,18 @@
+{
+  "name": "LearnAble",
+  "short_name": "LearnAble",
+  "description": "Accessible lessons for slow connections and low-end phones.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f2f0ea",
+  "theme_color": "#1b3048",
+  "lang": "en",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}

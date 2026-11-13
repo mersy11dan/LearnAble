@@ -1,0 +1,108 @@
+{
+  "id": "slow-connection",
+  "title": "A lesson that still plays when the connection does not",
+  "voiceNote": "Narration is an eSpeak device voice so the lesson plays with no API key. Captions are the text to trust. A Hasab voice can replace the audio when a key is set.",
+  "video": {
+    "en": "/media/lesson-en.mp4",
+    "am": "/media/lesson-am.mp4",
+    "poster": "/media/poster.png"
+  },
+  "audio": {
+    "en": "/media/lesson-en.wav",
+    "am": "/media/lesson-am.wav"
+  },
+  "captions": {
+    "en": "/media/captions-en.vtt",
+    "am": "/media/captions-am.vtt",
+    "descriptions": "/media/descriptions.vtt"
+  },
+  "signVideo": "/media/esl-placeholder.mp4",
+  "signPoster": "/media/esl-placeholder.png",
+  "figure": {
+    "src": "/media/lesson-figure.svg",
+    "alt": "A navy phone on a paper background, with an English and Amharic caption under the screen.",
+    "long": "A simple drawing, not a photograph. A tall rounded rectangle stands in for a phone. Inside it, a smaller rectangle is the screen. Under the phone, two lines of caption text are suggested by a black bar and a shorter bar. Nothing in the drawing depends on colour alone: the phone has a dark outline and the caption bars are separate shapes."
+  },
+  "segments": [
+    {
+      "start": 0.0,
+      "end": 5.19,
+      "en": "Hana opens her lesson on a phone in Addis Ababa.",
+      "am": "ሃና ትምህርቷን በአዲስ አበባ በስልኳ ትከፍታለች።",
+      "ad": "A phone is drawn on a paper-coloured screen, with a short caption under it.",
+      "gloss": "OPEN"
+    },
+    {
+      "start": 5.19,
+      "end": 11.702,
+      "en": "She needs English and Amharic captions she can make larger.",
+      "am": "የእንግሊዝኛ እና የአማርኛ ጽሑፍ መግለጫዎችን ማተለቅ ትፈልጋለች።",
+      "ad": "The caption bar grows taller. The letters are yellow on a black band.",
+      "gloss": "LARGER"
+    },
+    {
+      "start": 11.702,
+      "end": 22.036,
+      "en": "A sign window can move and grow, so Ethiopian Sign Language sits where she needs it.",
+      "am": "የምልክት መስኮቱን ማንቀሳቀስና ማተለቅ ትችላለች። የኢትዮጵያ የምልክት ቋንቋ የምትፈልገውን ቦታ ይይዛል።",
+      "ad": "A second window lifts off the phone. It is labelled Ethiopian Sign Language.",
+      "gloss": "SIGN"
+    },
+    {
+      "start": 22.036,
+      "end": 28.919,
+      "en": "Audio description says what the picture is doing, for a learner who cannot see it.",
+      "am": "የድምጽ መግለጫ ሥዕሉ ምን እንደሚያደርግ ይናገራል። ለማያየው ተማሪ ነው።",
+      "ad": "A round speaker icon appears beside the phone.",
+      "gloss": "SPEAK"
+    },
+    {
+      "start": 28.919,
+      "end": 36.761,
+      "en": "When the network is slow she keeps a small pack: sound, text, and a light page.",
+      "am": "ኔትወርኩ ሲዘገይ ትንሽ ጥቅል ታስቀምጣለች። ድምጽ፣ ጽሑፍ፣ እና ቀላል ገጽ።",
+      "ad": "The phone is replaced by a short stack of pages and a sound file.",
+      "gloss": "PACK"
+    },
+    {
+      "start": 36.761,
+      "end": 43.179,
+      "en": "The lesson on this page is the same one, with the network or without it.",
+      "am": "በዚህ ገጽ ላይ ያለው ትምህርት አንድ ነው። ኔትወርክ ቢኖርም ባይኖርም።",
+      "ad": "The stack of pages stays in the centre of the screen.",
+      "gloss": "SAME"
+    }
+  ],
+  "chat": [
+    {
+      "time": 0.4,
+      "speaker": "Facilitator",
+      "text": "We are watching together. Captions are on."
+    },
+    {
+      "time": 5.590000000000001,
+      "speaker": "Hana",
+      "text": "Please make the Amharic text larger."
+    },
+    {
+      "time": 12.102,
+      "speaker": "Facilitator",
+      "text": "Move the sign window if it covers the caption."
+    },
+    {
+      "time": 22.436,
+      "speaker": "Yonas",
+      "text": "I will turn on audio description."
+    },
+    {
+      "time": 29.319,
+      "speaker": "Hana",
+      "text": "I am saving the small pack before the network drops."
+    },
+    {
+      "time": 37.161,
+      "speaker": "Facilitator",
+      "text": "The text page matches what you just heard."
+    }
+  ]
+}
