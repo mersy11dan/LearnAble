@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { axe } from "jest-axe";
 import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it } from "vitest";
@@ -44,6 +44,14 @@ describe("pages", () => {
     expect(screen.getByRole("navigation", { name: "Breadcrumb" })).toBeInTheDocument();
     await expectClean(container);
   }, 20000);
+
+  it("switches the primary menu into Amharic", async () => {
+    const { container } = renderAt("/");
+    fireEvent.change(screen.getByRole("combobox", { name: "Language" }), { target: { value: "am" } });
+    expect(screen.getByRole("link", { name: "ትምህርት" })).toBeInTheDocument();
+    expect(document.documentElement.lang).toBe("am");
+    await expectClean(container);
+  });
 
   it("keeps the job summary in the page, next to the audio control", async () => {
     const { container } = renderAt("/careers");

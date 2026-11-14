@@ -213,6 +213,24 @@ button:disabled, .button[aria-disabled="true"] {
   transform: none;
 }
 
+.lang-pick {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: var(--size-target);
+  color: inherit;
+}
+
+.topbar select {
+  min-height: var(--size-target);
+  min-width: 7.5rem;
+  background: transparent;
+  color: inherit;
+  border: 2px solid transparent;
+  border-radius: var(--radius-control);
+  padding: 0 var(--space-2);
+}
+
 .topbar button {
   background: transparent;
   color: var(--color-navy-ink);
@@ -705,8 +723,11 @@ html[data-contrast="high"] .frame {
 html[data-contrast="high"] a { color: var(--color-focus); }
 
 html[data-contrast="high"] .topbar a,
-html[data-contrast="high"] .topbar button {
-  color: var(--color-navy-ink);
+html[data-contrast="high"] .topbar button,
+html[data-contrast="high"] .topbar select,
+html[data-contrast="high"] .lang-pick {
+  color: var(--color-ink);
+  background: transparent;
 }
 
 html[data-contrast="high"] .button,

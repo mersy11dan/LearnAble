@@ -7,6 +7,8 @@ expect.extend(toHaveNoViolations);
 
 afterEach(() => {
   cleanup();
+  localStorage.clear();
+  document.documentElement.lang = "en";
 });
 
 HTMLMediaElement.prototype.play = () => Promise.resolve();

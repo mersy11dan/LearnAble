@@ -1,4 +1,5 @@
 import { Route, Routes } from "react-router-dom";
+import { LocaleProvider } from "./a11y/locale";
 import { Layout } from "./components/Layout";
 import { AccessibilityPage } from "./pages/AccessibilityPage";
 import { CareersPage } from "./pages/CareersPage";
@@ -16,6 +17,7 @@ import { VerifyPage } from "./pages/VerifyPage";
 
 export function App() {
   return (
+    <LocaleProvider>
     <Routes>
       <Route element={<Layout />}>
         <Route index element={<HomePage />} />
@@ -43,5 +45,6 @@ export function App() {
         />
       </Route>
     </Routes>
+    </LocaleProvider>
   );
 }
