@@ -55,13 +55,15 @@ describe("ASL gloss panel", () => {
     await vi.waitFor(() => {
       expect(player.shadowRoot?.querySelector("[data-gloss-corrected]")?.textContent).toContain("fs-ADDIS");
     });
-    expect(player.shadowRoot?.querySelector("[data-corrected-term]")?.textContent).toBe("Corrected by hand");
-    expect(player.shadowRoot?.querySelector("[data-model-term]")?.textContent).toBe("Model output (Suyash2205/signbridge-t5-base-asl-gloss)");
+    expect(player.shadowRoot?.querySelector("[data-gloss-corrected]")?.textContent).toContain("Corrected by hand");
+    expect(player.shadowRoot?.querySelector("[data-model-term]")?.textContent).toContain("Model output (Suyash2205/signbridge-t5-base-asl-gloss)");
     expect(player.shadowRoot?.querySelector("[data-gloss-model]")?.textContent).toContain("ADDUS ABRAHAM");
-    expect(player.shadowRoot?.querySelector("h2")?.textContent).toBe(ASL_GLOSS_LABEL);
+    expect(player.shadowRoot?.querySelector("h2")?.textContent).toBe("ASL");
+    expect(player.shadowRoot?.querySelector(".sign-info")?.textContent).toContain(ASL_GLOSS_LABEL);
+    expect(player.shadowRoot?.querySelector("[data-hands] img")?.getAttribute("alt")).toBe("ASL fingerspelling: A");
     player.shadowRoot?.querySelector<HTMLButtonElement>("[data-act=captions]")?.click();
     expect(player.shadowRoot?.querySelector("[data-gloss-corrected]")?.textContent).toBe("");
-    expect(player.shadowRoot?.querySelector("[data-gloss-lines]")?.hasAttribute("hidden")).toBe(true);
+    expect(player.shadowRoot?.querySelector("[data-hands]")?.childElementCount).toBe(0);
     expect(player.shadowRoot?.querySelector("[data-sign-note]")?.textContent).toBe(AMHARIC_GLOSS_NOTE);
   });
 });
