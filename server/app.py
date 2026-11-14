@@ -28,6 +28,10 @@ def configured(name: str) -> str:
     return os.environ.get(name, "").strip()
 
 
+def consent_granted() -> bool:
+    return request.headers.get("X-LearnAble-Consent", "").strip().lower() == "yes"
+
+
 def sample_pair(text: str, source: str, target: str) -> str | None:
     cleaned = text.strip()
     for segment in lesson()["segments"]:
@@ -129,6 +133,45 @@ def create_app() -> Flask:
     def options(_unused: str):
         return ("", 204)
 
+    @app.get("/api/openapi.yaml")
+    def openapi_yaml():
+        return (ROOT / "server" / "openapi.yaml").read_text(encoding="utf-8"), 200, {"Content-Type": "application/yaml; charset=utf-8"}
+
+    @app.get("/api/docs")
+    def api_docs():
+        page = """<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>LearnAble API</title>
+<style>body{font-family:Georgia,serif;background:#f2f0ea;color:#172033;margin:2rem} a{color:#0b3d91} code{font-family:sans-serif}</style>
+</head><body>
+<h1>LearnAble API</h1>
+<p>Interactive list of the transcript pipeline. Send <code>X-LearnAble-Consent: yes</code> before a request may leave this machine.</p>
+<p><a href="/api/openapi.yaml">openapi.yaml</a></p>
+<ul>
+<li>GET /api/health</li>
+<li>POST /api/translate</li>
+<li>POST /api/transcribe</li>
+<li>POST /api/describe-image</li>
+<li>POST /api/speak</li>
+<li>POST /api/braille</li>
+<li>GET /api/offline-pack</li>
+<li>POST /api/certificates/verify</li>
+</ul>
+<form method="get" action="/api/health"><button type="submit">Check health</button></form>
+</body></html>"""
+        return page, 200, {"Content-Type": "text/html; charset=utf-8"}
+
+    @app.get("/api/offline-pack")
+    def offline_pack():
+        return jsonify({"builtIn": "browser", "path": "/packs/demo/index.html", "message": "The 3G pack is assembled on the phone from the saved lesson files."})
+
+    @app.post("/api/braille")
+    def braille():
+        body = request.get_json(silent=True) or {}
+        text = str(body.get("text") or "").strip()
+        if not text:
+            return jsonify({"message": "Include the text to export."}), 400
+        return jsonify({"format": "brf", "language": body.get("language") or "en", "message": "The browser exporter writes the .brf file from this text.", "characters": len(text)})
+
     @app.get("/api/health")
     def health():
         return jsonify(
@@ -136,7 +179,7 @@ def create_app() -> Flask:
                 "hasab": bool(configured("HASAB_API_KEY")),
                 "huggingface": bool(configured("HF_TOKEN")),
                 "asrModel": configured("HF_ASR_MODEL") or "waxal-benchmarking/whisper-small-waxal-amh",
-                "mtModel": configured("HF_MT_MODEL") or "facebook/nllb-200-distilled-600M",
+                "mtModel": configured("HF_MT_MODEL"),
                 "captionModel": configured("HF_CAPTION_MODEL") or "Salesforce/blip-image-captioning-base",
             }
         )
@@ -160,11 +203,15 @@ def create_app() -> Flask:
             )
         errors: list[str] = []
         if configured("HASAB_API_KEY"):
+            if not consent_granted():
+                return jsonify({"source": "unavailable", "translation": paired, "message": "Hasab was not called. Send X-LearnAble-Consent: yes first."})
             try:
                 return jsonify({"source": "hasab", "translation": hasab_translate(text, source, target), "message": "Translated by Hasab."})
             except Exception as exc:  # noqa: BLE001 - surface a safe failure, then try the next provider
                 errors.append(f"Hasab did not translate ({exc.__class__.__name__}).")
-        if configured("HF_TOKEN"):
+        if configured("HF_TOKEN") and configured("HF_MT_MODEL"):
+            if not consent_granted():
+                return jsonify({"source": "unavailable", "translation": paired, "message": "Hugging Face was not called. Send X-LearnAble-Consent: yes first."})
             try:
                 return jsonify(
                     {

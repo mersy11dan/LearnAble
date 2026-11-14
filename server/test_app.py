@@ -57,6 +57,17 @@ def test_upload_without_a_key_is_not_transcribed(client):
     assert body["text"] is None
 
 
+def test_openapi_lists_the_pipeline(client):
+    spec = client.get("/api/openapi.yaml").get_data(as_text=True)
+    assert "/api/translate" in spec
+    assert "/api/transcribe" in spec
+    assert "/api/describe-image" in spec
+    assert "/api/certificates/verify" in spec
+    page = client.get("/api/docs")
+    assert page.status_code == 200
+    assert b"LearnAble API" in page.data
+
+
 def test_missing_upload_returns_the_demo_transcript(client):
     body = client.post("/api/transcribe").get_json()
     assert body["source"] == "sample"
