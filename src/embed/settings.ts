@@ -13,6 +13,13 @@ export type EnhanceFlag = boolean | {
   read?: boolean;
 };
 
+export type ShortcutMap = {
+  heading: string;
+  landmark: string;
+  help: string;
+  voice: string;
+};
+
 export type WidgetSettings = {
   lang: Lang;
   uiLang: Lang;
@@ -27,6 +34,11 @@ export type WidgetSettings = {
   readPitch: number;
   readVerbosity: "sentences" | "headings" | "links";
   haptics: boolean;
+  voice: boolean;
+  voiceChosen: boolean;
+  audioDescription: boolean;
+  keyboard: boolean;
+  keys: ShortcutMap;
 };
 
 export type FeatureFlags = {
@@ -45,6 +57,7 @@ export type LearnAbleConfig = {
   features?: Partial<FeatureFlags>;
   enhance?: EnhanceFlag;
   assetBase?: string;
+  voice?: "on" | "off";
 };
 
 export const PRESETS: Record<CaptionPreset, { label: string; fg: string; bg: string }> = {
@@ -79,6 +92,11 @@ export const defaultSettings = (): WidgetSettings => ({
   readPitch: 1,
   readVerbosity: "sentences",
   haptics: false,
+  voice: true,
+  voiceChosen: false,
+  audioDescription: true,
+  keyboard: true,
+  keys: { heading: "h", landmark: "l", help: "?", voice: "Alt+Shift+S" },
 });
 
 let features = defaultFeatures();
@@ -94,6 +112,13 @@ export function enhancePart(part: "toolbar" | "media" | "skip" | "landmarks" | "
   if (enhance === false) return false;
   if (enhance === true) return true;
   return enhance[part] !== false;
+}
+
+function cleanShortcut(value: unknown, fallback: string): string {
+  if (typeof value !== "string") return fallback;
+  const trimmed = value.trim();
+  if (!trimmed || trimmed.length > 32) return fallback;
+  return trimmed;
 }
 
 function prefersReduce(): boolean {
@@ -115,7 +140,25 @@ export function loadSettings(): WidgetSettings {
     const uiLang = parsed.uiLang === "am" ? "am" : parsed.uiLang === "en" ? "en" : base.uiLang;
     const contrastMode = parsed.contrastMode === "bw" || parsed.contrastMode === "yb" ? parsed.contrastMode : "off";
     const contrastLevel = Math.min(10, Math.max(1, Number(parsed.contrastLevel) || base.contrastLevel));
-    return { ...base, ...parsed, lang, uiLang, contrastMode, contrastLevel };
+    const keys = { ...base.keys, ...(parsed.keys || {}) };
+    return {
+      ...base,
+      ...parsed,
+      lang,
+      uiLang,
+      contrastMode,
+      contrastLevel,
+      voice: typeof parsed.voice === "boolean" ? parsed.voice : base.voice,
+      voiceChosen: parsed.voiceChosen === true,
+      audioDescription: typeof parsed.audioDescription === "boolean" ? parsed.audioDescription : base.audioDescription,
+      keyboard: parsed.keyboard !== false,
+      keys: {
+        heading: cleanShortcut(keys.heading, base.keys.heading),
+        landmark: cleanShortcut(keys.landmark, base.keys.landmark),
+        help: cleanShortcut(keys.help, base.keys.help),
+        voice: cleanShortcut(keys.voice, base.keys.voice),
+      },
+    };
   } catch {
     return base;
   }
@@ -155,6 +198,10 @@ export function configure(config: LearnAbleConfig = {}): void {
     lang: config.lang ?? stored.lang,
     uiLang: config.uiLang ?? stored.uiLang,
   };
+  if (stored.voiceChosen !== true && config.voice) {
+    settings.voice = config.voice === "on";
+    if (config.voice === "off") settings.audioDescription = false;
+  }
   saveSettings(settings);
 }
 

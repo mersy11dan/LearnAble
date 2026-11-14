@@ -108,8 +108,8 @@ for (const [before, after] of pairs) {
       console.log("  without", plain.violations.map((item) => `${item.id} ${item.nodes}`).join("; ") || "none");
       console.log("  with", enhanced.violations.map((item) => `${item.id} ${item.nodes}`).join("; ") || "none");
     }
-    if (enhanced.count >= plain.count) {
-      throw new Error(`${before} at ${view.width}px ${view.zoom} did not drop: ${plain.count} to ${enhanced.count}`);
+    if (enhanced.count !== 0) {
+      throw new Error(`${before} at ${view.width}px ${view.zoom} still has ${enhanced.count} serious issues`);
     }
   }
 }
@@ -128,6 +128,8 @@ page.on("response", (response) => {
   }
 });
 await page.goto(base + "/pages/concept-with-learnable.html", { waitUntil: "domcontentloaded" });
+const keepVoice = page.getByRole("button", { name: "Keep LearnAble voice" });
+if (await keepVoice.count()) await keepVoice.click();
 await page.evaluate(() => {
   document.documentElement.style.zoom = "100%";
 });
@@ -166,8 +168,10 @@ await page.mouse.move(box.x - 40, box.y + 10);
 await page.mouse.up();
 const dragged = await player.locator(".media-row").evaluate((node) => node.style.getPropertyValue("--sign-col"));
 if (dragged === narrowed) throw new Error("pointer drag did not resize the sign panel");
+if ((await player.locator("[data-act=ad]").getAttribute("aria-pressed")) !== "true") throw new Error("audio description should start on");
+if ((await player.locator("track[kind=descriptions]").count()) < 1) throw new Error("description track missing");
 await player.locator("[data-act=ad]").click();
-if ((await player.locator("[data-act=ad]").getAttribute("aria-pressed")) !== "true") throw new Error("audio description did not toggle");
+if ((await player.locator("[data-act=ad]").getAttribute("aria-pressed")) !== "false") throw new Error("audio description did not toggle");
 if ((await player.locator(".transcript li").count()) < 6) throw new Error("transcript missing");
 await player.locator(".chat").waitFor();
 if (!(await player.locator(".chat").innerText()).includes("Captions are on")) throw new Error("chat missing");

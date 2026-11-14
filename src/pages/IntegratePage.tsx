@@ -2,7 +2,7 @@ import { useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import { Breadcrumbs } from "../components/Breadcrumbs";
 
-const htmlSnippet = `<script src="https://your-host/learnable.js" defer></script>
+const htmlSnippet = `<script src="https://your-host/learnable.js" defer data-learnable-voice="on"></script>
 <learnable-player
   src="/media/lesson-en.mp4"
   captions-en="/media/captions-en.vtt"
@@ -16,6 +16,7 @@ const htmlSnippet = `<script src="https://your-host/learnable.js" defer></script
 <script>
   LearnAble.init({
     lang: "am",
+    voice: "on",
     features: { toolbar: true, signWindow: true, audioDescription: true, offlinePack: true, braille: true, taggedDocs: true }
   });
 </script>`;
@@ -69,7 +70,7 @@ export function IntegratePage() {
         One script on a Savanna page turns on enhance mode. The toolbar sits on that page, and a plain video in the lesson is upgraded in place. Captions, the sign window, the pack, braille, and the text file are built in the browser when no API is running.
       </p>
       <h2>Whole page</h2>
-      <pre className="snippet">{`<script src="/learnable/learnable.js" defer data-learnable-enhance="true"></script>
+      <pre className="snippet">{`<script src="/learnable/learnable.js" defer data-learnable-enhance="true" data-learnable-voice="on"></script>
 <video controls playsinline src="/media/lesson-en.mp4"
   data-learnable-captions-en="/media/captions-en.vtt"
   data-learnable-captions-am="/media/captions-am.vtt"
@@ -88,11 +89,21 @@ export function IntegratePage() {
         With the service running, open <a href="http://127.0.0.1:5050/api/docs">the API notes</a>. The machine-readable spec is server/openapi.yaml. Captions, translation, speech recognition, image description, the offline pack, braille, and certificate verification are listed there. Nothing is sent to Hasab or Hugging Face until the request includes the consent header.
       </p>
       <h2>Keyboard</h2>
+      <p className="measure">
+        These keys are on for the whole page. Single letters do nothing while a text field, list, or editable region is focused. The Keyboard shortcuts button turns them off. Question mark opens the same list, and the fields in that dialog change the letters. NVDA and JAWS browse mode take H and L before the page sees them.
+      </p>
       <ul>
-        <li>Picture frame, while it is focused: Space or K play, C captions, D audio description, S sign panel, arrows seek. These keys do nothing while you are in the rest of the page, so a screen reader keeps its own letters.</li>
-        <li>Sign panel grip, while it is focused: arrows change the width, Home and End jump to the ends. Narrower and Wider do the same with buttons.</li>
-        <li>Toolbar, while it is focused: Escape stops read-aloud. Play reading is a button, not a hover.</li>
+        <li>Tab and Shift+Tab move in page order. A skip link is first.</li>
+        <li>H and Shift+H move between headings. L and Shift+L move between landmarks.</li>
+        <li>Question mark opens keyboard help. Escape closes that dialog and returns focus. Escape also closes an open Savanna panel.</li>
+        <li>Alt+Shift+S toggles LearnAble voice. The LearnAble voice button does the same. It is not an NVDA, JAWS, Orca, VoiceOver, or Chrome shortcut. The button is the alternative when a Mac layout would type a character instead.</li>
+        <li>Picture frame, while it is focused: Space or K play, C captions, D audio description, S sign panel, arrows seek, J and L move further. L is a landmark key only outside the picture frame.</li>
+        <li>Sign panel grip, while it is focused: arrows change the width, Home and End jump to the ends.</li>
       </ul>
+      <h2>Voice</h2>
+      <p className="measure">
+        Spoken navigation starts on, unless the script says data-learnable-voice="off" or LearnAble.init is called with voice: "off". A saved choice in this browser wins over that default. The first visit asks whether to keep the voice or turn it off for a screen reader. Some browsers speak only after that click or the next key. Audio description starts on with the voice, has its own button, and pauses the video when a description is longer than the gap. See docs/VOICE.md.
+      </p>
       <h2>If it does not start</h2>
       <ul>
         <li>Empty captions mean the caption file paths are wrong for the host page.</li>

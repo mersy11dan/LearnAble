@@ -4,6 +4,7 @@ import { verifyOpenBadge } from "../lib/badge";
 import { toBrf } from "../lib/braille";
 import { commandForKey } from "../lib/commands";
 import { buildClientPack, saveFile } from "../lib/pack";
+import { needsExtendedDescription } from "../lib/describe";
 import { speak, stopSpeaking } from "../lib/speech";
 import { buildTaggedPdf } from "../lib/taggedPdf";
 import { formatTime } from "../lib/time";
@@ -30,6 +31,7 @@ export class LearnAblePlayer extends HTMLElement {
   private adOn = false;
   private signOn = true;
   private lastAd = "";
+  private held = false;
   private built = false;
 
   constructor() {
@@ -42,6 +44,7 @@ export class LearnAblePlayer extends HTMLElement {
     void this.loadTracks();
     this.applySettings();
     window.addEventListener("learnable-settings", this.onSettings);
+    window.addEventListener("learnable-speech-cancel", this.onSpeechCancel);
   }
 
   refresh(): void {
@@ -53,11 +56,16 @@ export class LearnAblePlayer extends HTMLElement {
 
   disconnectedCallback(): void {
     window.removeEventListener("learnable-settings", this.onSettings);
+    window.removeEventListener("learnable-speech-cancel", this.onSpeechCancel);
     stopSpeaking();
   }
 
   private onSettings = (): void => {
     this.applySettings();
+  };
+
+  private onSpeechCancel = (): void => {
+    this.resumeHeld();
   };
 
   private mount(): void {
@@ -100,7 +108,7 @@ export class LearnAblePlayer extends HTMLElement {
         <div class="row">
           <button type="button" data-act="play">Play</button>
           <button type="button" data-act="captions">Captions: English</button>
-          ${describe ? `<button type="button" data-act="ad" aria-pressed="false">Audio description</button>` : ""}
+          ${describe ? `<button type="button" data-act="ad" aria-pressed="${getSettings().audioDescription}">Audio description</button>` : ""}
           ${sign ? `<button type="button" data-act="sign" aria-pressed="true">Sign window</button>` : ""}
           <label>Caption size <input data-act="size" type="range" min="1" max="2.2" step="0.1" value="1.15" /></label>
           <label>Caption colours
@@ -182,6 +190,7 @@ export class LearnAblePlayer extends HTMLElement {
       const src = this.getAttribute("src");
       if (src) fallback.src = resolveUrl(src);
     }
+    this.ensureDescriptionTrack();
     this.signClip = this.root.querySelector("[data-sign-video]");
     const signUrl = this.getAttribute("sign");
     if (this.signClip && signUrl && signUrl !== "false") this.signClip.src = resolveUrl(signUrl);
@@ -267,7 +276,32 @@ export class LearnAblePlayer extends HTMLElement {
     if (preset) preset.value = settings.captionPreset;
     if (size) size.value = String(settings.captionScale);
     this.styleCaption(settings.captionScale, settings.captionPreset);
+    this.adOn = settings.audioDescription;
+    const ad = this.root.querySelector<HTMLButtonElement>("[data-act=ad]");
+    if (ad) ad.setAttribute("aria-pressed", String(this.adOn));
     this.sync();
+  }
+
+  private ensureDescriptionTrack(): void {
+    if (!(this.video instanceof HTMLVideoElement)) return;
+    const src = this.getAttribute("describe");
+    if (!src || src === "false") return;
+    const url = resolveUrl(src);
+    let track = this.video.querySelector<HTMLTrackElement>("track[kind='descriptions']");
+    if (!track) {
+      track = document.createElement("track");
+      track.kind = "descriptions";
+      track.label = "Audio description";
+      track.srclang = "en";
+      this.video.append(track);
+    }
+    if (track.getAttribute("src") !== url) track.src = url;
+  }
+
+  private resumeHeld(): void {
+    if (!this.held || !this.video) return;
+    this.held = false;
+    void this.video.play().catch(() => undefined);
   }
 
   private styleCaption(scale: number, preset: CaptionPreset): void {
@@ -315,9 +349,21 @@ export class LearnAblePlayer extends HTMLElement {
     }
     if (this.adOn) {
       const description = cueAt(this.ad, time);
-      if (description && description.text !== this.lastAd) {
+      if (!description) this.lastAd = "";
+      else if (description.text !== this.lastAd) {
         this.lastAd = description.text;
-        speak(description.text, "en");
+        const settings = getSettings();
+        const gap = description.end - description.start;
+        const extended = needsExtendedDescription(description.text, gap, settings.readRate);
+        if (extended && !this.video.paused) {
+          this.video.pause();
+          this.held = true;
+        }
+        speak(description.text, "en", settings.readRate, {
+          pitch: settings.readPitch,
+          onend: () => this.resumeHeld(),
+          oncancel: () => this.resumeHeld(),
+        });
       }
     }
     const button = this.root.querySelector<HTMLButtonElement>("[data-act=captions]");
@@ -361,10 +407,12 @@ export class LearnAblePlayer extends HTMLElement {
   }
 
   private toggleAd(): void {
-    this.adOn = !this.adOn;
-    if (!this.adOn) stopSpeaking();
-    const button = this.root.querySelector<HTMLButtonElement>("[data-act=ad]");
-    if (button) button.setAttribute("aria-pressed", String(this.adOn));
+    const on = !getSettings().audioDescription;
+    updateSettings({ audioDescription: on });
+    if (!on) {
+      stopSpeaking();
+      this.resumeHeld();
+    }
   }
 
   private nudge(direction: string): void {

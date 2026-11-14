@@ -6,6 +6,7 @@ import { speak } from "../lib/speech";
 import { cuesToVtt } from "../lib/vtt";
 import { chromeCopy } from "./copy";
 import { LearnAblePlayer } from "./player";
+import { prepareImages } from "./images";
 import { repairHost } from "./repair";
 import { enhancePart, getSettings } from "./settings";
 
@@ -29,6 +30,7 @@ function upgradeElement(node: HTMLElement): void {
   if (!player.hasAttribute("offline")) player.setAttribute("offline", "");
   if (!player.hasAttribute("braille")) player.setAttribute("braille", "");
   if (!player.hasAttribute("docs")) player.setAttribute("docs", "");
+  if (!player.hasAttribute("describe")) player.setAttribute("describe", "/media/descriptions.vtt");
   node.slot = "media";
   node.replaceWith(player);
   player.append(node);
@@ -228,6 +230,7 @@ export function runEnhance(): void {
     document.body.append(live);
   }
   repairHost();
+  prepareImages();
 }
 
 export function readPage(): { text: string; lang: "en" | "am"; notice: string } {

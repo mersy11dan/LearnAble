@@ -42,6 +42,15 @@ NLLB-200 (`facebook/nllb-200-distilled-600M`) is CC-BY-NC-4.0. It is not downloa
 
 `waxal-benchmarking/whisper-small-waxal-amh` is CC-BY-4.0. `Salesforce/blip-image-captioning-base` is BSD-3-Clause. Both stay on Hugging Face and run only with a token and consent.
 
+## Optional eSpeak NG voice
+
+eSpeak NG is GPL-3.0-or-later. Copyright the eSpeak NG authors.
+https://github.com/espeak-ng/espeak-ng
+
+LearnAble does not copy, compile, or ship eSpeak NG. Putting that code in this MIT tree would make the combined program GPL-3.0. The plug-in only tries, at run time, to load a separate file the host may add at `/learnable/espeak/speak.js`. That file is not in this repository. If it is missing, or it does not export `speak(text, lang, rate)`, LearnAble keeps going and says so in the status text. A host who serves that file keeps it under GPL-3.0. It is not relicensed by this NOTICE.
+
+The Web Speech API is the voice that actually runs here. An Amharic voice is used when the browser already has one.
+
 ## Patterns, not copied code
 
 The player’s keyboard and caption behaviour follows ideas from Able Player

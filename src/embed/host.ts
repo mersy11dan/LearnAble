@@ -23,7 +23,7 @@ html[data-learnable-contrast="on"] :focus-visible { outline: 3px solid var(--la-
   return `
 html { scroll-padding-top: 5rem; scroll-padding-bottom: 7rem; }
 :focus { scroll-margin-top: 5rem; scroll-margin-bottom: 7rem; }
-:focus-visible { outline: 3px solid #0b3d91; outline-offset: 2px; }
+:focus-visible { outline: 3px solid #0b3d91 !important; outline-offset: 3px !important; }
 .learnable-skip {
   position: absolute; left: 0.5rem; top: 0.5rem; transform: translateY(-150%);
   background: #1b3048; color: #f7f4ee; padding: 0.6rem 1rem; z-index: 2147483001;
@@ -41,6 +41,22 @@ html { scroll-padding-top: 5rem; scroll-padding-bottom: 7rem; }
   padding: 0.4rem 0.8rem;
 }
 .learnable-row { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.learnable-dialog {
+  position: fixed; z-index: 2147483003; top: 1rem; left: 50%; transform: translateX(-50%);
+  width: min(32rem, calc(100vw - 1rem)); max-height: calc(100vh - 2rem); overflow: auto;
+  background: #f2f0ea; color: #172033; border: 3px solid #1b3048; border-top: 0.28rem solid #1b3048;
+  padding: 1rem; font-family: "Atkinson Hyperlegible", "Noto Sans Ethiopic", sans-serif;
+}
+.learnable-dialog h2 { font-family: Literata, Georgia, serif; font-size: 1.4rem; margin: 0 0 0.5rem; }
+.learnable-dialog p, .learnable-dialog li { line-height: 1.45; }
+.learnable-dialog button, .learnable-dialog input, .learnable-dialog select {
+  font: inherit; min-height: 2.75rem; color: #172033; background: #f2f0ea;
+}
+.learnable-dialog button {
+  background: #1b3048 !important; color: #f7f4ee !important; border: 2px solid #1b3048 !important;
+  box-shadow: inset 0 -0.28rem 0 #ffee00; padding: 0.45rem 0.75rem; cursor: pointer;
+}
+.learnable-dialog label { display: flex; flex-direction: column; gap: 0.2rem; min-width: 8rem; }
 .learnable-gateway input { min-height: 2.75rem; max-width: 100%; }
 .learnable-sentence.is-current, .is-current {
   outline: 3px solid #0b3d91; outline-offset: 2px; background: #ffee00; color: #172033;

@@ -112,3 +112,14 @@ export function readerStop(): void {
   unwrap();
   note("Reading stopped. The page text is unchanged.");
 }
+
+export function readerStopIfPlaying(): void {
+  if (!playing) return;
+  readerStop();
+}
+
+window.addEventListener("learnable-speech-cancel", () => {
+  if (!playing) return;
+  playing = false;
+  note("Reading paused.");
+});

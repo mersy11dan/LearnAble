@@ -4,6 +4,7 @@ import { applyHost } from "./host";
 import { readerPause, readerPlay, readerStop } from "./reader";
 import { getSettings, updateSettings, type CaptionPreset } from "./settings";
 import { widgetCss } from "./styles";
+import { announce, openHelp, setVoice } from "./voice";
 
 export class LearnAbleToolbar extends HTMLElement {
   private root: ShadowRoot;
@@ -20,6 +21,8 @@ export class LearnAbleToolbar extends HTMLElement {
     this.root.innerHTML = `
       <style>${widgetCss}</style>
       <div class="bar" role="group" aria-label="LearnAble display">
+        <button type="button" data-act="voice" aria-pressed="true" aria-keyshortcuts="Alt+Shift+S">LearnAble voice</button>
+        <button type="button" data-act="describe" aria-pressed="true">Audio description</button>
         <button type="button" data-key="largeText" aria-pressed="false">Larger text</button>
         <button type="button" data-key="stopMotion" aria-pressed="false">Stop motion</button>
         <label>Contrast
@@ -67,10 +70,8 @@ export class LearnAbleToolbar extends HTMLElement {
         </label>
         <p class="status" data-note></p>
         <label class="consent"><input type="checkbox" data-act="consent" /> I agree a description service may see pictures that have no alternative. Nothing is sent until this is checked.</label>
-        <details>
-          <summary>Keyboard help</summary>
-          <p>Reading keys work only while this toolbar is focused, so they do not cover a screen reader. Escape stops reading.</p>
-        </details>
+        <button type="button" data-act="keys" aria-pressed="true">Keyboard shortcuts</button>
+        <button type="button" data-act="help">Keyboard help</button>
       </div>
     `;
     this.root.querySelectorAll<HTMLButtonElement>("button[data-key]").forEach((button) => {
@@ -124,6 +125,23 @@ export class LearnAbleToolbar extends HTMLElement {
     this.root.addEventListener("keydown", (event) => {
       if (event instanceof KeyboardEvent && event.key === "Escape") readerStop();
     });
+    this.root.querySelector<HTMLButtonElement>("[data-act=voice]")?.addEventListener("click", () => {
+      setVoice(!getSettings().voice, "toggle");
+    });
+    this.root.querySelector<HTMLButtonElement>("[data-act=describe]")?.addEventListener("click", () => {
+      const on = !getSettings().audioDescription;
+      updateSettings({ audioDescription: on });
+      announce(on ? "Audio description on." : "Audio description off.");
+    });
+    this.root.querySelector<HTMLButtonElement>("[data-act=keys]")?.addEventListener("click", () => {
+      const on = !getSettings().keyboard;
+      updateSettings({ keyboard: on });
+      announce(on ? "Keyboard shortcuts on." : "Keyboard shortcuts off. The buttons still work.");
+    });
+    this.root.querySelector<HTMLButtonElement>("[data-act=help]")?.addEventListener("click", (event) => {
+      openHelp(event.currentTarget instanceof HTMLElement ? event.currentTarget : null);
+    });
+    window.addEventListener("learnable-settings", () => this.reflect());
     this.root.querySelector<HTMLButtonElement>("[data-act=images]")?.addEventListener("click", () => {
       const consent = this.root.querySelector<HTMLInputElement>("[data-act=consent]")?.checked === true;
       const note = this.root.querySelector("[data-note]");
@@ -163,6 +181,15 @@ export class LearnAbleToolbar extends HTMLElement {
     if (shown) shown.textContent = String(settings.contrastLevel);
     const haptics = this.root.querySelector<HTMLInputElement>("[data-key=haptics]");
     if (haptics) haptics.checked = settings.haptics;
+    const voice = this.root.querySelector<HTMLButtonElement>("[data-act=voice]");
+    const describe = this.root.querySelector<HTMLButtonElement>("[data-act=describe]");
+    const keys = this.root.querySelector<HTMLButtonElement>("[data-act=keys]");
+    if (voice) {
+      voice.setAttribute("aria-pressed", String(settings.voice));
+      voice.setAttribute("aria-keyshortcuts", settings.keys.voice);
+    }
+    if (describe) describe.setAttribute("aria-pressed", String(settings.audioDescription));
+    if (keys) keys.setAttribute("aria-pressed", String(settings.keyboard));
     const skip = document.querySelector(".learnable-skip");
     if (skip) skip.textContent = copy.skip;
     if (settings.contrastMode !== "off") this.setAttribute("contrast", "high");

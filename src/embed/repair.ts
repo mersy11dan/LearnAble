@@ -60,10 +60,10 @@ export function repairImages(): void {
       img.alt = "";
       img.setAttribute("role", "presentation");
     } else {
-      img.alt = "Needs a description";
+      img.alt = "Description not yet provided";
       const note = document.createElement("span");
       note.className = "learnable-alt-note";
-      note.textContent = "Needs a description";
+      note.textContent = "Description not yet provided";
       img.after(note);
     }
     img.setAttribute(REPAIR_ATTR, "alt");
