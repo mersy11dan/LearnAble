@@ -70,7 +70,7 @@ if (overflow) failures.push({ label: "320px lesson", violations: [{ id: "reflow"
 else console.log("ok 320px lesson");
 const contrast = await browser.newPage({ viewport: { width: 1280, height: 800 } });
 await contrast.goto(base + "/with-learnable/pages/concept-with-navigation.html", { waitUntil: "domcontentloaded" });
-await contrast.locator("learnable-toolbar").getByRole("button", { name: "High contrast" }).click();
+await contrast.locator("learnable-toolbar").locator("[data-key=contrastMode]").selectOption("bw");
 await contrast.addScriptTag({ path: "node_modules/axe-core/axe.min.js" });
 const widgetViolations = await contrast.evaluate(async () => {
   const nodes = [...document.querySelectorAll("learnable-player, learnable-toolbar")];
