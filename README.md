@@ -37,25 +37,18 @@ The script also mounts `<learnable-toolbar>` when the page does not include one.
 
 Events, on the element and on `window`: `learnable-ready`, `learnable-play`, `learnable-captions`, `learnable-settings`.
 
-Build both the site and the bundle with `npm run build`. The plug-in files are `dist/learnable.js` (IIFE, for the script tag) and `dist/learnable.es.js`, each with a sourcemap. The IIFE is about 41 KB, about 15 KB gzipped.
+Build both the site and the bundle with `npm run build`. The plug-in files are `dist/learnable.js` (IIFE, for the script tag) and `dist/learnable.es.js`, each with a sourcemap. The IIFE is about 44 KB, about 16 KB gzipped.
 
 Copy-paste snippets for HTML, React, WordPress, and an iframe fallback are on `/integrate`.
 
-## Demo script
+## Install in an hour
 
-About two and a half minutes. Start on Savanna as it shipped.
-
-1. Open **Before / with** and leave it on Before. Say this is the learner page, unchanged, with no captions and no display controls.
-2. Switch to **With LearnAble**. Say the only addition is a script tag and a `learnable-player` element.
-3. Press Play. Press the captions control so the line switches to Amharic. Open the toolbar and choose yellow on black, then a larger caption size.
-4. Point at the sign window. Say it tells the host where a recorded Ethiopian Sign Language clip goes, and the gloss follows the captions until then.
-5. Turn on audio description. Then press **Larger text**, **High contrast**, and **Stop motion** on the toolbar. Say those settings stick on this browser and can be reset.
-6. If the player was given `offline`, `braille`, and `docs`, download the 3G pack, the braille file, and the tagged PDF. Say those three are off until the host opts in.
-7. Open **Embed** and show the HTML snippet. Mention the React wrapper and the WordPress shortcode on the same page.
-
-## Run it
+Prerequisites: Node.js 22, npm, Python 3.12, and a current browser. Docker is optional. No API key is required.
 
 ```bash
+git clone https://github.com/mersy11dan/LearnAble.git
+cd LearnAble
+git checkout cursor/learnable-track2-82be
 npm install
 npm test
 npm run lint
@@ -63,9 +56,9 @@ npm run build
 npm run dev
 ```
 
-Open http://127.0.0.1:5173. The lesson, the pack, and the job card work in that one process.
+Open http://127.0.0.1:5173. The lesson, the pack, the job card, and the certificate check work in that one process. Captions are on, and the sign window is open, with the sound off.
 
-The transcript service is optional. In a second terminal:
+Optional transcript service, in a second terminal:
 
 ```bash
 python3 -m venv .venv
@@ -75,9 +68,33 @@ cp .env.example .env
 python server/app.py
 ```
 
-The dev server proxies `/api` to http://127.0.0.1:5050. With `.env` empty, known lesson sentences return the bundled caption and are marked `sample`. Other text is not invented.
+The dev server proxies `/api` to http://127.0.0.1:5050. Interactive notes are at http://127.0.0.1:5050/api/docs and the spec is `server/openapi.yaml`.
 
-`npm run preview` serves the production build on http://127.0.0.1:4173. The service worker is registered only in that build, so the app shell can be reopened after one online visit.
+Docker, from the repo root:
+
+```bash
+docker compose up --build
+```
+
+The site is on http://127.0.0.1:8080 and the API is on http://127.0.0.1:5050. Leave `.env` absent to stay on the sample captions.
+
+## Demo script
+
+About four minutes. Leave the sound off for the first minute.
+
+1. Open the lesson. Captions are already on, in English. The sign window is already open. Say the same words are in the transcript under the player, so nothing depends on the speakers.
+2. Use only the keyboard. Tab to the picture, then Space to play, C to switch the captions to Amharic, D for audio description, S for the sign window. Arrow keys move the window. Smaller and Larger are buttons, so the window does not need a pointer.
+3. Zoom the browser to 200 percent. Open Jobs. The card and the audio summary stay on the page. The certificate link is on the card.
+4. Open Certificates. The date is Gregorian and Ethiopian. The page checks the Open Badges 3.0 signature in the browser. Say the private key is not in the repo.
+5. Open the recorded session and point at the same dual date.
+6. Open the transcript pipeline. Leave the consent box unchecked and say nothing is sent to Hasab or Hugging Face until it is checked. With no key, a known sentence still returns the bundled caption.
+7. Open Before / with. Before is Savanna unchanged. With is the same page plus the script and the player.
+8. Download the 3G pack, then the tagged PDF from the text page. The PDF has the Amharic and the picture description.
+9. Open Embed and show the HTML snippet, then mention Docker and `/api/docs` for a host who wants the service.
+
+## Preview
+
+`npm run preview` serves the production build on http://127.0.0.1:4173. The service worker is registered only in that build, so the app shell can be reopened after one online visit. With `.env` empty, known lesson sentences return the bundled caption and are marked `sample`. Other text is not invented.
 
 Rebuild the demo media (needs `espeak-ng` and `ffmpeg`) with `npm run media`.
 
@@ -134,7 +151,7 @@ Copy `.env.example` to `.env`. Leave the secrets blank to use the fallbacks.
 | `HASAB_API_BASE` | Defaults to `https://api.hasab.ai` | Only change if Hasab gives you another host |
 | `HF_TOKEN` | Hugging Face inference | https://huggingface.co/settings/tokens |
 | `HF_ASR_MODEL` | Default `waxal-benchmarking/whisper-small-waxal-amh` | Amharic speech recognition, CC-BY-4.0 |
-| `HF_MT_MODEL` | Default `facebook/nllb-200-distilled-600M` | Translation. NLLB weights are CC-BY-NC-4.0, so not for a commercial product |
+| `HF_MT_MODEL` | Empty. Set `facebook/nllb-200-distilled-600M` only to opt in | NLLB weights are CC-BY-NC-4.0 and stay off by default |
 | `HF_CAPTION_MODEL` | Default `Salesforce/blip-image-captioning-base` | English image captions to review before they become alt text. BSD-3-Clause |
 | `VITE_API_BASE` | Public URL of the transcript service | Empty in dev, because Vite proxies `/api`. Never put a key in a `VITE_` variable |
 
@@ -142,4 +159,16 @@ Leyu is datasets and a Hugging Face model (`gheero-Leyu/amharic-omnivoice-tts`),
 
 ## Tests
 
-`npm test` runs Vitest (parsers, braille, the tagged PDF, axe on the home, lesson, and job card). `pytest` runs the transcript service with keys removed. `npm run lint` and `npm run build` should pass before a pull request.
+`npm test` runs Vitest (parsers, braille, the signed badge, the calendar, axe on every route). `pytest` runs the transcript service with keys removed, including the consent gate and the Ethiopic PDF. `npm run lint` and `npm run build` should pass before a pull request. `npm run axe` checks the built site in Chrome.
+
+## Troubleshooting
+
+| What you see | What to do |
+| --- | --- |
+| The player has no captions | The `captions-en` and `captions-am` paths have to be reachable from the host page |
+| The pipeline says the service is offline | Start `python server/app.py` on port 5050, or use Docker |
+| A provider was not called | Check the consent box. The request needs `X-LearnAble-Consent: yes`. See `docs/DATA-FLOWS.md` |
+| Translation uses a sample sentence | That is the no-key path. Unknown text is not invented |
+| You expected NLLB | Leave `HF_MT_MODEL` empty unless you accept the non-commercial licence in `NOTICE.md` |
+| The certificate check fails | The published proof is in `src/content/open-badge.json`. A changed token will not match the public key |
+| Docker cannot find the API | `docker compose up --build` from the repo root. The web container proxies `/api` to the `api` service |

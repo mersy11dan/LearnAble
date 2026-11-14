@@ -53,7 +53,7 @@ export function PipelinePage() {
       {health ? (
         <ul>
           <li>Speech model: {health.asrModel}</li>
-          <li>Translation model: {health.mtModel}</li>
+          <li>Translation model: {health.mtModel || "off until HF_MT_MODEL is set"}</li>
           <li>Image model: {health.captionModel}</li>
         </ul>
       ) : null}

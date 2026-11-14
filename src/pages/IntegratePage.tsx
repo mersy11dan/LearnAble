@@ -68,6 +68,24 @@ export function IntegratePage() {
       <p className="measure">
         One script defines the elements. The toolbar floats on the host page. The player stays inside its shadow tree, so the host stylesheet does not restyle it.
       </p>
+      <h2>Install</h2>
+      <ol>
+        <li>Install Node.js 22 and Python 3.12. No API key is required.</li>
+        <li>Clone the repo, check out this branch, then run npm install, npm test, npm run build, and npm run dev.</li>
+        <li>Open the lesson at http://127.0.0.1:5173. Captions and the sign window are already on.</li>
+        <li>For the transcript service, create a virtualenv, pip install -r server/requirements.txt, copy .env.example to .env, and run python server/app.py.</li>
+        <li>Or run docker compose up --build. The site is on port 8080 and the API is on port 5050.</li>
+      </ol>
+      <h2>API</h2>
+      <p className="measure">
+        With the service running, open <a href="http://127.0.0.1:5050/api/docs">the API notes</a>. The machine-readable spec is server/openapi.yaml. Captions, translation, speech recognition, image description, the offline pack, braille, and certificate verification are listed there. Nothing is sent to Hasab or Hugging Face until the request includes the consent header.
+      </p>
+      <h2>If it does not start</h2>
+      <ul>
+        <li>Empty captions mean the caption file paths are wrong for the host page.</li>
+        <li>A message that the service is offline means Flask is not running on port 5050.</li>
+        <li>Leave HF_MT_MODEL empty. NLLB-200 is non-commercial and off unless you opt in.</li>
+      </ul>
       <learnable-player ref={playerRef} />
       <h2>HTML</h2>
       <pre className="snippet">{htmlSnippet}</pre>
