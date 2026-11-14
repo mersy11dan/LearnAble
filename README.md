@@ -34,6 +34,21 @@ The dev server proxies `/api` to http://127.0.0.1:5050. With `.env` empty, known
 
 Rebuild the demo media (needs `espeak-ng` and `ffmpeg`) with `npm run media`.
 
+## Demo script
+
+About two and a half minutes. Start at the home page with the network on. Say the lesson is the frame: a phone, a sign gloss, English in white, Amharic in yellow.
+
+1. Click **Open the lesson**. Say the voice is a device voice so it plays with no key, and the captions are the text to trust.
+2. Select the picture and press Space. Press C so the captions switch to Amharic. Drag the caption size up and choose yellow on black.
+3. Point at the sign window. Say it is an honest placeholder, not a signer, and it already moves and resizes. Press the arrow keys on its title bar, then Larger.
+4. Turn on **Audio description**. Say it speaks what the picture is doing.
+5. Click **Larger text**, then **High contrast**, then **Stop motion**. Turn them off again so the judges see they stick and come back.
+6. Open **Download the 3G pack** from the next-step link. Say the zip is sound, text, captions, and a light page, and the video stays behind. Mention the production build also keeps the app after one visit.
+7. Open the text version. Show the picture description, then **Download English braille** and **Download Amharic braille**. Say the tagged PDF is English, and the Amharic stays on this page.
+8. Open **Jobs**. Press **Play audio summary** and say the same words are on the card, including at 200 percent zoom. Follow **Next: check a certificate** and show a matching code.
+
+If time is left, open **Session** and let the chat appear with the recording.
+
 ## Design system
 
 Tokens live in `src/styles/tokens.css`. Components use those names. Do not add a one-off color or shadow in a page.
