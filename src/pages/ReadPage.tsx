@@ -8,18 +8,20 @@ import { saveFile } from "../lib/pack";
 export function ReadPage() {
   const [message, setMessage] = useState("");
 
-  function downloadPdf() {
+  async function downloadPdf() {
+    const shipped = await fetch("/media/learnable-lesson.pdf");
+    if (shipped.ok) {
+      saveFile(new Uint8Array(await shipped.arrayBuffer()), "learnable-lesson.pdf", "application/pdf");
+      setMessage("Tagged PDF downloaded. It includes the English, the Amharic, and the picture description.");
+      return;
+    }
     const pdf = buildTaggedPdf({
       title: demoLesson.title,
-      paragraphs: [
-        ...demoLesson.segments.map((segment) => segment.en),
-        "Amharic text is in the HTML page. This PDF uses Helvetica, which has no Ethiopic letters, so those sentences are not pasted here as question marks.",
-        demoLesson.figure.long,
-      ],
+      paragraphs: [...demoLesson.segments.map((segment) => segment.en), demoLesson.figure.long],
       figureAlt: demoLesson.figure.alt,
     });
     saveFile(pdf, "learnable-lesson.pdf", "application/pdf");
-    setMessage("Tagged PDF downloaded. The text version on this page carries the Amharic.");
+    setMessage("Tagged PDF downloaded. Amharic is on this page. The fallback file has the English and the picture description.");
   }
 
   function downloadBrf(language: "en" | "am") {
@@ -69,9 +71,9 @@ export function ReadPage() {
       </div>
       {message ? <p role="status">{message}</p> : null}
       <p className="measure">
-        The PDF has a document title, language, heading, paragraphs, and a figure with a text alternative. Amharic
-        stays in this HTML page because the PDF font cannot draw Ethiopic letters. The braille files are uncontracted
-        grade 1, in Braille ASCII (.brf).
+        The PDF has a document title, marked structure, a figure with a text alternative, English in Helvetica, and
+        Amharic in Noto Sans Ethiopic. This page has the same words and the same picture description. The braille
+        files are uncontracted grade 1, in Braille ASCII (.brf).
       </p>
     </div>
   );

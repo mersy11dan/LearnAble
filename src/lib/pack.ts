@@ -9,6 +9,7 @@ const PACK_FILES = [
   "captions-am.vtt",
   "descriptions.vtt",
   "lesson-figure.svg",
+  "lesson.pdf",
 ];
 
 export async function buildOfflinePack(english: string, amharic: string): Promise<Uint8Array> {

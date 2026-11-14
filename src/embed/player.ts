@@ -331,6 +331,12 @@ export class LearnAblePlayer extends HTMLElement {
       this.setStatus("Braille file downloaded.");
     }
     if (action === "pdf") {
+      const shipped = await fetch("/media/learnable-lesson.pdf");
+      if (shipped.ok) {
+        saveFile(new Uint8Array(await shipped.arrayBuffer()), "learnable-lesson.pdf", "application/pdf");
+        this.setStatus("Tagged PDF downloaded, with Amharic and the picture description.");
+        return;
+      }
       const pdf = buildTaggedPdf({
         title: "LearnAble lesson",
         paragraphs: this.en.map((cue) => cue.text),

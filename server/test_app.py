@@ -92,6 +92,19 @@ def test_published_badge_verifies(client):
     assert body["learner"] == "Hana Bekele"
 
 
+def test_tagged_pdf_embeds_amharic_and_alt_text():
+    from pypdf import PdfReader
+    from tagged_pdf import build_lesson_pdf
+
+    payload = build_lesson_pdf()
+    assert b"/StructTreeRoot" in payload
+    assert b"/ToUnicode" in payload
+    assert b"A navy phone on a paper background" in payload
+    text = PdfReader(BytesIO(payload)).pages[0].extract_text()
+    assert "ሃና" in text
+    assert "Hana opens her lesson" in text
+
+
 def test_openapi_lists_the_pipeline(client):
     spec = client.get("/api/openapi.yaml").get_data(as_text=True)
     assert "/api/translate" in spec
