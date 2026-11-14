@@ -229,12 +229,81 @@ button:disabled, .button[aria-disabled="true"] {
 
 .opening {
   display: grid;
-  grid-template-columns: minmax(0, 1.25fr) minmax(16rem, 0.75fr);
+  grid-template-columns: minmax(0, 1.15fr) minmax(18rem, 0.85fr);
   gap: var(--space-6);
-  align-items: end;
+  align-items: stretch;
   width: min(var(--page), calc(100% - var(--space-5)));
-  margin: var(--space-6) auto var(--space-5);
+  margin: var(--space-6) auto var(--space-6);
 }
+.preview {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--color-stage);
+  color: var(--color-paper);
+  min-height: 26rem;
+}
+.preview-stage {
+  flex: 1;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: var(--space-5);
+  padding: var(--space-5) var(--space-5) var(--space-4);
+}
+.preview-phone {
+  width: 7.25rem;
+  height: 12.5rem;
+  border: 3px solid var(--color-navy-ink);
+  background: var(--color-paper);
+  position: relative;
+}
+.preview-phone::before {
+  content: "";
+  position: absolute;
+  left: 0.55rem;
+  right: 0.55rem;
+  top: 0.7rem;
+  bottom: 2.1rem;
+  border: 2px solid var(--color-navy);
+}
+.preview-phone::after {
+  content: "";
+  position: absolute;
+  left: 0.55rem;
+  right: 0.55rem;
+  bottom: 0.7rem;
+  height: var(--bar-height);
+  background: var(--color-caption);
+  box-shadow: 0 calc(var(--bar-height) * -1.6) 0 var(--color-stage);
+}
+.preview-sign {
+  justify-self: start;
+  width: min(100%, 16rem);
+  background: var(--color-paper);
+  color: var(--color-ink);
+  border: 3px solid var(--color-moss);
+  box-shadow: var(--elevation-float);
+  padding: var(--space-3);
+}
+.preview-sign span { display: block; }
+.preview-sign strong {
+  display: block;
+  margin-top: var(--space-2);
+  font-family: var(--font-display);
+  font-size: var(--text-xl);
+  letter-spacing: var(--tracking-display);
+}
+.preview-captions {
+  padding: var(--space-3) var(--space-4) var(--space-4);
+  border-top: var(--bar-height) solid var(--color-caption);
+}
+.preview-captions p {
+  margin: 0;
+  font-size: var(--text-lg);
+  line-height: var(--leading-ui);
+}
+.preview-captions p + p { margin-top: var(--space-2); color: var(--color-caption); }
 
 .frame {
   margin: 0;
@@ -550,6 +619,9 @@ code { font-family: var(--font-text); }
   .toggles { margin-left: 0; }
   .opening, .transcript-layout, .session-grid { grid-template-columns: 1fr; }
   .opening { margin-top: var(--space-5); gap: var(--space-5); }
+  .preview { min-height: 0; }
+  .preview-stage { padding: var(--space-4); gap: var(--space-4); }
+  .preview-phone { width: 5.5rem; height: 9.5rem; }
   .route-line { flex-direction: column; align-items: flex-start; gap: var(--space-2); }
   .sign-window {
     position: relative !important;

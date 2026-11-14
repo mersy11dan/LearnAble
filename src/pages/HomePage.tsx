@@ -5,14 +5,15 @@ export function HomePage() {
   const first = demoLesson.segments[0];
   return (
     <section className="opening">
-      <figure className="frame">
-        <img
-          src={demoLesson.video.poster}
-          width={1280}
-          height={720}
-          alt="A drawn phone on paper, the first frame of the lesson."
-        />
-        <figcaption>
+      <figure className="preview">
+        <div className="preview-stage" aria-hidden="true">
+          <div className="preview-phone" />
+          <div className="preview-sign">
+            <span>Ethiopian Sign Language</span>
+            <strong>{first.gloss}</strong>
+          </div>
+        </div>
+        <figcaption className="preview-captions">
           <p lang="en">{first.en}</p>
           <p lang="am">{first.am}</p>
         </figcaption>
@@ -20,8 +21,8 @@ export function HomePage() {
       <div className="opening-copy">
         <h1>{demoLesson.title}</h1>
         <p>
-          The caption under that frame is the lesson. English, Amharic, a sign window, and a spoken description of the
-          picture. The sound and the text can leave with you.
+          English under the picture, Amharic in yellow, and the sign gloss beside the phone. Open the lesson to play it,
+          resize the captions, and keep a copy for a slow connection.
         </p>
         <p className="actions">
           <Link className="button" to="/lesson/slow-connection">
