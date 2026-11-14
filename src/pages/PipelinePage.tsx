@@ -42,6 +42,7 @@ export function PipelinePage() {
       <p className="measure">
         When a key is set, this service can call Hasab or Hugging Face. With no key, a known lesson sentence returns
         its paired caption and is marked as a sample. Other sentences are left untranslated rather than invented.
+        A picture description is for a lesson image. It is not a guide for walking.
       </p>
       <p className={health === null ? "notice notice-error" : "notice notice-wait"} role="status">
         {health === undefined

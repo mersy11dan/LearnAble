@@ -15,9 +15,11 @@ export function CareersPage() {
       {jobs.map((job) => (
         <article key={job.id} className="job">
           <h2>{job.title}</h2>
+          <p lang="am">{job.titleAm}</p>
           <p>
             {job.org}, {job.place}, {job.time}
           </p>
+          <p>{job.access}</p>
           <p id={`${job.id}-summary`}>{job.summary}</p>
           <div className="actions">
             <button type="button" onClick={() => speak(job.summary, "en")}>

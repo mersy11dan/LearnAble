@@ -65,8 +65,8 @@ describe("pages", () => {
 
   it("keeps the job summary in the page, next to the audio control", async () => {
     const { container } = renderAt("/careers");
-    expect(screen.getByRole("button", { name: "Play audio summary" })).toBeInTheDocument();
-    expect(screen.getByText(/fictional demo/i)).toBeInTheDocument();
+    expect(screen.getAllByRole("button", { name: "Play audio summary" }).length).toBeGreaterThan(1);
+    expect(screen.getAllByText(/fictional demo/i).length).toBeGreaterThan(1);
     await expectClean(container);
   });
 });

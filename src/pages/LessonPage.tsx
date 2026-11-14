@@ -26,6 +26,10 @@ export function LessonPage() {
       <Breadcrumbs items={[{ to: "/", label: "LearnAble" }, { label: "Lesson" }]} />
       <h1>{demoLesson.title}</h1>
       <p className="measure">{demoLesson.voiceNote}</p>
+      <p className="measure">
+        The sign window is a placeholder for a recorded interpreter. A Deaf teacher still owns the language. A short
+        list of signs is a helper, and it does not replace that teacher.
+      </p>
       <p className="actions">
         <a href="#player">Skip to player</a>
         <Link to={`/lesson/${demoLesson.id}/read`}>Read the text version</Link>
