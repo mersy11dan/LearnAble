@@ -105,7 +105,7 @@ for (const [path, name] of pages) {
   for (const size of sizes) {
     const plain = await browser.newContext();
     const beforePage = await plain.newPage({ viewport: { width: size.width, height: size.height } });
-    await beforePage.goto(base + path, { waitUntil: "domcontentloaded", timeout: 60000 });
+    await beforePage.goto(base + path, { waitUntil: "load", timeout: 60000 });
     await beforePage.evaluate((zoom) => { document.documentElement.style.zoom = zoom; }, size.zoom);
     const before = await audit(beforePage);
     await plain.close();
@@ -113,7 +113,7 @@ for (const [path, name] of pages) {
     const withScript = await browser.newContext();
     await withScript.addInitScript(stubSpeech);
     const afterPage = await withScript.newPage({ viewport: { width: size.width, height: size.height } });
-    await afterPage.goto(base + path, { waitUntil: "domcontentloaded", timeout: 60000 });
+    await afterPage.goto(base + path, { waitUntil: "load", timeout: 60000 });
     await afterPage.addScriptTag({ url: `${base}/learnable/learnable.js` });
     await afterPage.locator("learnable-toolbar").waitFor({ timeout: 15000 });
     await afterPage.evaluate((zoom) => { document.documentElement.style.zoom = zoom; }, size.zoom);

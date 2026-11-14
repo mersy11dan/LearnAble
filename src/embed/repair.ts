@@ -26,14 +26,34 @@ function insideWidget(element: Element): boolean {
   return Boolean(element.closest("learnable-player, learnable-toolbar, .learnable-gateway"));
 }
 
+function readable(text: string): boolean {
+  return /[\p{L}\p{N}]/u.test(text);
+}
+
+function visibleText(element: Element): string {
+  const parts: string[] = [];
+  const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
+  while (walker.nextNode()) {
+    const parent = walker.currentNode.parentElement;
+    if (!parent) continue;
+    const style = getComputedStyle(parent);
+    if (style.display === "none" || style.visibility === "hidden") continue;
+    parts.push(walker.currentNode.textContent || "");
+  }
+  return parts.join(" ").replace(/\s+/g, " ").trim();
+}
+
 export function repairNames(): void {
   document.querySelectorAll("a, button, [role='button']").forEach((element) => {
-    if (insideWidget(element) || nameOf(element)) return;
+    if (insideWidget(element) || element.getAttribute("aria-label") || element.getAttribute("aria-labelledby")) return;
+    const alt = element.querySelector("img[alt]")?.getAttribute("alt")?.trim() || "";
+    if (readable(visibleText(element)) || readable(alt)) return;
     const title = element.getAttribute("title")?.trim();
     const href = element.getAttribute("href") || "";
     const home = href === "/" || href === "#/" || /(^|\/)home\/?$/.test(href);
-    const fallback = home ? "Home" : element.tagName === "A" ? "Link" : "Button";
-    element.setAttribute("aria-label", title || fallback);
+    const citation = /cite_|#cite|reference/i.test(href);
+    const fallback = citation ? "Back to reference" : home ? "Home" : element.tagName === "A" ? "Link" : "Button";
+    element.setAttribute("aria-label", (title && readable(title) ? title : "") || fallback);
     element.setAttribute(REPAIR_ATTR, "name");
   });
 
@@ -192,7 +212,7 @@ export function clearContrastPaints(): void {
 
 export function repairContrast(): void {
   if (document.documentElement.dataset.learnableContrast === "on") return;
-    document.querySelectorAll("a, button, span, p, h1, h2, h3, h4, li, label, div, td, th, code, small, strong, b, em").forEach((element) => {
+    document.querySelectorAll("a, button, span, p, h1, h2, h3, h4, h5, h6, li, label, div, td, th, code, small, strong, b, em, i, u, abbr, acronym, font, cite, sup, sub").forEach((element) => {
     if (insideWidget(element) || element.getAttribute(REPAIR_ATTR) === "contrast") return;
     const direct = [...element.childNodes].some((node) => node.nodeType === Node.TEXT_NODE && node.textContent?.trim());
     if (!direct || element.getClientRects().length === 0) return;
@@ -252,6 +272,22 @@ export function repairOutline(): void {
   }
 }
 
+export function repairLanguage(): void {
+  const root = document.documentElement;
+  if (root.lang || root.getAttribute("xml:lang")) return;
+  const bodyLang = document.body?.getAttribute("lang") || document.body?.getAttribute("xml:lang") || "";
+  const meta = document.querySelector('meta[http-equiv="content-language" i], meta[name="language" i], meta[property="og:locale" i]');
+  const metaLang = meta?.getAttribute("content") || "";
+  const lang = (bodyLang || metaLang).split(/[,;]/)[0]?.trim().replace("_", "-");
+  if (!lang) return;
+  root.lang = lang;
+  root.dataset.learnableLangAdded = "true";
+}
+
+export function repairInlineLinks(): void {
+  document.documentElement.dataset.learnableLinkCue = "on";
+}
+
 export function clearRepairs(): void {
   document.querySelectorAll<HTMLElement>("[data-learnable-repair]").forEach((element) => {
     const kind = element.getAttribute(REPAIR_ATTR);
@@ -269,21 +305,35 @@ export function clearRepairs(): void {
     element.removeAttribute(REPAIR_ATTR);
   });
   document.querySelectorAll(".learnable-skip, .learnable-alt-note, #learnable-gateway").forEach((node) => node.remove());
+  const root = document.documentElement;
+  if (root.dataset.learnableLangAdded === "true") {
+    root.removeAttribute("lang");
+    delete root.dataset.learnableLangAdded;
+  }
+  delete root.dataset.learnableLinkCue;
 }
 
 export function repairHost(): void {
+  if (document.readyState !== "complete" && document.documentElement.dataset.learnableRepairLoad !== "true") {
+    document.documentElement.dataset.learnableRepairLoad = "true";
+    window.addEventListener("load", () => repairHost(), { once: true });
+  }
   if (window.matchMedia?.("(forced-colors: active)").matches) {
+  repairLanguage();
   repairImages();
   repairNames();
   repairAria();
   repairLists();
   repairOutline();
+  repairInlineLinks();
   return;
   }
+  repairLanguage();
   repairImages();
   repairNames();
   repairAria();
   repairLists();
   repairOutline();
+  repairInlineLinks();
   repairContrast();
 }

@@ -63,6 +63,10 @@ html { scroll-padding-top: 5rem; scroll-padding-bottom: 7rem; }
   outline: 3px solid #0b3d91; outline-offset: 2px; background: #ffee00; color: #172033;
 }
 #learnable-reader-live { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+html[data-learnable-link-cue="on"] :is(p, li, td, th, dd, dt, figcaption, blockquote, caption, div, span):not(:is(nav, header, footer, [role="navigation"], [role="banner"], [role="contentinfo"], [role="menubar"]) *) a[href]:not([role="button"]):not([class*="btn"]):not([class*="button"]) {
+  text-decoration-line: underline !important;
+  text-underline-offset: 0.12em;
+}
 html[data-learnable-text="large"] { font-size: 112.5%; }
 ${paint}
 html[data-learnable-motion="reduce"] *,
