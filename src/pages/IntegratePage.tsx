@@ -66,8 +66,15 @@ export function IntegratePage() {
       <Breadcrumbs items={[{ to: "/", label: "LearnAble" }, { label: "Embed" }]} />
       <h1>Add LearnAble to a page you already have</h1>
       <p className="measure">
-        One script defines the elements. The toolbar floats on the host page. The player stays inside its shadow tree, so the host stylesheet does not restyle it.
+        One script on a Savanna page turns on enhance mode. The toolbar sits on that page, and a plain video in the lesson is upgraded in place. Captions, the sign window, the pack, braille, and the text file are built in the browser when no API is running.
       </p>
+      <h2>Whole page</h2>
+      <pre className="snippet">{`<script src="/learnable/learnable.js" defer data-learnable-enhance="true"></script>
+<video controls playsinline src="/media/lesson-en.mp4"
+  data-learnable-captions-en="/media/captions-en.vtt"
+  data-learnable-captions-am="/media/captions-am.vtt"
+  data-learnable-sign="/media/esl-placeholder.mp4"
+  data-learnable-describe="/media/descriptions.vtt"></video>`}</pre>
       <h2>Install</h2>
       <ol>
         <li>Install Node.js 22 and Python 3.12. No API key is required.</li>

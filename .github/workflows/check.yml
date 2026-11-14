@@ -29,5 +29,6 @@ jobs:
             sleep 1
           done
           node scripts/axe-routes.mjs
+          node scripts/e2e-static.mjs
         env:
           CHROME_PATH: /usr/bin/google-chrome

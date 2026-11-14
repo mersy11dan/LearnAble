@@ -6,9 +6,7 @@
 -->
 <html lang="en">
   <head>
-
-<base href="/reference/savanna/pages/">
-<script src="/learnable.js" defer></script>
+    <script src="/learnable/learnable.js" defer data-learnable-enhance="true"></script>
 
     <style class="vjs-styles-defaults">
       .video-js {
@@ -540,6 +538,31 @@
             <h1 class="d-flex flex-column gap-2">
               <span>The Future of the VA Industry</span>
             </h1>
+
+            <figure class="mb-4">
+              <video
+                controls
+                playsinline
+                preload="metadata"
+                poster="/media/poster.png"
+                src="/media/lesson-en.mp4"
+                data-learnable-captions-en="/media/captions-en.vtt"
+                data-learnable-captions-am="/media/captions-am.vtt"
+                data-learnable-sign="/media/esl-placeholder.mp4"
+                data-learnable-describe="/media/descriptions.vtt"
+                data-learnable-audio-en="/media/lesson-en.wav"
+                data-learnable-audio-am="/media/lesson-am.wav"
+                data-learnable-offline
+                data-learnable-braille
+                data-learnable-docs
+                style="width: 100%; max-width: 40rem; background: #111"
+              >
+                <track kind="captions" src="/media/captions-en.vtt" srclang="en" label="English" default />
+                <track kind="captions" src="/media/captions-am.vtt" srclang="am" label="Amharic" />
+              </video>
+              <figcaption>A short lesson on captions, a sign window, and a slow connection.</figcaption>
+            </figure>
+
 
             <div class="align-items-center d-flex flex-wrap gap-2 justify-content-between">
               <div class="d-flex gap-1"></div>
@@ -1292,8 +1315,5 @@ alert(example);
     <script src="../assets/js/popper.js"></script>
     <script src="../assets/js/bootstrap.bundle.js"></script>
     <script src="../assets/js/static-page.js"></script>
-  
-<learnable-player src="/media/lesson-en.mp4" captions-en="/media/captions-en.vtt" captions-am="/media/captions-am.vtt" sign="/media/esl-placeholder.mp4" describe="/media/descriptions.vtt" offline braille docs></learnable-player>
-
-</body>
+  </body>
 </html>

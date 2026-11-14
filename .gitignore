@@ -1,5 +1,6 @@
 node_modules
-dist
+dist/*
+!dist/learnable.js
 .env
 .venv
 __pycache__
