@@ -26,27 +26,18 @@ export const widgetCss = `
   --color-paper: #1b3048;
   --color-ink: #f7f4ee;
 }
-:host([contrast="high"]) {
-  --color-paper: #000;
-  --color-ink: #fff;
-  --color-navy: #000;
-  --color-navy-ink: #fff;
-  --color-line: #fff;
-  --color-focus: #ffee00;
-  --color-caption: #ffee00;
-  --color-stage: #000;
-  --color-muted: #fff;
-}
-:host-context(html[data-learnable-contrast="high"]) {
-  --color-paper: #000;
-  --color-ink: #fff;
-  --color-navy: #000;
-  --color-navy-ink: #fff;
-  --color-line: #fff;
-  --color-focus: #ffee00;
-  --color-caption: #ffee00;
-  --color-stage: #000;
-  --color-muted: #fff;
+:host([contrast="high"]),
+:host-context(html[data-learnable-contrast="on"]) {
+  --color-paper: var(--la-hc-bg, #121212);
+  --color-ink: var(--la-hc-fg, #f2f2f2);
+  --color-navy: var(--la-hc-bg, #121212);
+  --color-navy-ink: var(--la-hc-fg, #f2f2f2);
+  --color-line: var(--la-hc-fg, #f2f2f2);
+  --color-moss: var(--la-hc-fg, #f2f2f2);
+  --color-focus: var(--la-hc-focus, #ffe14a);
+  --color-caption: var(--la-hc-focus, #ffe14a);
+  --color-stage: var(--la-hc-bg, #121212);
+  --color-muted: var(--la-hc-fg, #f2f2f2);
 }
 * { box-sizing: border-box; }
 :focus-visible { outline: var(--focus-width) solid var(--color-focus); outline-offset: 3px; }
@@ -60,9 +51,9 @@ button {
   box-shadow: inset 0 calc(var(--bar-height) * -1) 0 var(--color-caption);
   cursor: pointer;
 }
-button[aria-pressed="true"] { background: var(--color-ink); }
+button[aria-pressed="true"] { background: var(--color-ink); color: var(--color-paper); }
 .media-row { display: grid; grid-template-columns: minmax(0, 1fr) 0.5rem var(--sign-col, 16rem); gap: 0.5rem; align-items: start; }
-.sign-grip { cursor: col-resize; background: var(--color-moss); min-height: 2.75rem; }
+.sign-grip { cursor: col-resize; background: var(--color-moss); color: var(--color-paper); min-height: 2.75rem; }
 @media (max-width: 52rem) {
   .media-row { grid-template-columns: 1fr; }
   .sign-grip { display: none; }
@@ -89,7 +80,9 @@ video[data-fallback][hidden] { display: none; }
 .gloss { font-family: var(--font-display); font-size: 1.6rem; }
 .mark { display: block; width: 2.5rem; height: 1.1rem; border: 2px solid var(--color-navy); box-shadow: 0 var(--bar-height) 0 var(--color-caption); margin-bottom: 0.4rem; }
 label { display: flex; flex-direction: column; gap: 0.2rem; min-width: 8rem; }
+select, input, textarea { color: var(--color-ink); background-color: var(--color-paper); }
 input[type="range"] { width: 100%; min-height: 2.75rem; }
+section { background: var(--color-paper); color: var(--color-ink); }
 .bar {
   position: fixed; z-index: 2147483000; top: auto; bottom: 0.5rem; left: 0.5rem; right: auto;
   background: var(--color-navy); color: var(--color-navy-ink); padding: 0.6rem;

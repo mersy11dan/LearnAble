@@ -259,7 +259,7 @@ export class LearnAblePlayer extends HTMLElement {
   private applySettings(): void {
     const settings = getSettings();
     this.mode = settings.lang;
-    if (settings.highContrast) this.setAttribute("contrast", "high");
+    if (settings.contrastMode !== "off" || settings.highContrast) this.setAttribute("contrast", "high");
     else this.removeAttribute("contrast");
     this.setAttribute("theme", getTheme());
     const preset = this.root.querySelector<HTMLSelectElement>("[data-act=preset]");

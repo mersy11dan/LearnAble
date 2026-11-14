@@ -11,7 +11,7 @@ function hostCss(settings: WidgetSettings): string {
     ? `
 html[data-learnable-contrast="on"] { --la-hc-bg: ${theme.bg}; --la-hc-fg: ${theme.fg}; --la-hc-focus: ${theme.focus}; }
 html[data-learnable-contrast="on"] body,
-html[data-learnable-contrast="on"] body *:not(img):not(video):not(svg):not(canvas):not(iframe) {
+html[data-learnable-contrast="on"] body *:not(img):not(video):not(svg):not(canvas):not(iframe):not(learnable-player):not(learnable-player *):not(learnable-toolbar):not(learnable-toolbar *) {
   background-color: var(--la-hc-bg) !important;
   color: var(--la-hc-fg) !important;
   border-color: var(--la-hc-fg) !important;
