@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest";
+import { upgradeMedia } from "./enhance";
 import LearnAble, { init, reset } from "./index";
 
 afterEach(() => {
@@ -11,7 +12,7 @@ describe("LearnAble embed", () => {
   it("registers the custom elements and the global API", () => {
     expect(customElements.get("learnable-player")).toBeTruthy();
     expect(customElements.get("learnable-toolbar")).toBeTruthy();
-    expect(window.LearnAble?.version).toBe("0.2.0");
+    expect(window.LearnAble?.version).toBe("0.3.0");
     expect(LearnAble.init).toBe(init);
   });
 
@@ -34,6 +35,18 @@ describe("LearnAble embed", () => {
     expect(document.documentElement.dataset.learnableText).toBe("large");
     const saved = JSON.parse(localStorage.getItem("learnable-widget") || "{}") as { largeText?: boolean };
     expect(saved.largeText).toBe(true);
+  });
+
+  it("upgrades a host video in place", () => {
+    const video = document.createElement("video");
+    video.setAttribute("src", "/media/lesson-en.mp4");
+    video.setAttribute("data-learnable-captions-en", "/media/captions-en.vtt");
+    document.body.append(video);
+    upgradeMedia();
+    const player = document.querySelector("learnable-player");
+    expect(player?.contains(video)).toBe(true);
+    expect(player?.getAttribute("captions-en")).toBe("/media/captions-en.vtt");
+    expect(player?.shadowRoot?.querySelector("[data-act=pack]")).toBeTruthy();
   });
 
   it("does not mount a toolbar when the host turns it off", () => {

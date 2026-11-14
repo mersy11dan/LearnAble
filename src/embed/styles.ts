@@ -69,10 +69,15 @@ video { width: 100%; height: 100%; display: block; background: var(--color-stage
 }
 .row { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; padding: 0.6rem 0; }
 .status { color: var(--color-muted); margin: 0.25rem 0; }
-.sign {
+.sign { max-width: 100%;
   margin-top: 0.6rem; border: 3px solid var(--color-moss); background: var(--color-paper); color: var(--color-ink);
 }
-.sign h2 { font-family: var(--font-display); font-size: 1.1rem; margin: 0; padding: 0.5rem 0.75rem; background: var(--color-navy); color: var(--color-navy-ink); }
+.sign h2 { font-family: var(--font-display); font-size: 1.1rem; margin: 0; padding: 0.5rem 0.75rem; background: var(--color-navy); color: var(--color-navy-ink); cursor: grab; touch-action: none; }
+.sign video { width: 100%; max-height: 9rem; background: var(--color-stage); object-fit: contain; }
+video[data-fallback][hidden] { display: none; }
+.chat { margin: 0.5rem 0; padding-left: 1.2rem; }
+.bar .status, .bar .consent { color: inherit; }
+.bar select { min-height: 2.75rem; color: var(--color-ink); background: var(--color-paper); }
 .sign p { margin: 0.5rem 0.75rem; }
 .gloss { font-family: var(--font-display); font-size: 1.6rem; }
 .mark { display: block; width: 2.5rem; height: 1.1rem; border: 2px solid var(--color-navy); box-shadow: 0 var(--bar-height) 0 var(--color-caption); margin-bottom: 0.4rem; }

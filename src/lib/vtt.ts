@@ -54,6 +54,20 @@ export function parseVtt(source: string): Cue[] {
   return cues;
 }
 
+function stamp(seconds: number): string {
+  const total = Math.max(0, Math.round(seconds * 1000));
+  const hours = Math.floor(total / 3_600_000);
+  const minutes = Math.floor((total % 3_600_000) / 60_000);
+  const secs = Math.floor((total % 60_000) / 1000);
+  const millis = total % 1000;
+  return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}:${String(secs).padStart(2, "0")}.${String(millis).padStart(3, "0")}`;
+}
+
+export function cuesToVtt(cues: Cue[]): string {
+  const body = cues.map((cue) => `${stamp(cue.start)} --> ${stamp(cue.end)}\n${cue.text}`).join("\n\n");
+  return `WEBVTT\n\n${body}\n`;
+}
+
 export function cueAt<T extends { start: number; end: number }>(items: T[], time: number): T | undefined {
   const found = items.find((item) => time >= item.start && time < item.end);
   if (found) return found;

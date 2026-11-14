@@ -1,5 +1,8 @@
+import { rememberScript, setAssetBase } from "./assets";
+import { runEnhance } from "./enhance";
 import { applyHost, clearHost } from "./host";
 import { LearnAblePlayer } from "./player";
+import { enhancePart, type LearnAbleConfig } from "./settings";
 import { LearnAbleToolbar } from "./toolbar";
 import {
   configure,
@@ -8,9 +11,10 @@ import {
   loadSettings,
   resetSettings,
   updateSettings,
-  type LearnAbleConfig,
   type WidgetSettings,
 } from "./settings";
+
+rememberScript(document.currentScript instanceof HTMLScriptElement ? document.currentScript : null);
 
 export type { LearnAbleConfig, WidgetSettings };
 
@@ -22,8 +26,21 @@ function defineElements(): void {
   if (!customElements.get("learnable-toolbar")) customElements.define("learnable-toolbar", LearnAbleToolbar);
 }
 
+function scriptConfig(): LearnAbleConfig {
+  const script = document.querySelector("script[src*='learnable']");
+  const attr = script?.getAttribute("data-learnable-enhance");
+  const root = document.documentElement.dataset.learnableEnhance;
+  const lang = script?.getAttribute("data-learnable-lang");
+  const off = root === "off" || attr === "false" || attr === "off";
+  return {
+    enhance: off ? false : true,
+    lang: lang === "am" || lang === "en" ? lang : undefined,
+    assetBase: script?.getAttribute("data-learnable-base") || undefined,
+  };
+}
+
 function mountToolbar(): void {
-  if (!getFeatures().toolbar || document.documentElement.dataset.learnableToolbar === "page") {
+  if (!enhancePart("toolbar") || !getFeatures().toolbar || document.documentElement.dataset.learnableToolbar === "page") {
     autoToolbar?.remove();
     autoToolbar = null;
     return;
@@ -34,26 +51,30 @@ function mountToolbar(): void {
   document.body?.append(autoToolbar);
 }
 
-export function boot(): void {
-  defineElements();
-  const settings = loadSettings();
-  updateSettings(settings);
-  applyHost(getSettings());
-  mountToolbar();
-  booted = true;
-  window.dispatchEvent(new CustomEvent("learnable-ready", { detail: { settings: getSettings(), features: getFeatures() } }));
-}
-
-export function init(config: LearnAbleConfig = {}): typeof api {
-  configure(config);
+function startup(extra: LearnAbleConfig = {}): void {
+  const fromScript = scriptConfig();
+  const enhance = extra.enhance !== undefined ? extra.enhance : fromScript.enhance;
+  configure({ ...fromScript, ...extra, enhance });
+  setAssetBase(extra.assetBase || fromScript.assetBase);
   defineElements();
   applyHost(getSettings());
   mountToolbar();
+  if (enhance !== false) runEnhance();
   document.querySelectorAll("learnable-player").forEach((element) => {
     if (element instanceof LearnAblePlayer) element.refresh();
   });
   booted = true;
   window.dispatchEvent(new CustomEvent("learnable-ready", { detail: { settings: getSettings(), features: getFeatures() } }));
+}
+
+export function boot(): void {
+  const settings = loadSettings();
+  updateSettings(settings);
+  startup();
+}
+
+export function init(config: LearnAbleConfig = {}): typeof api {
+  startup(config);
   return api;
 }
 
@@ -75,7 +96,7 @@ const api = {
     return next;
   },
   getFeatures,
-  version: "0.2.0",
+  version: "0.3.0",
 };
 
 declare global {

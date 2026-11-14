@@ -1,8 +1,19 @@
 export type CaptionPreset = "white" | "yellow" | "black" | "cyan";
 export type Lang = "en" | "am";
 
+export type EnhanceFlag = boolean | {
+  toolbar?: boolean;
+  media?: boolean;
+  skip?: boolean;
+  landmarks?: boolean;
+  keyboard?: boolean;
+  images?: boolean;
+  read?: boolean;
+};
+
 export type WidgetSettings = {
   lang: Lang;
+  uiLang: Lang;
   largeText: boolean;
   highContrast: boolean;
   stopMotion: boolean;
@@ -21,8 +32,11 @@ export type FeatureFlags = {
 
 export type LearnAbleConfig = {
   lang?: Lang;
+  uiLang?: Lang;
   theme?: "paper" | "navy";
   features?: Partial<FeatureFlags>;
+  enhance?: EnhanceFlag;
+  assetBase?: string;
 };
 
 export const PRESETS: Record<CaptionPreset, { label: string; fg: string; bg: string }> = {
@@ -45,6 +59,7 @@ export const defaultFeatures = (): FeatureFlags => ({
 
 export const defaultSettings = (): WidgetSettings => ({
   lang: "en",
+  uiLang: "en",
   largeText: false,
   highContrast: false,
   stopMotion: false,
@@ -55,6 +70,17 @@ export const defaultSettings = (): WidgetSettings => ({
 let features = defaultFeatures();
 let settings = defaultSettings();
 let themeName: "paper" | "navy" = "paper";
+let enhance: EnhanceFlag = true;
+
+export function getEnhance(): EnhanceFlag {
+  return enhance;
+}
+
+export function enhancePart(part: "toolbar" | "media" | "skip" | "landmarks" | "keyboard" | "images" | "read"): boolean {
+  if (enhance === false) return false;
+  if (enhance === true) return true;
+  return enhance[part] !== false;
+}
 
 function prefersReduce(): boolean {
   try {
@@ -71,7 +97,9 @@ export function loadSettings(): WidgetSettings {
     const saved = localStorage.getItem(KEY);
     if (!saved) return base;
     const parsed = JSON.parse(saved) as Partial<WidgetSettings>;
-    return { ...base, ...parsed, lang: parsed.lang === "am" ? "am" : parsed.lang === "en" ? "en" : base.lang };
+    const lang = parsed.lang === "am" ? "am" : parsed.lang === "en" ? "en" : base.lang;
+    const uiLang = parsed.uiLang === "am" ? "am" : parsed.uiLang === "en" ? "en" : base.uiLang;
+    return { ...base, ...parsed, lang, uiLang };
   } catch {
     return base;
   }
@@ -104,8 +132,13 @@ export function updateSettings(partial: Partial<WidgetSettings>): WidgetSettings
 export function configure(config: LearnAbleConfig = {}): void {
   features = { ...defaultFeatures(), ...config.features };
   if (config.theme) themeName = config.theme;
+  if (config.enhance !== undefined) enhance = config.enhance;
   const stored = loadSettings();
-  settings = { ...stored, lang: config.lang ?? stored.lang };
+  settings = {
+    ...stored,
+    lang: config.lang ?? stored.lang,
+    uiLang: config.uiLang ?? stored.uiLang,
+  };
   saveSettings(settings);
 }
 
