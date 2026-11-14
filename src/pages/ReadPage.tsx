@@ -54,7 +54,7 @@ export function ReadPage() {
             <h2 lang="en">{segment.en}</h2>
             <p lang="am">{segment.am}</p>
             <p>Picture: {segment.ad}</p>
-            <p>ASL gloss (English → ASL), not Ethiopian Sign Language: {segment.gloss}</p>
+            <p>Corrected by hand. ASL gloss (English → ASL), not Ethiopian Sign Language: {segment.gloss}</p>
           </section>
         ))}
       </article>

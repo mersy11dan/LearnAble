@@ -187,7 +187,13 @@ const amharic = (await spoken(page)).filter((item) => item.type === "speak").fin
 if (!amharic || !amharic.text.includes("የንዑስ")) throw new Error(`Amharic speech ${JSON.stringify(amharic)}`);
 
 await page.evaluate(() => {
-  const button = document.querySelector("learnable-toolbar")?.shadowRoot?.querySelector("[data-act=voice]");
+  const root = document.querySelector("learnable-toolbar")?.shadowRoot;
+  const dock = root?.querySelector(".dock");
+  const launcher = root?.querySelector("[data-act=launcher]");
+  if (dock) dock.hidden = false;
+  if (launcher) launcher.hidden = true;
+  const button = root?.querySelector("[data-act=voice]");
+  button?.getBoundingClientRect();
   document.dispatchEvent(new KeyboardEvent("keydown", { key: "Tab", bubbles: true, cancelable: true }));
   button?.focus();
 });

@@ -11,13 +11,16 @@ afterEach(() => {
 });
 
 describe("ASL gloss panel", () => {
-  it("uses the precomputed model line for an English lesson caption", () => {
+  it("uses the hand-corrected line for lookup and keeps the model line", () => {
     const panel = signPanel("Hana opens her lesson on a phone in Addis Ababa.", "en");
     expect(panel.source).toBe("precomputed");
-    expect(panel.gloss).toBe("HANA DESC-OPEN X-SHE LESSON ON PHONE IN ADDUS ABRAHAM .");
-    expect(panel.note).toContain("Suyash2205/signbridge-t5-base-asl-gloss");
+    expect(panel.gloss).toBe("fs-ADDIS fs-ABABA, HANA IX-3 PHONE LESSON OPEN");
+    expect(panel.model).toContain("ADDUS ABRAHAM");
+    expect(panel.note).toContain("Corrected by hand");
+    expect(panel.spell).toContain("A D D I S");
     expect(panel.spell).toContain("H A N A");
     expect(panel.spell).toContain("O P E N");
+    expect(panel.spell).not.toContain("A B R A H A M");
   });
 
   it("strips X- and DESC- before the dictionary lookup", () => {
@@ -25,10 +28,12 @@ describe("ASL gloss panel", () => {
     expect(normalizeToken("X-SHE")).toBe("SHE");
     setSignDictionary([{ gloss: "OPEN", clip: "/media/signs/open.mp4" }]);
     expect(lookupToken("DESC-OPEN").clip).toBe("/media/signs/open.mp4");
+    expect(lookupToken("fs-ADDIS").letters).toEqual(["A", "D", "D", "I", "S"]);
+    expect(lookupToken("IX-3").letters).toEqual([]);
     const panel = signPanel("Hana opens her lesson on a phone in Addis Ababa.", "en");
     expect(panel.clip).toBe("/media/signs/open.mp4");
     expect(panel.spell).not.toContain("O P E N");
-    expect(panel.spell).toContain("H A N A");
+    expect(panel.spell).toContain("A D D I S");
   });
 
   it("does not gloss Amharic", () => {
@@ -48,12 +53,15 @@ describe("ASL gloss panel", () => {
     player.setAttribute("captions-am", "/media/captions-am.vtt");
     document.body.append(player);
     await vi.waitFor(() => {
-      expect(player.shadowRoot?.querySelector(".gloss")?.textContent).toContain("ADDUS ABRAHAM");
+      expect(player.shadowRoot?.querySelector("[data-gloss-corrected]")?.textContent).toContain("fs-ADDIS");
     });
+    expect(player.shadowRoot?.querySelector("[data-corrected-term]")?.textContent).toBe("Corrected by hand");
+    expect(player.shadowRoot?.querySelector("[data-model-term]")?.textContent).toBe("Model output (Suyash2205/signbridge-t5-base-asl-gloss)");
+    expect(player.shadowRoot?.querySelector("[data-gloss-model]")?.textContent).toContain("ADDUS ABRAHAM");
     expect(player.shadowRoot?.querySelector("h2")?.textContent).toBe(ASL_GLOSS_LABEL);
-    expect(player.shadowRoot?.querySelector("[data-sign-note]")?.textContent).toContain("Precomputed by");
     player.shadowRoot?.querySelector<HTMLButtonElement>("[data-act=captions]")?.click();
-    expect(player.shadowRoot?.querySelector(".gloss")?.textContent).toBe("");
+    expect(player.shadowRoot?.querySelector("[data-gloss-corrected]")?.textContent).toBe("");
+    expect(player.shadowRoot?.querySelector("[data-gloss-lines]")?.hasAttribute("hidden")).toBe(true);
     expect(player.shadowRoot?.querySelector("[data-sign-note]")?.textContent).toBe(AMHARIC_GLOSS_NOTE);
   });
 });

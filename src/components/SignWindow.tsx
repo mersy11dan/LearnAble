@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 
 type SignWindowProps = {
   gloss: string;
+  model: string;
   note: string;
   spell: string;
   videoSrc: string;
@@ -18,7 +19,7 @@ function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
 }
 
-export function SignWindow({ gloss, note, spell, videoSrc, onClose }: SignWindowProps) {
+export function SignWindow({ gloss, model, note, spell, videoSrc, onClose }: SignWindowProps) {
   const [box, setBox] = useState<Box>({ x: 24, y: 420, width: 320, height: 280 });
 
   useEffect(() => {
@@ -100,9 +101,24 @@ export function SignWindow({ gloss, note, spell, videoSrc, onClose }: SignWindow
       </div>
       <div className="sign-body">
         <p className="sign-slot-title">Sign interpreter video goes here</p>
-        <p className="gloss" lang="en">
-          {gloss}
-        </p>
+        <dl className="gloss-lines">
+          {gloss ? (
+            <>
+              <dt>{model ? "Corrected by hand" : "Offline fallback"}</dt>
+              <dd className="gloss" lang="en">
+                {gloss}
+              </dd>
+            </>
+          ) : null}
+          {model ? (
+            <>
+              <dt>Model output (Suyash2205/signbridge-t5-base-asl-gloss)</dt>
+              <dd className="gloss" lang="en">
+                {model}
+              </dd>
+            </>
+          ) : null}
+        </dl>
         {spell ? <p className="sign-note">{spell}</p> : null}
         <p className="sign-note">
           {note} A clip can be added at <code>{videoSrc}</code>.

@@ -10,7 +10,7 @@ import { buildTaggedPdf } from "../lib/taggedPdf";
 import { formatTime } from "../lib/time";
 import { cueAt, cuesToVtt, parseVtt, type Cue } from "../lib/vtt";
 import { resolveUrl } from "./assets";
-import { ASL_GLOSS_LABEL, signPanel } from "./signs";
+import { ASL_GLOSS_LABEL, GLOSS_MODEL, signPanel } from "./signs";
 import { getFeatures, getSettings, getTheme, optedIn, PRESETS, updateSettings, type CaptionPreset } from "./settings";
 import { widgetCss } from "./styles";
 
@@ -91,7 +91,12 @@ export class LearnAblePlayer extends HTMLElement {
             ? `<aside class="sign" data-sign aria-label="${ASL_GLOSS_LABEL}">
                 <h2>${ASL_GLOSS_LABEL}</h2>
                 <p class="sign-note" data-sign-note>English captions use a precomputed ASL gloss. Amharic captions are not glossed. This is not a recorded signer.</p>
-                <p class="gloss" lang="en"></p>
+                <dl class="gloss-lines" data-gloss-lines hidden>
+                  <dt data-corrected-term>Corrected by hand</dt>
+                  <dd class="gloss" data-gloss-corrected lang="en"></dd>
+                  <dt data-model-term>Model output (${GLOSS_MODEL})</dt>
+                  <dd class="gloss gloss-model" data-gloss-model lang="en"></dd>
+                </dl>
                 <p class="spell" data-spell></p>
                 <video data-sign-video muted playsinline preload="metadata" hidden></video>
                 <div class="row">
@@ -334,8 +339,19 @@ export class LearnAblePlayer extends HTMLElement {
       caption.setAttribute("lang", this.mode === "am" ? "am" : "en");
     }
     const panel = signPanel(cue?.text || "", this.mode);
-    const gloss = this.root.querySelector(".gloss");
-    if (gloss) gloss.textContent = panel.gloss;
+    const lines = this.root.querySelector<HTMLElement>("[data-gloss-lines]");
+    const correctedTerm = this.root.querySelector("[data-corrected-term]");
+    if (correctedTerm) correctedTerm.textContent = panel.source === "precomputed" ? "Corrected by hand" : "Offline fallback";
+    const corrected = this.root.querySelector("[data-gloss-corrected]");
+    const model = this.root.querySelector<HTMLElement>("[data-gloss-model]");
+    const modelTerm = this.root.querySelector<HTMLElement>("[data-model-term]");
+    if (corrected) corrected.textContent = panel.gloss;
+    if (model) {
+      model.textContent = panel.model;
+      model.hidden = !panel.model;
+    }
+    if (modelTerm) modelTerm.hidden = !panel.model;
+    if (lines) lines.hidden = !panel.gloss && !panel.model;
     const note = this.root.querySelector("[data-sign-note]");
     if (note) note.textContent = panel.note;
     const spell = this.root.querySelector("[data-spell]");

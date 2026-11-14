@@ -135,8 +135,11 @@ def test_lesson_gloss_is_precomputed_without_calling_a_provider(client, monkeypa
     assert body["source"] == "precomputed"
     assert body["precomputed"] is True
     assert body["model"] == "Suyash2205/signbridge-t5-base-asl-gloss"
-    assert body["gloss"] == cue["gloss"]
     assert "ADDUS ABRAHAM" in body["gloss"]
+    assert body["corrected"] == cue["gloss"]
+    assert body["corrected"].startswith("fs-ADDIS")
+    assert "ADDUS" not in body["corrected"]
+    assert "AMHARIC" in client.post("/api/gloss", json={"text": LESSON["segments"][1]["en"]}).get_json()["corrected"]
 
 
 def test_amharic_is_not_glossed(client):

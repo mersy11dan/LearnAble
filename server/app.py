@@ -105,13 +105,14 @@ def gloss_table() -> dict:
     return json.loads(GLOSS_PATH.read_text(encoding="utf-8"))
 
 
-def precomputed_gloss(text: str) -> str | None:
+def precomputed_gloss(text: str) -> tuple[str, str] | None:
     cleaned = text.strip()
     for cue in gloss_table().get("cues", []):
         if str(cue.get("en", "")).strip() == cleaned:
             gloss = cue.get("gloss")
-            if isinstance(gloss, str) and gloss.strip():
-                return gloss.strip()
+            corrected = cue.get("corrected") or gloss
+            if isinstance(gloss, str) and gloss.strip() and isinstance(corrected, str) and corrected.strip():
+                return gloss.strip(), corrected.strip()
     return None
 
 
@@ -272,13 +273,15 @@ def create_app() -> Flask:
             return jsonify({"gloss": None, "source": "unavailable", "precomputed": False, "model": GLOSS_MODEL, "message": "Include the English caption."}), 400
         known = precomputed_gloss(text)
         if known:
+            raw, corrected = known
             return jsonify(
                 {
-                    "gloss": known,
+                    "gloss": raw,
+                    "corrected": corrected,
                     "source": "precomputed",
                     "precomputed": True,
                     "model": GLOSS_MODEL,
-                    "message": "This gloss was precomputed by Suyash2205/signbridge-t5-base-asl-gloss and shipped with the lesson. No model was loaded.",
+                    "message": "The model line was precomputed by Suyash2205/signbridge-t5-base-asl-gloss. The corrected line was edited by hand. No model was loaded.",
                 }
             )
         if configured("LEARNABLE_GLOSS_LOCAL"):
