@@ -50,7 +50,7 @@ The identity is a caption bar. The wordmark is a drawn frame (the picture) with 
 | Motion | `--motion-fast`, `--motion-ease` | Stop motion, and `prefers-reduced-motion`, set the duration to 0 and kill animation. |
 | Focus | `--focus-width` 3px, `--focus-offset`, `--focus-color` | Visible on paper (blue) and on the navy bar (yellow). |
 | Target | `--size-target` 2.75rem | Controls meet a 44px minimum. |
-| Caption bar | `--bar-height`, `--bar-width`, `--elevation-press` | Yellow bar on navy only: the logo, the current page, a pressed display toggle, and the bottom edge of a button. Page titles use a short navy rule, which turns yellow in high contrast. |
+| Caption bar | `--bar-height`, `--bar-width`, `--elevation-press` | Yellow bar on navy only: the logo, the current page, a pressed display toggle, and the bottom edge of a button. Page titles use a short navy rule, which turns yellow in high contrast. Spacing adds `--space-0` and `--space-8`. Type adds `--leading-ui`. Motion adds `--motion-press`. Radius for controls is `--radius-control` (square). |
 
 `html[data-text="large"]`, `html[data-contrast="high"]`, and `html[data-motion="reduce"]` retarget the same tokens. High contrast is black, white, and yellow. The header buttons are Larger text, High contrast, and Stop motion, stored in `localStorage` under `learnable-display`.
 

@@ -108,7 +108,7 @@ export function SignWindow({ gloss, videoSrc, poster, onClose }: SignWindowProps
         className="sign-handle"
         role="button"
         tabIndex={0}
-        aria-label="Move the sign window. Arrow keys move it. Shift makes a larger step."
+        aria-label="Ethiopian Sign Language. Arrow keys move this window. Shift makes a larger step."
         onKeyDown={onHandleKey}
         onPointerDown={onDragStart}
       >
