@@ -14,6 +14,7 @@ export function HomePage() {
           <div className="preview-phone" />
           <div className="preview-sign">
             <span>ASL gloss (English → ASL), not Ethiopian Sign Language</span>
+            <span>Corrected by hand</span>
             <strong>{first.gloss}</strong>
           </div>
         </div>

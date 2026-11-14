@@ -11,6 +11,7 @@ export type GlossSource = "precomputed" | "amharic" | "off" | "offline";
 
 export type SignPanel = {
   gloss: string;
+  model: string;
   note: string;
   spell: string;
   clip: string | null;
@@ -45,16 +46,26 @@ export function normalizeToken(token: string): string {
 }
 
 export function lookupToken(token: string): { token: string; key: string; clip: string | null; letters: string[] } {
-  const key = normalizeToken(token);
+  const raw = token.replace(/^[,.:;]+|[,.:;]+$/g, "");
+  if (/^fs-/i.test(raw)) {
+    const key = raw.replace(/^fs-/i, "").replace(/[^A-Za-z]/g, "").toUpperCase();
+    return { token, key, clip: null, letters: fingerspell(key) };
+  }
+  if (/^IX(?:-\d+)?$/i.test(raw)) {
+    return { token, key: raw.toUpperCase(), clip: null, letters: [] };
+  }
+  const key = normalizeToken(raw);
   const found = entries.find((entry) => entry.gloss.toUpperCase() === key);
   const clip = found?.clip ?? null;
   return { token, key, clip, letters: clip || !key ? [] : fingerspell(key) };
 }
 
-export function precomputedGloss(text: string): string | null {
+export function precomputedGloss(text: string): { model: string; corrected: string } | null {
   const cleaned = text.trim();
   const cue = shipped.cues.find((item) => item.en.trim() === cleaned);
-  return cue?.gloss ?? null;
+  if (!cue?.gloss) return null;
+  const corrected = "corrected" in cue && typeof cue.corrected === "string" ? cue.corrected : cue.gloss;
+  return { model: cue.gloss, corrected };
 }
 
 function spellLine(gloss: string): { spell: string; clip: string | null } {
@@ -68,19 +79,25 @@ function spellLine(gloss: string): { spell: string; clip: string | null } {
   };
 }
 
+const emptyPanel = (note: string, source: GlossSource): SignPanel => ({
+  gloss: "",
+  model: "",
+  note,
+  spell: "",
+  clip: null,
+  source,
+});
+
 export function signPanel(text: string, mode: CaptionMode): SignPanel {
-  if (mode === "am") {
-    return { gloss: "", note: AMHARIC_GLOSS_NOTE, spell: "", clip: null, source: "amharic" };
-  }
-  if (mode === "off" || !text.trim()) {
-    return { gloss: "", note: "ASL gloss is shown with English captions.", spell: "", clip: null, source: "off" };
-  }
+  if (mode === "am") return emptyPanel(AMHARIC_GLOSS_NOTE, "amharic");
+  if (mode === "off" || !text.trim()) return emptyPanel("ASL gloss is shown with English captions.", "off");
   const known = precomputedGloss(text);
   if (known) {
-    const rendered = spellLine(known);
+    const rendered = spellLine(known.corrected);
     return {
-      gloss: known,
-      note: `Precomputed by ${GLOSS_MODEL}. This keeps English word order. It is not a recorded signer.`,
+      gloss: known.corrected,
+      model: known.model,
+      note: "Corrected by hand for this demo. A Deaf ASL signer should review it. This is ASL, not Ethiopian Sign Language, and not a recorded signer.",
       spell: rendered.spell,
       clip: rendered.clip,
       source: "precomputed",
@@ -91,11 +108,58 @@ export function signPanel(text: string, mode: CaptionMode): SignPanel {
   const rendered = spellLine(gloss);
   return {
     gloss,
+    model: "",
     note: "This caption has no shipped gloss, and the model is not running. These are the English words, not model output.",
     spell: rendered.spell,
     clip: rendered.clip,
     source: "offline",
   };
+}
+
+export type SignVisual = {
+  src: string | null;
+  alt: string;
+  caption: string;
+  kind: "fingerspell" | "point";
+};
+
+const FINGERSPELL_DIR = "/signs/fingerspell";
+
+export function visualsFor(gloss: string): SignVisual[] {
+  const frames: SignVisual[] = [];
+  for (const token of glossTokens(gloss)) {
+    if (/^fs-/i.test(token)) {
+      const word = token.replace(/^fs-/i, "").replace(/[^A-Za-z]/g, "").toUpperCase();
+      for (const letter of word) frames.push(letterFrame(letter));
+      continue;
+    }
+    if (/^IX(?:-\d+)?$/i.test(token)) {
+      frames.push({ src: null, alt: "ASL point, no picture shipped", caption: token.toUpperCase(), kind: "point" });
+      continue;
+    }
+    const key = normalizeToken(token);
+    for (const letter of key) frames.push(letterFrame(letter));
+  }
+  return frames;
+}
+
+function letterFrame(letter: string): SignVisual {
+  return {
+    src: `${FINGERSPELL_DIR}/${letter}.svg`,
+    alt: `ASL fingerspelling: ${letter}`,
+    caption: letter,
+    kind: "fingerspell",
+  };
+}
+
+export function signSummary(frames: SignVisual[]): string {
+  if (!frames.length) return "";
+  const letters = frames.filter((frame) => frame.kind === "fingerspell").map((frame) => frame.caption);
+  const points = frames.filter((frame) => frame.kind === "point").map((frame) => frame.caption);
+  const parts = ["ASL. Fingerspelled."];
+  if (letters.length) parts.push(letters.join(" "));
+  if (points.length) parts.push(points.join(" "));
+  return parts.join(" ");
 }
 
 export function lookupSign(text: string): { gloss: string; clip: string | null; placeholder: true } {

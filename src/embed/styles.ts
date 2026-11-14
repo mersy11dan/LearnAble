@@ -60,7 +60,7 @@ button {
   cursor: pointer;
 }
 button[aria-pressed="true"] { background: var(--color-ink); color: var(--color-paper); }
-.media-row { display: grid; grid-template-columns: minmax(0, 1fr) 0.5rem var(--sign-col, 16rem); gap: 0.5rem; align-items: start; }
+.media-row { display: grid; grid-template-columns: minmax(0, 1fr) 0.5rem minmax(0, var(--sign-col, 16rem)); gap: 0.5rem; align-items: start; min-width: 0; }
 .sign-grip { cursor: col-resize; background: var(--color-moss); color: var(--color-paper); min-height: 2.75rem; }
 @media (max-width: 52rem) {
   .media-row { grid-template-columns: 1fr; }
@@ -107,6 +107,11 @@ section { background: var(--color-paper); color: var(--color-ink); }
 .transcript { list-style: none; margin: 0.5rem 0; padding: 0; max-height: 16rem; overflow: auto; }
 .transcript button { background: transparent; color: var(--color-ink); border: 0; box-shadow: none; text-align: left; width: 100%; }
 .sign .row button { background: var(--color-paper); color: var(--color-ink); border-color: var(--color-navy); box-shadow: none; }
+.gloss-lines { margin: 0.5rem 0.75rem; min-width: 0; max-width: 100%; }
+.gloss-lines dt { font-weight: 700; margin: 0.45rem 0 0.15rem; overflow-wrap: anywhere; }
+.gloss-lines dd { margin: 0 0 0.35rem; min-width: 0; }
+.sign, .sign h2, .sign p, .spell { min-width: 0; max-width: 100%; overflow-wrap: anywhere; }
+[hidden] { display: none !important; }
 .bar button { background: transparent; color: inherit; border-color: transparent; box-shadow: inset 0 calc(var(--bar-height) * -1) 0 transparent; }
 .bar button[aria-pressed="true"] { box-shadow: inset 0 calc(var(--bar-height) * -1) 0 var(--color-caption); background: transparent; }
 `;

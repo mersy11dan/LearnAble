@@ -59,7 +59,7 @@ paths:
                 language: { type: string, enum: [en, am] }
       responses:
         "200":
-          description: gloss text, or null. source is precomputed, model, huggingface, or unavailable. precomputed is true only for the shipped lesson lines.
+          description: gloss is the model string, or null. corrected is the hand-edited line for the sample lesson. source is precomputed, model, huggingface, or unavailable.
         "400":
           description: Missing English text.
   /api/transcribe:

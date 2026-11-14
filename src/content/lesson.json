@@ -30,7 +30,7 @@
       "en": "Hana opens her lesson on a phone in Addis Ababa.",
       "am": "ሃና ትምህርቷን በአዲስ አበባ በስልኳ ትከፍታለች።",
       "ad": "A phone is drawn on a paper-coloured screen, with a short caption under it.",
-      "gloss": "HANA DESC-OPEN X-SHE LESSON ON PHONE IN ADDUS ABRAHAM ."
+      "gloss": "fs-ADDIS fs-ABABA, HANA IX-3 PHONE LESSON OPEN"
     },
     {
       "start": 5.19,
@@ -38,7 +38,7 @@
       "en": "She needs English and Amharic captions she can make larger.",
       "am": "የእንግሊዝኛ እና የአማርኛ ጽሑፍ መግለጫዎችን ማተለቅ ትፈልጋለች።",
       "ad": "The caption bar grows taller. The letters are yellow on a black band.",
-      "gloss": "X-SHE NEED , AND AMHARAC , CAPTEXT X-SHE CAN MAKE DESC-LARGER ."
+      "gloss": "ENGLISH AMHARIC CAPTIONS, IX-3 NEED LARGER"
     },
     {
       "start": 11.702,
@@ -46,7 +46,7 @@
       "en": "A sign window can move and grow, so Ethiopian Sign Language sits where she needs it.",
       "am": "የምልክት መስኮቱን ማንቀሳቀስና ማተለቅ ትችላለች። የኢትዮጵያ የምልክት ቋንቋ የምትፈልገውን ቦታ ይይዛል።",
       "ad": "A second window lifts off the phone. It is labelled Ethiopian Sign Language.",
-      "gloss": "SIGN WINDOW CAN MOVE AND GROW , DESC-SO ETHIOPIAN SIGN LANGUAGE SIT WHERE X-SHE NEED X-IT ."
+      "gloss": "SIGN WINDOW, CAN MOVE GROW. ETHIOPIAN SIGN, WHERE IX-3 NEED"
     },
     {
       "start": 22.036,
@@ -54,7 +54,7 @@
       "en": "Audio description says what the picture is doing, for a learner who cannot see it.",
       "am": "የድምጽ መግለጫ ሥዕሉ ምን እንደሚያደርግ ይናገራል። ለማያየው ተማሪ ነው።",
       "ad": "A round speaker icon appears beside the phone.",
-      "gloss": "AUDIO DESCRIPTION SAY WHAT PICTURE BE DO , FOR LEARNER WHO CAN DESC-NOT SEE X-IT ."
+      "gloss": "AUDIO DESCRIPTION, PICTURE DO-WHAT. LEARNER SEE-NOT, FOR IX-3"
     },
     {
       "start": 28.919,
@@ -62,7 +62,7 @@
       "en": "When the network is slow she keeps a small pack: sound, text, and a light page.",
       "am": "ኔትወርኩ ሲዘገይ ትንሽ ጥቅል ታስቀምጣለች። ድምጽ፣ ጽሑፍ፣ እና ቀላል ገጽ።",
       "ad": "The phone is replaced by a short stack of pages and a sound file.",
-      "gloss": "WHEN NETWORK BE DESC-SLOW , X-SHE KEEP DESC-SMALL PACK : SOUND , TEXT , AND LIGHT PAGE ."
+      "gloss": "NETWORK SLOW, IX-3 KEEP PACK SMALL: SOUND TEXT PAGE LIGHT"
     },
     {
       "start": 36.761,
@@ -70,7 +70,7 @@
       "en": "The lesson on this page is the same one, with the network or without it.",
       "am": "በዚህ ገጽ ላይ ያለው ትምህርት አንድ ነው። ኔትወርክ ቢኖርም ባይኖርም።",
       "ad": "The stack of pages stays in the centre of the screen.",
-      "gloss": "LESSON ON THIS PAGE BE DESC-SAME ONE , WITH NETWORK OR WITHOUT X-IT ."
+      "gloss": "PAGE THIS, LESSON SAME. NETWORK WITH OR WITHOUT, SAME"
     }
   ],
   "chat": [
