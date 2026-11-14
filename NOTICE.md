@@ -32,6 +32,10 @@ License, loaded from the Fontsource packages.
 Noto Sans Ethiopic and Noto Serif Ethiopic are SIL Open Font License.
 Copyright Google. See `public/fonts/Noto-copyright.txt`.
 
+## Sign language models that were not used
+
+Hugging Face sign models found for this project are sign-to-text or still-image classifiers, or they are not Ethiopian Sign Language. `ihsanahakiim/videomae-base-finetuned-signlanguage` and `fhswf/sign-language-avatar-gloss-dgs` are non-commercial. None of them are downloaded or called. See `docs/SIGN-LANGUAGE.md`.
+
 ## Optional models
 
 NLLB-200 (`facebook/nllb-200-distilled-600M`) is CC-BY-NC-4.0. It is not downloaded, not called, and not named as the default. Translation uses it only when `HF_MT_MODEL` is set to that id and the person has given consent.

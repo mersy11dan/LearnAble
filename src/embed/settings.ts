@@ -1,3 +1,5 @@
+import type { ContrastMode } from "../lib/contrast";
+
 export type CaptionPreset = "white" | "yellow" | "black" | "cyan";
 export type Lang = "en" | "am";
 
@@ -19,6 +21,12 @@ export type WidgetSettings = {
   stopMotion: boolean;
   captionScale: number;
   captionPreset: CaptionPreset;
+  contrastMode: ContrastMode;
+  contrastLevel: number;
+  readRate: number;
+  readPitch: number;
+  readVerbosity: "sentences" | "headings" | "links";
+  haptics: boolean;
 };
 
 export type FeatureFlags = {
@@ -65,6 +73,12 @@ export const defaultSettings = (): WidgetSettings => ({
   stopMotion: false,
   captionScale: 1.15,
   captionPreset: "white",
+  contrastMode: "off",
+  contrastLevel: 7,
+  readRate: 1,
+  readPitch: 1,
+  readVerbosity: "sentences",
+  haptics: false,
 });
 
 let features = defaultFeatures();
@@ -99,7 +113,9 @@ export function loadSettings(): WidgetSettings {
     const parsed = JSON.parse(saved) as Partial<WidgetSettings>;
     const lang = parsed.lang === "am" ? "am" : parsed.lang === "en" ? "en" : base.lang;
     const uiLang = parsed.uiLang === "am" ? "am" : parsed.uiLang === "en" ? "en" : base.uiLang;
-    return { ...base, ...parsed, lang, uiLang };
+    const contrastMode = parsed.contrastMode === "bw" || parsed.contrastMode === "yb" ? parsed.contrastMode : "off";
+    const contrastLevel = Math.min(10, Math.max(1, Number(parsed.contrastLevel) || base.contrastLevel));
+    return { ...base, ...parsed, lang, uiLang, contrastMode, contrastLevel };
   } catch {
     return base;
   }

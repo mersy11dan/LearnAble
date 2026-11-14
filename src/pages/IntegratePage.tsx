@@ -87,6 +87,12 @@ export function IntegratePage() {
       <p className="measure">
         With the service running, open <a href="http://127.0.0.1:5050/api/docs">the API notes</a>. The machine-readable spec is server/openapi.yaml. Captions, translation, speech recognition, image description, the offline pack, braille, and certificate verification are listed there. Nothing is sent to Hasab or Hugging Face until the request includes the consent header.
       </p>
+      <h2>Keyboard</h2>
+      <ul>
+        <li>Picture frame, while it is focused: Space or K play, C captions, D audio description, S sign panel, arrows seek. These keys do nothing while you are in the rest of the page, so a screen reader keeps its own letters.</li>
+        <li>Sign panel grip, while it is focused: arrows change the width, Home and End jump to the ends. Narrower and Wider do the same with buttons.</li>
+        <li>Toolbar, while it is focused: Escape stops read-aloud. Play reading is a button, not a hover.</li>
+      </ul>
       <h2>If it does not start</h2>
       <ul>
         <li>Empty captions mean the caption file paths are wrong for the host page.</li>

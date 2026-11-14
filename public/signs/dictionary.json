@@ -1,0 +1,13 @@
+{
+  "language": "ethsl",
+  "placeholder": true,
+  "note": "No recorded Ethiopian Sign Language clips are shipped. Each entry is a gloss placeholder. A Deaf teacher can add a clip URL.",
+  "signs": [
+    { "match": "Hana opens", "gloss": "OPEN", "clip": null },
+    { "match": "captions she can make larger", "gloss": "LARGER", "clip": null },
+    { "match": "sign window", "gloss": "SIGN", "clip": null },
+    { "match": "Audio description", "gloss": "SPEAK", "clip": null },
+    { "match": "small pack", "gloss": "PACK", "clip": null },
+    { "match": "same one", "gloss": "SAME", "clip": null }
+  ]
+}

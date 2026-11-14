@@ -61,6 +61,12 @@ button {
   cursor: pointer;
 }
 button[aria-pressed="true"] { background: var(--color-ink); }
+.media-row { display: grid; grid-template-columns: minmax(0, 1fr) 0.5rem var(--sign-col, 16rem); gap: 0.5rem; align-items: start; }
+.sign-grip { cursor: col-resize; background: var(--color-moss); min-height: 2.75rem; }
+@media (max-width: 52rem) {
+  .media-row { grid-template-columns: 1fr; }
+  .sign-grip { display: none; }
+}
 .stage { position: relative; background: var(--color-stage); aspect-ratio: 16 / 9; }
 video { width: 100%; height: 100%; display: block; background: var(--color-stage); object-fit: contain; }
 .caption {
@@ -85,7 +91,7 @@ video[data-fallback][hidden] { display: none; }
 label { display: flex; flex-direction: column; gap: 0.2rem; min-width: 8rem; }
 input[type="range"] { width: 100%; min-height: 2.75rem; }
 .bar {
-  position: fixed; z-index: 2147483000; top: 0.5rem; right: 0.5rem; left: auto; bottom: auto;
+  position: fixed; z-index: 2147483000; top: auto; bottom: 0.5rem; left: 0.5rem; right: auto;
   background: var(--color-navy); color: var(--color-navy-ink); padding: 0.6rem;
   display: flex; flex-wrap: wrap; gap: 0.4rem; max-width: min(22rem, calc(100vw - 1rem));
   max-height: 70vh; overflow: auto;

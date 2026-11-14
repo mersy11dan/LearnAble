@@ -180,7 +180,15 @@ function neededRatio(element: Element): number {
   return size >= 24 || (size >= 18.67 && weight >= 700) ? 3 : 4.5;
 }
 
+export function clearContrastPaints(): void {
+  document.querySelectorAll<HTMLElement>("[data-learnable-repair='contrast']").forEach((element) => {
+    element.style.removeProperty("color");
+    element.removeAttribute(REPAIR_ATTR);
+  });
+}
+
 export function repairContrast(): void {
+  if (document.documentElement.dataset.learnableContrast === "on") return;
   document.querySelectorAll("a, button, span, p, h1, h2, h3, h4, li, label, div, td, th, code, small, strong, b, em").forEach((element) => {
     if (insideWidget(element) || element.getAttribute(REPAIR_ATTR) === "contrast") return;
     const direct = [...element.childNodes].some((node) => node.nodeType === Node.TEXT_NODE && node.textContent?.trim());

@@ -221,6 +221,12 @@ export function runEnhance(): void {
   ensureLandmarks();
   ensureKeyboard();
   mountGateway();
+  if (!document.getElementById("learnable-reader-live")) {
+    const live = document.createElement("p");
+    live.id = "learnable-reader-live";
+    live.setAttribute("role", "status");
+    document.body.append(live);
+  }
   repairHost();
 }
 

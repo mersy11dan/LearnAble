@@ -1,9 +1,25 @@
+import { themePair } from "../lib/contrast";
 import { resolveUrl } from "./assets";
+import { clearContrastPaints, repairContrast } from "./repair";
 import type { WidgetSettings } from "./settings";
 
 const STYLE_ID = "learnable-host-adjust";
 
-function hostCss(): string {
+function hostCss(settings: WidgetSettings): string {
+  const theme = settings.contrastMode === "off" ? null : themePair(settings.contrastMode, settings.contrastLevel);
+  const paint = theme
+    ? `
+html[data-learnable-contrast="on"] { --la-hc-bg: ${theme.bg}; --la-hc-fg: ${theme.fg}; --la-hc-focus: ${theme.focus}; }
+html[data-learnable-contrast="on"] body,
+html[data-learnable-contrast="on"] body *:not(img):not(video):not(svg):not(canvas):not(iframe) {
+  background-color: var(--la-hc-bg) !important;
+  color: var(--la-hc-fg) !important;
+  border-color: var(--la-hc-fg) !important;
+  text-shadow: none !important;
+}
+html[data-learnable-contrast="on"] :focus-visible { outline: 3px solid var(--la-hc-focus) !important; outline-offset: 3px !important; }
+`
+    : "";
   return `
 html { scroll-padding-top: 5rem; scroll-padding-bottom: 7rem; }
 :focus { scroll-margin-top: 5rem; scroll-margin-bottom: 7rem; }
@@ -26,9 +42,12 @@ html { scroll-padding-top: 5rem; scroll-padding-bottom: 7rem; }
 }
 .learnable-row { display: flex; flex-wrap: wrap; gap: 0.5rem; }
 .learnable-gateway input { min-height: 2.75rem; max-width: 100%; }
+.learnable-sentence.is-current, .is-current {
+  outline: 3px solid #0b3d91; outline-offset: 2px; background: #ffee00; color: #172033;
+}
+#learnable-reader-live { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
 html[data-learnable-text="large"] { font-size: 112.5%; }
-html[data-learnable-contrast="high"] :focus-visible { outline: 3px solid #ffee00; outline-offset: 3px; }
-html[data-learnable-contrast="high"] a { text-decoration: underline; }
+${paint}
 html[data-learnable-motion="reduce"] *,
 html[data-learnable-motion="reduce"] *::before,
 html[data-learnable-motion="reduce"] *::after {
@@ -58,7 +77,6 @@ html[data-learnable-motion="reduce"] *::after {
 export function applyHost(settings: WidgetSettings): void {
   const root = document.documentElement;
   root.dataset.learnableText = settings.largeText ? "large" : "default";
-  root.dataset.learnableContrast = settings.highContrast ? "high" : "default";
   root.dataset.learnableMotion = settings.stopMotion ? "reduce" : "allow";
   let style = document.getElementById(STYLE_ID);
   if (!style) {
@@ -66,7 +84,10 @@ export function applyHost(settings: WidgetSettings): void {
     style.id = STYLE_ID;
     document.head.append(style);
   }
-  style.textContent = hostCss();
+  style.textContent = hostCss(settings);
+  root.dataset.learnableContrast = settings.contrastMode === "off" ? "off" : "on";
+  if (settings.contrastMode === "off") repairContrast();
+  else clearContrastPaints();
 }
 
 export function clearHost(): void {
