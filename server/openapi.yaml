@@ -1,0 +1,131 @@
+openapi: 3.0.3
+info:
+  title: LearnAble transcript API
+  version: 0.2.0
+  description: |
+    Captions, translation, speech recognition, image description, braille, and certificate checks.
+    External providers are called only when X-LearnAble-Consent is yes and a key is set.
+    facebook/nllb-200-distilled-600M is CC-BY-NC-4.0. It is not the default. Set HF_MT_MODEL yourself if you accept that licence.
+servers:
+  - url: http://127.0.0.1:5050
+paths:
+  /api/health:
+    get:
+      summary: Which providers are configured
+      responses:
+        "200":
+          description: Booleans only. Secrets are not returned.
+  /api/translate:
+    post:
+      summary: Translate between English and Amharic
+      parameters:
+        - $ref: "#/components/parameters/Consent"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [text, source, target]
+              properties:
+                text: { type: string }
+                source: { type: string, enum: [en, am] }
+                target: { type: string, enum: [en, am] }
+      responses:
+        "200":
+          description: A translation or a sample caption. source is sample, hasab, huggingface, or unavailable.
+        "400":
+          description: Missing text or language.
+  /api/transcribe:
+    post:
+      summary: Speech to text
+      parameters:
+        - $ref: "#/components/parameters/Consent"
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                audio: { type: string, format: binary }
+      responses:
+        "200":
+          description: Without a file, the demo lesson transcript. With a file and no key, nothing is invented.
+  /api/describe-image:
+    post:
+      summary: Image description for alt text
+      parameters:
+        - $ref: "#/components/parameters/Consent"
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                image: { type: string, format: binary }
+      responses:
+        "200":
+          description: The lesson picture description, or a model caption when a token and consent are present.
+  /api/speak:
+    post:
+      summary: Optional Hasab speech
+      parameters:
+        - $ref: "#/components/parameters/Consent"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [text]
+              properties:
+                text: { type: string }
+                language: { type: string, enum: [en, am] }
+      responses:
+        "200":
+          description: Audio bytes when Hasab is configured and consent is given. Otherwise JSON telling the page to use the device voice.
+  /api/braille:
+    post:
+      summary: Points at the browser braille exporter
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [text]
+              properties:
+                text: { type: string }
+                language: { type: string, enum: [en, am] }
+      responses:
+        "200":
+          description: The widget writes the .brf file. This route confirms the text was accepted.
+  /api/offline-pack:
+    get:
+      summary: Where the 3G pack is built
+      responses:
+        "200":
+          description: The pack is built in the browser from /packs/demo so a phone can save it.
+  /api/certificates/verify:
+    post:
+      summary: Check an Open Badges 3.0 credential
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [credential]
+              properties:
+                credential: { type: object }
+      responses:
+        "200":
+          description: valid true or false, with the learner name when the proof matches.
+components:
+  parameters:
+    Consent:
+      name: X-LearnAble-Consent
+      in: header
+      required: false
+      schema: { type: string, enum: ["yes"] }
+      description: Required before any call leaves the host for Hasab or Hugging Face.

@@ -1,0 +1,21 @@
+services:
+  web:
+    build: .
+    ports:
+      - "8080:80"
+    depends_on:
+      - api
+  api:
+    build:
+      context: .
+      dockerfile: server/Dockerfile
+    ports:
+      - "5050:5050"
+    environment:
+      LEARNABLE_HOST: 0.0.0.0
+      HASAB_API_KEY: ${HASAB_API_KEY:-}
+      HASAB_API_BASE: ${HASAB_API_BASE:-}
+      HF_TOKEN: ${HF_TOKEN:-}
+      HF_ASR_MODEL: ${HF_ASR_MODEL:-}
+      HF_MT_MODEL: ${HF_MT_MODEL:-}
+      HF_CAPTION_MODEL: ${HF_CAPTION_MODEL:-}
