@@ -8,9 +8,12 @@ used for image captions and as a second path for speech and translation.
 
 from __future__ import annotations
 
+import base64
 import json
 import os
 from pathlib import Path
+
+from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
 
 import requests
 from flask import Flask, jsonify, request
@@ -27,6 +30,21 @@ def lesson() -> dict:
 
 def configured(name: str) -> str:
     return os.environ.get(name, "").strip()
+
+
+def b64url(value: str) -> bytes:
+    padding = "=" * ((4 - len(value) % 4) % 4)
+    return base64.urlsafe_b64decode(value + padding)
+
+
+def badge_signature_ok(jwt: str, jwk: dict) -> bool:
+    try:
+        header, payload, signature = jwt.split(".")
+        public = Ed25519PublicKey.from_public_bytes(b64url(jwk["x"]))
+        public.verify(b64url(signature), f"{header}.{payload}".encode())
+        return True
+    except Exception:  # noqa: BLE001 - any bad token is simply not valid
+        return False
 
 
 def consent_granted() -> bool:
@@ -171,8 +189,8 @@ def create_app() -> Flask:
         credential = body.get("credential") or {}
         jwt = credential.get("jwt") if isinstance(credential, dict) else None
         published = json.loads((ROOT / "src" / "content" / "open-badge.json").read_text(encoding="utf-8"))
-        if jwt and jwt == published["jwt"]:
-            subject = published["credential"]["credentialSubject"]
+        subject = published["credential"]["credentialSubject"]
+        if jwt and badge_signature_ok(jwt, published["publicKey"]):
             return jsonify({"valid": True, "learner": subject["name"], "proof": "Ed25519"})
         return jsonify({"valid": False, "learner": None, "proof": "Ed25519"})
 

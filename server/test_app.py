@@ -90,6 +90,9 @@ def test_published_badge_verifies(client):
     body = response.get_json()
     assert body["valid"] is True
     assert body["learner"] == "Hana Bekele"
+    tampered = badge["jwt"][:-4] + "AAAA"
+    rejected = client.post("/api/certificates/verify", json={"credential": {"jwt": tampered}})
+    assert rejected.get_json()["valid"] is False
 
 
 def test_tagged_pdf_embeds_amharic_and_alt_text():
