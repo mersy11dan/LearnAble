@@ -1,8 +1,12 @@
 import { Link } from "react-router-dom";
+import { useLocale } from "../a11y/locale";
 import { demoLesson } from "../content/lesson";
+import { rememberedLesson } from "../lib/resume";
 
 export function HomePage() {
+  const { chrome } = useLocale();
   const first = demoLesson.segments[0];
+  const resume = rememberedLesson();
   return (
     <section className="opening">
       <figure className="preview">
@@ -24,6 +28,11 @@ export function HomePage() {
           English under the picture, Amharic in yellow, and the sign gloss beside the phone. Open the lesson to play it,
           resize the captions, and keep a copy for a slow connection.
         </p>
+        {resume ? (
+          <p className="notice" role="status">
+            <Link to={`/lesson/${resume}`}>{chrome.continue}</Link>
+          </p>
+        ) : null}
         <p className="actions">
           <Link className="button" to="/lesson/slow-connection">
             Open the lesson

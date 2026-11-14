@@ -53,6 +53,16 @@ describe("pages", () => {
     await expectClean(container);
   });
 
+  it("offers to continue a lesson that was already opened", async () => {
+    const { unmount } = renderAt("/lesson/slow-connection");
+    expect(localStorage.getItem("learnable-resume")).toBe("slow-connection");
+    unmount();
+    const { container } = renderAt("/");
+    expect(screen.getByRole("link", { name: "Continue where you left off" })).toBeInTheDocument();
+    expect(screen.getByText("On the network")).toBeInTheDocument();
+    await expectClean(container);
+  });
+
   it("keeps the job summary in the page, next to the audio control", async () => {
     const { container } = renderAt("/careers");
     expect(screen.getByRole("button", { name: "Play audio summary" })).toBeInTheDocument();

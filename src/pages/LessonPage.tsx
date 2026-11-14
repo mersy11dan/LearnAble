@@ -1,10 +1,15 @@
+import { useEffect } from "react";
 import { Link, useParams } from "react-router-dom";
 import { AccessiblePlayer } from "../components/AccessiblePlayer";
 import { Breadcrumbs } from "../components/Breadcrumbs";
 import { demoLesson } from "../content/lesson";
+import { rememberLesson } from "../lib/resume";
 
 export function LessonPage() {
   const { lessonId } = useParams();
+  useEffect(() => {
+    if (lessonId === demoLesson.id) rememberLesson(demoLesson.id);
+  }, [lessonId]);
   if (lessonId !== demoLesson.id) {
     return (
       <div className="page">

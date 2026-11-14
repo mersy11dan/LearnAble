@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { NavLink, Outlet } from "react-router-dom";
 import { useLocale } from "../a11y/locale";
 import { usePreferences } from "../a11y/preferences";
@@ -6,6 +6,16 @@ import { Wordmark } from "./Wordmark";
 
 export function Layout() {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [online, setOnline] = useState(() => (typeof navigator === "undefined" ? true : navigator.onLine));
+  useEffect(() => {
+    const mark = () => setOnline(navigator.onLine);
+    window.addEventListener("online", mark);
+    window.addEventListener("offline", mark);
+    return () => {
+      window.removeEventListener("online", mark);
+      window.removeEventListener("offline", mark);
+    };
+  }, []);
   const { chrome, lang, setLang } = useLocale();
   const { largeText, highContrast, stopMotion, setLargeText, setHighContrast, setStopMotion } = usePreferences();
   const links = [
@@ -86,6 +96,9 @@ export function Layout() {
           ))}
         </ul>
         <p>LearnAble demo for the ALX Accessibility Hackathon, 14–15 November 2026. Sample voices, sample captions, no account required.</p>
+        <p className="network-status" role="status">
+          {online ? chrome.online : chrome.offline}
+        </p>
       </footer>
     </div>
   );

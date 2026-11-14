@@ -24,6 +24,9 @@ const STRINGS = {
     embed: "Embed",
     accessibility: "Accessibility",
     display: "Display",
+    continue: "Continue where you left off",
+    online: "On the network",
+    offline: "Working without the network",
   },
   am: {
     skip: "ወደ ዋናው ይዘት ዝለል",
@@ -46,6 +49,9 @@ const STRINGS = {
     embed: "አካትት",
     accessibility: "ተደራሽነት",
     display: "ማሳያ",
+    continue: "ካቆምክበት ቀጥል",
+    online: "በመረቡ ላይ",
+    offline: "ያለ መረብ እየሰራ ነው",
   },
 } as const;
 
