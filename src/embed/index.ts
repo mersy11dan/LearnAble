@@ -2,6 +2,7 @@ import { rememberScript, setAssetBase } from "./assets";
 import { runEnhance } from "./enhance";
 import { applyHost, clearHost } from "./host";
 import { LearnAblePlayer } from "./player";
+import { setSignDictionary, type SignEntry } from "./signs";
 import { clearRepairs } from "./repair";
 import { enhancePart, type LearnAbleConfig } from "./settings";
 import { LearnAbleToolbar } from "./toolbar";
@@ -102,6 +103,9 @@ const api = {
   },
   getFeatures,
   clearRepairs,
+  setSignDictionary(next: SignEntry[]) {
+    setSignDictionary(next);
+  },
   version: "0.3.0",
 };
 

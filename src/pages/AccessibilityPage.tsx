@@ -25,7 +25,7 @@ export function AccessibilityPage() {
       </p>
       <h2>Known limits</h2>
       <ul>
-        <li>The sign window is a gloss placeholder until a recorded Ethiopian Sign Language track is added.</li>
+        <li>The sign window shows precomputed ASL gloss for English captions. It is not Ethiopian Sign Language. Amharic captions are not glossed. There is still no recorded signer.</li>
         <li>Braille is uncontracted grade 1, not a full liblouis contraction.</li>
         <li>The tagged PDF is English. Amharic is in the HTML text version.</li>
         <li>eSpeak is the offline voice. It is intelligible and clearly a device voice.</li>

@@ -20,15 +20,19 @@ No How2Sign or SignWriting checkpoint on the Hub was small enough, openly licens
 
 ## What the panel does
 
-Each caption cue is matched to a gloss in `src/content/signs.json` (the same list is copied at `public/signs/dictionary.json`). If a Deaf teacher adds a `clip` URL, the panel plays that file in time with the cue. If `clip` is null, the panel shows the gloss and a fingerspelling row, and it says in the interface that this is a placeholder, not a recorded signer.
+English caption cues use gloss precomputed by [Suyash2205/signbridge-t5-base-asl-gloss](https://huggingface.co/Suyash2205/signbridge-t5-base-asl-gloss). The lines live in `src/content/asl-gloss.json`. The panel heading is “ASL gloss (English → ASL), not Ethiopian Sign Language”. Amharic captions are not glossed, and the panel says so.
 
-To add a real clip, put the file where the page can fetch it and set `clip` to that URL:
+The model card says Apache-2.0. The training set `achrafothman/aslg_pc12` is CC-BY-NC-4.0, so running the weights is opt-in (`LEARNABLE_GLOSS_LOCAL` on the Flask machine, or `HF_GLOSS_REMOTE` with consent). The browser never downloads the 892 MB fp32 file. There is no ONNX export in the model repo.
+
+Each gloss token is then looked up in `src/content/signs.json` (the same list is at `public/signs/dictionary.json`). `X-` and `DESC-` prefixes are removed first, so `DESC-OPEN` looks up `OPEN`. If that entry has a `clip`, the panel plays it. If `clip` is null, that token is fingerspelled. Swap the JSON, or call `LearnAble.setSignDictionary(entries)`, to plug in another dictionary. Do not label an ASL clip as Ethiopian Sign Language.
 
 ```json
-{ "match": "Hana opens", "gloss": "OPEN", "clip": "/media/signs/open.mp4" }
+{ "gloss": "OPEN", "clip": "/media/signs/open.mp4" }
 ```
 
-The match is a piece of the English caption. The clip should be a recording made with a Deaf EthSL teacher. Do not swap in an ASL clip and call it EthSL.
+A caption that is not in the shipped file, while the model is off, shows the English words and says they are not model output.
+
+The six sample outputs, run on a 4-thread Intel Xeon with no GPU, are usable as a gloss line and not usable as sign. Word order stays English. `Addis Ababa` became `ADDUS ABRAHAM`, and `Amharic captions` became `AMHARAC` and `CAPTEXT`. Cold generate was 0.786 s after a 9.94 s load. Warm cues were 0.699–0.945 s.
 
 ## Limits
 

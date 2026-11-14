@@ -1,7 +1,7 @@
 {
-  "language": "ethsl",
+  "language": "gloss-clips",
   "placeholder": true,
-  "note": "No recorded Ethiopian Sign Language clips are shipped. Each entry is a gloss placeholder. A Deaf teacher can add a clip URL.",
+  "note": "Pluggable clip dictionary. Each gloss token, after X- and DESC- are removed, is looked up here. clip null means fingerspelling. Swap this file, or call setSignDictionary, to plug in another list. These are not recorded Ethiopian Sign Language or ASL videos.",
   "signs": [
     { "match": "Hana opens", "gloss": "OPEN", "clip": null },
     { "match": "captions she can make larger", "gloss": "LARGER", "clip": null },

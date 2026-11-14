@@ -77,7 +77,7 @@ video { width: 100%; height: 100%; display: block; background: var(--color-stage
 .sign { max-width: 100%;
   margin-top: 0.6rem; border: 3px solid var(--color-moss); background: var(--color-paper); color: var(--color-ink);
 }
-.sign h2 { font-family: var(--font-display); font-size: 1.1rem; margin: 0; padding: 0.5rem 0.75rem; background: var(--color-navy); color: var(--color-navy-ink); cursor: grab; touch-action: none; }
+.sign h2 { font-family: var(--font-display); font-size: 1rem; line-height: 1.35; margin: 0; padding: 0.5rem 0.75rem; background: var(--color-navy); color: var(--color-navy-ink); overflow-wrap: anywhere; }
 .sign video { width: 100%; max-height: 9rem; background: var(--color-stage); object-fit: contain; }
 video[data-fallback][hidden] { display: none; }
 .chat { margin: 0.5rem 0; padding-left: 1.2rem; }
@@ -85,7 +85,7 @@ video[data-fallback][hidden] { display: none; }
 .bar select, .bar a { min-height: 2.75rem; color: var(--color-ink); background: var(--color-paper); }
 .bar a { display: inline-flex; align-items: center; padding: 0 0.6rem; text-decoration: underline; }
 .sign p { margin: 0.5rem 0.75rem; }
-.gloss { font-family: var(--font-display); font-size: 1.6rem; }
+.gloss { font-family: var(--font-display); font-size: 1.15rem; line-height: 1.35; overflow-wrap: anywhere; }
 .mark { display: block; width: 2.5rem; height: 1.1rem; border: 2px solid var(--color-navy); box-shadow: 0 var(--bar-height) 0 var(--color-caption); margin-bottom: 0.4rem; }
 label { display: flex; flex-direction: column; gap: 0.2rem; min-width: 8rem; }
 select, input, textarea { color: var(--color-ink); background-color: var(--color-paper); }

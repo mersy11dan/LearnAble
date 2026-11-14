@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 
 type SignWindowProps = {
   gloss: string;
+  note: string;
+  spell: string;
   videoSrc: string;
   poster: string;
   onClose: () => void;
@@ -16,7 +18,7 @@ function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
 }
 
-export function SignWindow({ gloss, videoSrc, onClose }: SignWindowProps) {
+export function SignWindow({ gloss, note, spell, videoSrc, onClose }: SignWindowProps) {
   const [box, setBox] = useState<Box>({ x: 24, y: 420, width: 320, height: 280 });
 
   useEffect(() => {
@@ -84,26 +86,26 @@ export function SignWindow({ gloss, videoSrc, onClose }: SignWindowProps) {
     <section
       className="sign-window"
       style={{ left: box.x, top: box.y, width: box.width, height: box.height }}
-      aria-label={`Ethiopian Sign Language window. Current gloss ${gloss}. This is a placeholder, not a recorded signer.`}
+      aria-label={`ASL gloss (English → ASL), not Ethiopian Sign Language. ${gloss || note}`}
     >
       <div
         className="sign-handle"
         role="button"
         tabIndex={0}
-        aria-label="Ethiopian Sign Language. Arrow keys move this window. Shift makes a larger step."
+        aria-label="ASL gloss (English → ASL), not Ethiopian Sign Language. Arrow keys move this window. Shift makes a larger step."
         onKeyDown={onHandleKey}
         onPointerDown={onDragStart}
       >
-        Ethiopian Sign Language
+        ASL gloss (English → ASL), not Ethiopian Sign Language
       </div>
       <div className="sign-body">
         <p className="sign-slot-title">Sign interpreter video goes here</p>
         <p className="gloss" lang="en">
           {gloss}
         </p>
+        {spell ? <p className="sign-note">{spell}</p> : null}
         <p className="sign-note">
-          This is not a signer. Add a recorded Ethiopian Sign Language clip at <code>{videoSrc}</code>. Until then, the
-          gloss follows the captions.
+          {note} A clip can be added at <code>{videoSrc}</code>.
         </p>
       </div>
       <div className="sign-actions">

@@ -5,6 +5,7 @@ import { commandForKey, type PlayerCommand } from "../lib/commands";
 import { speak, stopSpeaking } from "../lib/speech";
 import { formatTime } from "../lib/time";
 import { cueAt } from "../lib/vtt";
+import { signPanel } from "../embed/signs";
 import { SignWindow } from "./SignWindow";
 
 type CaptionMode = "off" | "en" | "am";
@@ -433,7 +434,7 @@ export function AccessiblePlayer({
 
       {signOn ? (
         <SignWindow
-          gloss={current?.gloss ?? "OPEN"}
+          {...signPanel(captions === "en" ? current?.en ?? "" : "", captions === "am" ? "am" : captions === "en" ? "en" : "off")}
           videoSrc={signVideo}
           poster={signPoster}
           onClose={() => setSignOn(false)}

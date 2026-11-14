@@ -13,7 +13,7 @@ export function HomePage() {
         <div className="preview-stage" aria-hidden="true">
           <div className="preview-phone" />
           <div className="preview-sign">
-            <span>Ethiopian Sign Language</span>
+            <span>ASL gloss (English → ASL), not Ethiopian Sign Language</span>
             <strong>{first.gloss}</strong>
           </div>
         </div>
