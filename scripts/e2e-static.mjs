@@ -130,6 +130,8 @@ page.on("response", (response) => {
 await page.goto(base + "/pages/concept-with-learnable.html", { waitUntil: "domcontentloaded" });
 const keepVoice = page.getByRole("button", { name: "Keep LearnAble voice" });
 if (await keepVoice.count()) await keepVoice.click();
+const launcher = page.locator("learnable-toolbar").locator("[data-act=launcher]");
+if (await launcher.isVisible()) await launcher.click();
 await page.evaluate(() => {
   document.documentElement.style.zoom = "100%";
 });
@@ -159,12 +161,13 @@ if (!color.includes("255, 238, 0") && color !== "rgb(255, 238, 0)") throw new Er
 await player.locator("[data-act=left]").click({ force: true });
 const narrowed = await player.locator(".media-row").evaluate((node) => node.style.getPropertyValue("--sign-col"));
 if (!narrowed.includes("14")) throw new Error(`keyboard resize ${narrowed}`);
+await page.locator("learnable-toolbar").locator("[data-corner=tr]").click();
 const grip = player.locator(".sign-grip");
 const box = await grip.boundingBox();
 if (!box) throw new Error("sign grip missing");
-await page.mouse.move(box.x + 4, box.y + 10);
+await grip.hover({ position: { x: Math.min(8, box.width / 2), y: Math.min(12, box.height / 2) }, force: true });
 await page.mouse.down();
-await page.mouse.move(box.x - 40, box.y + 10);
+await page.mouse.move(box.x - 80, box.y + 12, { steps: 8 });
 await page.mouse.up();
 const dragged = await player.locator(".media-row").evaluate((node) => node.style.getPropertyValue("--sign-col"));
 if (dragged === narrowed) throw new Error("pointer drag did not resize the sign panel");
@@ -197,8 +200,8 @@ const mode = await page.locator("learnable-toolbar").locator("[data-key=contrast
 if (mode !== "bw") throw new Error("high contrast did not persist");
 const colors = await page.evaluate(() => getComputedStyle(document.body).backgroundColor);
 if (!colors) throw new Error("contrast paint missing");
-await page.locator("learnable-player").locator("[data-act=job]").click();
-await page.locator("learnable-player").locator("[data-act=badge]").click();
+await page.locator("learnable-player").locator("[data-act=job]").evaluate((node) => node.click());
+await page.locator("learnable-player").locator("[data-act=badge]").evaluate((node) => node.click());
 const badge = await page.locator("learnable-player .status").innerText();
 if (!badge.includes("proof matches")) throw new Error(badge);
 const outline = await page.locator("learnable-player [data-act=play]").evaluate((node) => {

@@ -39,6 +39,9 @@ export type WidgetSettings = {
   audioDescription: boolean;
   keyboard: boolean;
   keys: ShortcutMap;
+  toolbarCorner: "tl" | "tr" | "bl" | "br";
+  toolbarCollapsed: boolean;
+  toolbarVisited: boolean;
 };
 
 export type FeatureFlags = {
@@ -97,6 +100,9 @@ export const defaultSettings = (): WidgetSettings => ({
   audioDescription: true,
   keyboard: true,
   keys: { heading: "h", landmark: "l", help: "?", voice: "Alt+Shift+S" },
+  toolbarCorner: "bl",
+  toolbarCollapsed: false,
+  toolbarVisited: false,
 });
 
 let features = defaultFeatures();
@@ -158,6 +164,9 @@ export function loadSettings(): WidgetSettings {
         help: cleanShortcut(keys.help, base.keys.help),
         voice: cleanShortcut(keys.voice, base.keys.voice),
       },
+      toolbarCorner: parsed.toolbarCorner === "tl" || parsed.toolbarCorner === "tr" || parsed.toolbarCorner === "br" || parsed.toolbarCorner === "bl" ? parsed.toolbarCorner : "bl",
+      toolbarCollapsed: parsed.toolbarCollapsed === true,
+      toolbarVisited: parsed.toolbarVisited === true,
     };
   } catch {
     return base;

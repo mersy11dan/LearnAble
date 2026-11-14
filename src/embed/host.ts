@@ -6,7 +6,8 @@ import type { WidgetSettings } from "./settings";
 const STYLE_ID = "learnable-host-adjust";
 
 function hostCss(settings: WidgetSettings): string {
-  const theme = settings.contrastMode === "off" ? null : themePair(settings.contrastMode, settings.contrastLevel);
+  const forced = typeof window !== "undefined" && window.matchMedia?.("(forced-colors: active)").matches;
+  const theme = forced || settings.contrastMode === "off" ? null : themePair(settings.contrastMode, settings.contrastLevel);
   const paint = theme
     ? `
 html[data-learnable-contrast="on"] { --la-hc-bg: ${theme.bg}; --la-hc-fg: ${theme.fg}; --la-hc-focus: ${theme.focus}; }

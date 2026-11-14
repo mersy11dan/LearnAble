@@ -31,5 +31,6 @@ jobs:
           node scripts/axe-routes.mjs
           node scripts/e2e-static.mjs
           node scripts/voice-e2e.mjs
+          node scripts/open-web-e2e.mjs
         env:
           CHROME_PATH: /usr/bin/google-chrome

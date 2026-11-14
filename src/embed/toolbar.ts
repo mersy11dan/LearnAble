@@ -6,9 +6,17 @@ import { getSettings, updateSettings, type CaptionPreset } from "./settings";
 import { widgetCss } from "./styles";
 import { announce, openHelp, setVoice } from "./voice";
 
+const CORNERS = ["tl", "tr", "bl", "br"] as const;
+type Corner = (typeof CORNERS)[number];
+
+function intersects(a: DOMRect, b: DOMRect): boolean {
+  return a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top;
+}
+
 export class LearnAbleToolbar extends HTMLElement {
   private root: ShadowRoot;
   private built = false;
+  private open = true;
 
   constructor() {
     super();
@@ -20,7 +28,10 @@ export class LearnAbleToolbar extends HTMLElement {
     this.built = true;
     this.root.innerHTML = `
       <style>${widgetCss}</style>
-      <div class="bar" role="group" aria-label="LearnAble display">
+      <button type="button" class="launcher" data-act="launcher" aria-expanded="false" aria-controls="learnable-panel">LearnAble</button>
+      <div class="dock">
+      <button type="button" class="handle" data-act="move" aria-label="Move LearnAble. Arrow keys move it. The corner buttons place it without dragging.">Move</button>
+      <div class="bar" id="learnable-panel" role="toolbar" aria-label="LearnAble display" aria-orientation="horizontal">
         <button type="button" data-act="voice" aria-pressed="true" aria-keyshortcuts="Alt+Shift+S">LearnAble voice</button>
         <button type="button" data-act="describe" aria-pressed="true">Audio description</button>
         <button type="button" data-key="largeText" aria-pressed="false">Larger text</button>
@@ -72,6 +83,12 @@ export class LearnAbleToolbar extends HTMLElement {
         <label class="consent"><input type="checkbox" data-act="consent" /> I agree a description service may see pictures that have no alternative. Nothing is sent until this is checked.</label>
         <button type="button" data-act="keys" aria-pressed="true">Keyboard shortcuts</button>
         <button type="button" data-act="help">Keyboard help</button>
+        <button type="button" data-act="collapse">Minimise</button>
+        <button type="button" data-corner="tl">Top left</button>
+        <button type="button" data-corner="tr">Top right</button>
+        <button type="button" data-corner="bl">Bottom left</button>
+        <button type="button" data-corner="br">Bottom right</button>
+      </div>
       </div>
     `;
     this.root.querySelectorAll<HTMLButtonElement>("button[data-key]").forEach((button) => {
@@ -147,7 +164,136 @@ export class LearnAbleToolbar extends HTMLElement {
       const note = this.root.querySelector("[data-note]");
       if (note) note.textContent = consent ? describeImages(true) : imageReport();
     });
+    const saved = getSettings();
+    this.open = saved.toolbarVisited ? !saved.toolbarCollapsed : true;
+    if (!saved.toolbarVisited) updateSettings({ toolbarVisited: true, toolbarCollapsed: true });
+    this.place(saved.toolbarCorner);
+    this.root.querySelector<HTMLButtonElement>("[data-act=launcher]")?.addEventListener("click", () => this.setOpen(true));
+    this.root.querySelector<HTMLButtonElement>("[data-act=collapse]")?.addEventListener("click", () => this.setOpen(false));
+    this.root.querySelectorAll<HTMLButtonElement>("[data-corner]").forEach((button) => {
+      button.addEventListener("click", () => this.place(button.dataset.corner as Corner, true));
+    });
+    const handle = this.root.querySelector<HTMLButtonElement>("[data-act=move]");
+    handle?.addEventListener("pointerdown", (event) => this.drag(event));
+    handle?.addEventListener("keydown", (event) => this.moveByKey(event));
+    this.root.querySelector(".bar")?.addEventListener("keydown", (event) => this.rove(event as KeyboardEvent));
+    document.addEventListener("focusin", (event) => this.avoid(event));
+    this.paint();
     this.reflect();
+  }
+
+  private controls(): HTMLElement[] {
+    return [...this.root.querySelectorAll<HTMLElement>(".bar button, .bar a[href], .bar select, .bar input")];
+  }
+
+  private setOpen(open: boolean): void {
+    this.open = open;
+    updateSettings({ toolbarCollapsed: !open, toolbarVisited: true });
+    this.paint();
+    const focus = open ? this.root.querySelector<HTMLElement>("[data-act=move]") : this.root.querySelector<HTMLElement>("[data-act=launcher]");
+    focus?.focus();
+  }
+
+  private place(corner: Corner, save = false): void {
+    if (!CORNERS.includes(corner)) return;
+    this.dataset.corner = corner;
+    this.style.left = "";
+    this.style.top = "";
+    this.style.right = "";
+    this.style.bottom = "";
+    if (save) updateSettings({ toolbarCorner: corner });
+  }
+
+  private drag(event: PointerEvent): void {
+    if (event.button !== 0) return;
+    const handle = event.currentTarget;
+    if (!(handle instanceof HTMLElement)) return;
+    const startX = event.clientX;
+    const startY = event.clientY;
+    const origin = this.getBoundingClientRect();
+    const move = (next: PointerEvent) => {
+      const left = Math.min(window.innerWidth - 48, Math.max(0, origin.left + next.clientX - startX));
+      const top = Math.min(window.innerHeight - 48, Math.max(0, origin.top + next.clientY - startY));
+      this.dataset.corner = "free";
+      this.style.left = `${left}px`;
+      this.style.top = `${top}px`;
+      this.style.right = "auto";
+      this.style.bottom = "auto";
+    };
+    const up = () => {
+      handle.removeEventListener("pointermove", move);
+      handle.removeEventListener("pointerup", up);
+    };
+    handle.setPointerCapture(event.pointerId);
+    handle.addEventListener("pointermove", move);
+    handle.addEventListener("pointerup", up);
+  }
+
+  private moveByKey(event: KeyboardEvent): void {
+    if (!event.key.startsWith("Arrow")) return;
+    event.preventDefault();
+    event.stopPropagation();
+    const rect = this.getBoundingClientRect();
+    const step = 24;
+    const left = rect.left + (event.key === "ArrowLeft" ? -step : event.key === "ArrowRight" ? step : 0);
+    const top = rect.top + (event.key === "ArrowUp" ? -step : event.key === "ArrowDown" ? step : 0);
+    this.dataset.corner = "free";
+    this.style.left = `${Math.min(window.innerWidth - 48, Math.max(0, left))}px`;
+    this.style.top = `${Math.min(window.innerHeight - 48, Math.max(0, top))}px`;
+    this.style.right = "auto";
+    this.style.bottom = "auto";
+  }
+
+  private rove(event: KeyboardEvent): void {
+    const target = event.composedPath()[0];
+    if (!(target instanceof HTMLElement)) return;
+    if (target.closest("input, select, textarea")) return;
+    if (target.dataset.act === "move") return;
+    const items = this.controls();
+    const index = items.indexOf(target);
+    if (index < 0) return;
+    let next = index;
+    if (event.key === "ArrowRight" || event.key === "ArrowDown") next = (index + 1) % items.length;
+    else if (event.key === "ArrowLeft" || event.key === "ArrowUp") next = (index - 1 + items.length) % items.length;
+    else if (event.key === "Home") next = 0;
+    else if (event.key === "End") next = items.length - 1;
+    else return;
+    event.preventDefault();
+    items.forEach((item, itemIndex) => item.setAttribute("tabindex", itemIndex === next ? "0" : "-1"));
+    items[next].focus();
+  }
+
+  private avoid(event: FocusEvent): void {
+    const target = event.composedPath()[0];
+    if (!(target instanceof HTMLElement)) return;
+    if (event.composedPath().includes(this)) return;
+    const rect = target.getBoundingClientRect();
+    if (rect.width === 0 && rect.height === 0) return;
+    if (!intersects(this.getBoundingClientRect(), rect)) return;
+    const order: Corner[] = ["tr", "tl", "br", "bl"];
+    for (const corner of order) {
+      this.place(corner);
+      if (!intersects(this.getBoundingClientRect(), target.getBoundingClientRect())) {
+        updateSettings({ toolbarCorner: corner });
+        return;
+      }
+    }
+    target.style.scrollMargin = "5rem";
+    target.scrollIntoView({ block: "nearest", inline: "nearest" });
+  }
+
+  private paint(): void {
+    const launcher = this.root.querySelector<HTMLElement>("[data-act=launcher]");
+    const dock = this.root.querySelector<HTMLElement>(".dock");
+    if (launcher) {
+      launcher.hidden = this.open;
+      launcher.setAttribute("aria-expanded", String(this.open));
+    }
+    if (dock) dock.hidden = !this.open;
+    if (this.open) {
+      const items = this.controls();
+      items.forEach((item, index) => item.setAttribute("tabindex", index === 0 ? "0" : "-1"));
+    }
   }
 
   private reflect(): void {

@@ -30,8 +30,9 @@ export function repairNames(): void {
   document.querySelectorAll("a, button, [role='button']").forEach((element) => {
     if (insideWidget(element) || nameOf(element)) return;
     const title = element.getAttribute("title")?.trim();
-    const logo = element.classList.contains("logo-container") || element.querySelector(".logo");
-    const fallback = logo ? "ALX home" : element.tagName === "A" ? "Link" : "Button";
+    const href = element.getAttribute("href") || "";
+    const home = href === "/" || href === "#/" || /(^|\/)home\/?$/.test(href);
+    const fallback = home ? "Home" : element.tagName === "A" ? "Link" : "Button";
     element.setAttribute("aria-label", title || fallback);
     element.setAttribute(REPAIR_ATTR, "name");
   });
@@ -88,12 +89,14 @@ export function repairAria(): void {
     element.setAttribute(REPAIR_ATTR, "aria");
   });
 
-  document.querySelectorAll("a.anchor[aria-hidden='true'], [aria-hidden='true'][tabindex]").forEach((element) => {
-    element.setAttribute("tabindex", "-1");
-    if (element.getAttribute("aria-hidden") === "true" && element.classList.contains("modal")) {
-      element.removeAttribute("tabindex");
-    }
-    element.setAttribute(REPAIR_ATTR, "aria");
+  document.querySelectorAll("[aria-hidden='true']").forEach((element) => {
+    if (insideWidget(element)) return;
+    const hidden = element instanceof HTMLElement ? [element] : [];
+    const focusable = element.querySelectorAll<HTMLElement>("a, button, input, select, textarea, [tabindex]");
+    [...hidden, ...focusable].forEach((node) => {
+      if (node.tabIndex >= 0) node.tabIndex = -1;
+      node.setAttribute(REPAIR_ATTR, "aria");
+    });
   });
 
   document.querySelectorAll("span[aria-label], div[aria-label]").forEach((element) => {
@@ -189,7 +192,7 @@ export function clearContrastPaints(): void {
 
 export function repairContrast(): void {
   if (document.documentElement.dataset.learnableContrast === "on") return;
-  document.querySelectorAll("a, button, span, p, h1, h2, h3, h4, li, label, div, td, th, code, small, strong, b, em").forEach((element) => {
+    document.querySelectorAll("a, button, span, p, h1, h2, h3, h4, li, label, div, td, th, code, small, strong, b, em").forEach((element) => {
     if (insideWidget(element) || element.getAttribute(REPAIR_ATTR) === "contrast") return;
     const direct = [...element.childNodes].some((node) => node.nodeType === Node.TEXT_NODE && node.textContent?.trim());
     if (!direct || element.getClientRects().length === 0) return;
@@ -226,14 +229,61 @@ export function repairContrast(): void {
       chosen = ratio(black, background) >= ratio(white, background) ? black : white;
     }
     (element as HTMLElement).style.setProperty("color", `rgb(${chosen[0]}, ${chosen[1]}, ${chosen[2]})`, "important");
+    if (element.tagName === "A") (element as HTMLElement).style.setProperty("text-decoration", "underline", "important");
     element.setAttribute(REPAIR_ATTR, "contrast");
   });
 }
 
+export function repairOutline(): void {
+  const headings = [...document.querySelectorAll<HTMLElement>("h1, h2, h3, h4, h5, h6")].filter((heading) => !insideWidget(heading));
+  let previous = 0;
+  for (const heading of headings) {
+    const level = Number(heading.tagName.slice(1));
+    if (!heading.textContent?.trim() && !heading.getAttribute("aria-label")) {
+      heading.setAttribute("aria-label", "Heading");
+      heading.setAttribute(REPAIR_ATTR, "outline");
+    }
+    const expected = previous === 0 ? 1 : Math.min(level, previous + 1);
+    if (level > expected) {
+      heading.setAttribute("aria-level", String(expected));
+      heading.setAttribute(REPAIR_ATTR, "outline");
+      previous = expected;
+    } else previous = level;
+  }
+}
+
+export function clearRepairs(): void {
+  document.querySelectorAll<HTMLElement>("[data-learnable-repair]").forEach((element) => {
+    const kind = element.getAttribute(REPAIR_ATTR);
+    if (kind === "name" || kind === "label") element.removeAttribute("aria-label");
+    if (kind === "aria" || kind === "landmark") element.removeAttribute("role");
+    if (kind === "outline") {
+      element.removeAttribute("aria-level");
+      if (element.getAttribute("aria-label") === "Heading") element.removeAttribute("aria-label");
+    }
+    if (kind === "alt") element.removeAttribute("alt");
+    if (kind === "contrast") {
+      element.style.removeProperty("color");
+      element.style.removeProperty("text-decoration");
+    }
+    element.removeAttribute(REPAIR_ATTR);
+  });
+  document.querySelectorAll(".learnable-skip, .learnable-alt-note, #learnable-gateway").forEach((node) => node.remove());
+}
+
 export function repairHost(): void {
-  repairNames();
+  if (window.matchMedia?.("(forced-colors: active)").matches) {
   repairImages();
+  repairNames();
   repairAria();
   repairLists();
+  repairOutline();
+  return;
+  }
+  repairImages();
+  repairNames();
+  repairAria();
+  repairLists();
+  repairOutline();
   repairContrast();
 }

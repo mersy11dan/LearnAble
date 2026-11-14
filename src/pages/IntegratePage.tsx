@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { Breadcrumbs } from "../components/Breadcrumbs";
 
@@ -47,8 +47,14 @@ add_shortcode("learnable", function () {
 
 const iframeSnippet = `<iframe title="LearnAble lesson" src="https://your-host/lesson/slow-connection" style="width:100%;height:40rem;border:0"></iframe>`;
 
+function bookmarklet(src: string): string {
+  const code = `(function(){if(window.LearnAble)return;var s=document.createElement("script");s.src=${JSON.stringify(src)};s.defer=true;document.documentElement.appendChild(s);})();`;
+  return `javascript:${encodeURIComponent(code)}`;
+}
+
 export function IntegratePage() {
   const playerRef = useRef<HTMLElement>(null);
+  const [scriptUrl, setScriptUrl] = useState("https://your-host/learnable/learnable.js");
 
   useEffect(() => {
     const node = playerRef.current;
@@ -103,6 +109,25 @@ export function IntegratePage() {
       <h2>Voice</h2>
       <p className="measure">
         Spoken navigation starts on, unless the script says data-learnable-voice="off" or LearnAble.init is called with voice: "off". A saved choice in this browser wins over that default. The first visit asks whether to keep the voice or turn it off for a screen reader. Some browsers speak only after that click or the next key. Audio description starts on with the voice, has its own button, and pauses the video when a description is longer than the gap. See docs/VOICE.md.
+      </p>
+      <h2>Any page</h2>
+      <p className="measure">
+        Savanna is the test bed. The same script looks for a header, a navigation region, a main area, and a footer on any site, adds a skip link when the page has none, and repairs empty names, lists, and weak contrast one element at a time. Site-only behaviour, such as the Savanna menu button, lives in an optional profile and runs only on that site. LearnAble.clearRepairs() removes the attributes this script added.
+      </p>
+      <h2>Bookmarklet</h2>
+      <p className="measure">
+        Drag this link to the bookmark bar. It injects the script from the address below. A strict content-security policy can block that injection. The extension does not, because the script is inside the package.
+      </p>
+      <label>
+        Script address
+        <input value={scriptUrl} onChange={(event) => setScriptUrl(event.target.value)} />
+      </label>
+      <p>
+        <a ref={(node) => node?.setAttribute("href", bookmarklet(scriptUrl))}>LearnAble</a>
+      </p>
+      <h2>Extension</h2>
+      <p className="measure">
+        The folder extension/ is a Manifest V3 package. It asks only for the active tab and scripting. It injects the packaged learnable.js when you click the icon. It does not ask for every website, and it does not load code from the network. In Chrome or Edge, open Extensions, turn on developer mode, choose Load unpacked, and select that folder. Build the project first so extension/learnable.js is present.
       </p>
       <h2>If it does not start</h2>
       <ul>

@@ -21,7 +21,15 @@ export const widgetCss = `
   font-size: 1rem;
   line-height: 1.45;
   display: block;
+  position: fixed;
+  z-index: 2147483000;
+  max-width: min(22rem, calc(100vw - 1rem));
+  max-height: calc(100vh - 1rem);
 }
+:host([data-corner="bl"]) { left: 0.5rem; bottom: 0.5rem; top: auto; right: auto; }
+:host([data-corner="br"]) { right: 0.5rem; bottom: 0.5rem; left: auto; top: auto; }
+:host([data-corner="tl"]) { left: 0.5rem; top: 0.5rem; right: auto; bottom: auto; }
+:host([data-corner="tr"]) { right: 0.5rem; top: 0.5rem; left: auto; bottom: auto; }
 :host([theme="navy"]) {
   --color-paper: #1b3048;
   --color-ink: #f7f4ee;
@@ -83,11 +91,18 @@ label { display: flex; flex-direction: column; gap: 0.2rem; min-width: 8rem; }
 select, input, textarea { color: var(--color-ink); background-color: var(--color-paper); }
 input[type="range"] { width: 100%; min-height: 2.75rem; }
 section { background: var(--color-paper); color: var(--color-ink); }
+.launcher, .handle { min-width: 2.75rem; }
+.dock { display: flex; flex-direction: column; gap: 0.35rem; align-items: flex-start; }
 .bar {
-  position: fixed; z-index: 2147483000; top: auto; bottom: 0.5rem; left: 0.5rem; right: auto;
+  position: static;
   background: var(--color-navy); color: var(--color-navy-ink); padding: 0.6rem;
   display: flex; flex-wrap: wrap; gap: 0.4rem; max-width: min(22rem, calc(100vw - 1rem));
-  max-height: 70vh; overflow: auto;
+  max-height: min(70vh, calc(100vh - 4rem)); overflow: auto;
+}
+@media (forced-colors: active) {
+  :host, .bar, .launcher, .handle, button, a, select, input {
+    background: Canvas !important; color: CanvasText !important; border-color: CanvasText !important;
+  }
 }
 .transcript { list-style: none; margin: 0.5rem 0; padding: 0; max-height: 16rem; overflow: auto; }
 .transcript button { background: transparent; color: var(--color-ink); border: 0; box-shadow: none; text-align: left; width: 100%; }

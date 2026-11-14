@@ -2,6 +2,7 @@ import { rememberScript, setAssetBase } from "./assets";
 import { runEnhance } from "./enhance";
 import { applyHost, clearHost } from "./host";
 import { LearnAblePlayer } from "./player";
+import { clearRepairs } from "./repair";
 import { enhancePart, type LearnAbleConfig } from "./settings";
 import { LearnAbleToolbar } from "./toolbar";
 import { startVoice } from "./voice";
@@ -100,6 +101,7 @@ const api = {
     return next;
   },
   getFeatures,
+  clearRepairs,
   version: "0.3.0",
 };
 
