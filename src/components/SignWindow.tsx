@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { visualsFor } from "../embed/signs";
 
 type SignWindowProps = {
   gloss: string;
@@ -100,7 +101,18 @@ export function SignWindow({ gloss, model, note, spell, videoSrc, onClose }: Sig
         ASL gloss (English → ASL), not Ethiopian Sign Language
       </div>
       <div className="sign-body">
-        <p className="sign-slot-title">Sign interpreter video goes here</p>
+        <p className="sign-slot-title">ASL fingerspelling</p>
+        <div className="hands">
+          {visualsFor(gloss).slice(0, 24).map((frame, index) =>
+            frame.src ? (
+              <img key={`${frame.alt}-${index}`} src={frame.src} alt={frame.alt} width={48} height={48} />
+            ) : (
+              <span key={`${frame.alt}-${index}`} role="img" aria-label={frame.alt}>
+                {frame.caption}
+              </span>
+            ),
+          )}
+        </div>
         <dl className="gloss-lines">
           {gloss ? (
             <>

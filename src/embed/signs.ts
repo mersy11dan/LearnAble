@@ -116,6 +116,52 @@ export function signPanel(text: string, mode: CaptionMode): SignPanel {
   };
 }
 
+export type SignVisual = {
+  src: string | null;
+  alt: string;
+  caption: string;
+  kind: "fingerspell" | "point";
+};
+
+const FINGERSPELL_DIR = "/signs/fingerspell";
+
+export function visualsFor(gloss: string): SignVisual[] {
+  const frames: SignVisual[] = [];
+  for (const token of glossTokens(gloss)) {
+    if (/^fs-/i.test(token)) {
+      const word = token.replace(/^fs-/i, "").replace(/[^A-Za-z]/g, "").toUpperCase();
+      for (const letter of word) frames.push(letterFrame(letter));
+      continue;
+    }
+    if (/^IX(?:-\d+)?$/i.test(token)) {
+      frames.push({ src: null, alt: "ASL point, no picture shipped", caption: token.toUpperCase(), kind: "point" });
+      continue;
+    }
+    const key = normalizeToken(token);
+    for (const letter of key) frames.push(letterFrame(letter));
+  }
+  return frames;
+}
+
+function letterFrame(letter: string): SignVisual {
+  return {
+    src: `${FINGERSPELL_DIR}/${letter}.svg`,
+    alt: `ASL fingerspelling: ${letter}`,
+    caption: letter,
+    kind: "fingerspell",
+  };
+}
+
+export function signSummary(frames: SignVisual[]): string {
+  if (!frames.length) return "";
+  const letters = frames.filter((frame) => frame.kind === "fingerspell").map((frame) => frame.caption);
+  const points = frames.filter((frame) => frame.kind === "point").map((frame) => frame.caption);
+  const parts = ["ASL. Fingerspelled."];
+  if (letters.length) parts.push(letters.join(" "));
+  if (points.length) parts.push(points.join(" "));
+  return parts.join(" ");
+}
+
 export function lookupSign(text: string): { gloss: string; clip: string | null; placeholder: true } {
   const panel = signPanel(text, "en");
   return { gloss: panel.gloss || "SIGN", clip: panel.clip, placeholder: true };

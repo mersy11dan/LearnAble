@@ -32,9 +32,11 @@ function upgradeElement(node: HTMLElement): void {
   if (!player.hasAttribute("braille")) player.setAttribute("braille", "");
   if (!player.hasAttribute("docs")) player.setAttribute("docs", "");
   if (!player.hasAttribute("describe")) player.setAttribute("describe", "/media/descriptions.vtt");
+  const parent = node.parentNode;
+  const next = node.nextSibling;
   node.slot = "media";
-  node.replaceWith(player);
   player.append(node);
+  parent?.insertBefore(player, next);
 }
 
 export function upgradeMedia(): void {

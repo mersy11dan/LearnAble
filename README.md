@@ -22,6 +22,8 @@ English and Amharic captions, a sign window, audio description, and optional 3G 
 
 The script also mounts `<learnable-toolbar>` when the page does not include one. Call `LearnAble.init` to choose the language and which features start on.
 
+The lesson videos are H.264 Constrained Baseline, `yuv420p`, AAC, with the index at the front of the file. Serve them as `video/mp4` and answer `Range` requests with `206` and `Accept-Ranges: bytes`. The sign panel’s letter drawings are in `public/signs/fingerspell/` and must be hosted next to the script, not on a page that only has a `<base href>` pointing somewhere else.
+
 | Option | Default | What it does |
 | --- | --- | --- |
 | `lang` | `"en"` | `"en"` or `"am"` caption language |

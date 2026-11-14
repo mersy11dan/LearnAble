@@ -1,4 +1,5 @@
-import { createReadStream, existsSync, statSync } from "node:fs";
+import { existsSync, statSync } from "node:fs";
+import { sendFile } from "./send-file.mjs";
 import { createServer } from "node:http";
 import { extname, join, normalize } from "node:path";
 import { chromium } from "playwright-core";
@@ -20,11 +21,12 @@ const types = {
   ".woff2": "font/woff2",
   ".ttf": "font/ttf",
   ".json": "application/json",
+  ".svg": "image/svg+xml",
 };
 
 function fileFor(urlPath) {
   if (urlPath === "/learnable/learnable.js") return join(root, "dist/learnable.js");
-  if (urlPath.startsWith("/media/") || urlPath.startsWith("/fonts/")) return join(root, "public", urlPath);
+  if (urlPath.startsWith("/media/") || urlPath.startsWith("/fonts/") || urlPath.startsWith("/signs/")) return join(root, "public", urlPath);
   if (urlPath.startsWith("/assets/")) return join(root, "public/reference/savanna", urlPath);
   const named = {
     "/pages/concept-with-learnable.html": "public/with-learnable/pages/concept-with-navigation.html",
@@ -52,8 +54,7 @@ const server = createServer((request, response) => {
     response.end("missing");
     return;
   }
-  response.writeHead(200, { "content-type": types[extname(file)] || "application/octet-stream" });
-  createReadStream(file).pipe(response);
+  sendFile(request, response, file, types[extname(file)] || "application/octet-stream");
 });
 
 await new Promise((resolve) => server.listen(port, "127.0.0.1", resolve));
@@ -147,13 +148,16 @@ await page.waitForTimeout(400);
 const playing = await player.locator(".status").innerText();
 if (!playing.startsWith("Playing")) throw new Error(`play failed: ${playing}`);
 const glossLabel = await player.locator(".sign h2").innerText();
-if (glossLabel !== "ASL gloss (English → ASL), not Ethiopian Sign Language") throw new Error(glossLabel);
+if (glossLabel !== "ASL") throw new Error(glossLabel);
+const about = await player.locator(".sign-info").textContent();
+if (!about?.includes("not Ethiopian Sign Language")) throw new Error(about || "missing about");
+const handAlt = await player.locator("[data-hands] img").first().getAttribute("alt");
+if (handAlt !== "ASL fingerspelling: A") throw new Error(`hand ${handAlt}`);
 const correctedGloss = await player.locator("[data-gloss-corrected]").innerText();
 if (!correctedGloss.includes("fs-ADDIS")) throw new Error(`corrected gloss missing: ${correctedGloss}`);
-const modelGloss = await player.locator("[data-gloss-model]").innerText();
+const modelGloss = await player.locator("[data-gloss-model]").textContent();
 if (!modelGloss.includes("ADDUS ABRAHAM")) throw new Error(`model gloss missing: ${modelGloss}`);
-const correctedLabel = await player.locator("[data-corrected-term]").innerText();
-if (correctedLabel !== "Corrected by hand") throw new Error(correctedLabel);
+if (!correctedGloss.includes("Corrected by hand")) throw new Error(correctedGloss);
 await player.locator("[data-act=captions]").click();
 const amharic = await player.locator(".caption").innerText();
 if (!amharic.includes("ሃና")) throw new Error(`caption did not switch: ${amharic}`);

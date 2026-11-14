@@ -558,6 +558,8 @@ legend { padding: 0 var(--space-1); }
   border: 2px solid var(--color-navy);
   box-shadow: 0 var(--bar-height) 0 var(--color-caption);
 }
+.hands { display: flex; flex-wrap: wrap; gap: 0.25rem; margin: 0 var(--space-3); }
+.hands img { width: 3rem; height: 3rem; object-fit: contain; background: #f7f4ee; border: 2px solid var(--color-line); }
 .gloss-lines { margin: 0 var(--space-3) var(--space-2); min-width: 0; }
 .gloss-lines dt { font-weight: 700; margin: var(--space-2) 0 0.15rem; overflow-wrap: anywhere; }
 .gloss-lines dd { margin: 0; }
