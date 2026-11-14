@@ -34,6 +34,9 @@ export function LessonPage() {
         signVideo={demoLesson.signVideo}
         signPoster={demoLesson.signPoster}
       />
+      <p className="next">
+        <Link to="/offline">Next: keep the 3G pack</Link>
+      </p>
     </div>
   );
 }

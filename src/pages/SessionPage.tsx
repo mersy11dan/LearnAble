@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { AccessiblePlayer } from "../components/AccessiblePlayer";
 import { Breadcrumbs } from "../components/Breadcrumbs";
 import { demoLesson } from "../content/lesson";
@@ -37,9 +38,12 @@ export function SessionPage() {
               </li>
             ))}
           </ol>
-          {visible.length === 0 ? <p>Chat appears as the recording plays.</p> : null}
+          {visible.length === 0 ? <p className="notice notice-wait">Chat appears as the recording plays.</p> : null}
         </section>
       </div>
+      <p className="next">
+        <Link to="/careers">Next: the job card</Link>
+      </p>
     </div>
   );
 }

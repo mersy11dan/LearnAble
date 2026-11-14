@@ -6,7 +6,12 @@ export function HomePage() {
   return (
     <section className="opening">
       <figure className="frame">
-        <img src={demoLesson.video.poster} alt="A drawn phone on paper, the first frame of the lesson." />
+        <img
+          src={demoLesson.video.poster}
+          width={1280}
+          height={720}
+          alt="A drawn phone on paper, the first frame of the lesson."
+        />
         <figcaption>
           <p lang="en">{first.en}</p>
           <p lang="am">{first.am}</p>

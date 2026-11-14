@@ -10,7 +10,7 @@ export function OfflinePage() {
 
   async function downloadZip() {
     setBusy(true);
-    setMessage("Preparing the pack.");
+      setMessage("Preparing the pack…");
     try {
       const zip = await buildOfflinePack(transcript("en"), transcript("am"));
       saveFile(zip, "learnable-3g-pack.zip", "application/zip");
@@ -30,10 +30,10 @@ export function OfflinePage() {
         The video stays on this site. The pack keeps the lesson as sound, captions, braille, and one light page. Open
         the page from the phone’s files when the signal drops.
       </p>
-      <p role="status">{message}</p>
+      <p className={busy ? "notice notice-wait" : "notice"} role="status">{message}</p>
       <div className="actions">
         <button type="button" onClick={() => void downloadZip()} disabled={busy}>
-          {busy ? "Preparing" : "Download the pack"}
+          {busy ? "Preparing…" : "Download the pack"}
         </button>
         <a href="/packs/demo/index.html">Open the light page</a>
         <a href={demoLesson.audio.en}>English sound</a>

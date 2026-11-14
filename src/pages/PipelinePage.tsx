@@ -40,9 +40,9 @@ export function PipelinePage() {
         When a key is set, this service can call Hasab or Hugging Face. With no key, a known lesson sentence returns
         its paired caption and is marked as a sample. Other sentences are left untranslated rather than invented.
       </p>
-      <p role="status">
+      <p className={health === null ? "notice notice-error" : "notice notice-wait"} role="status">
         {health === undefined
-          ? "Looking for the transcript service."
+          ? "Looking for the transcript service…"
           : health === null
             ? "The transcript service is offline. Sample captions in the lesson still work."
             : `Service online. Hasab ${health.hasab ? "key present" : "not configured"}. Hugging Face ${health.huggingface ? "token present" : "not configured"}.`}
@@ -57,21 +57,21 @@ export function PipelinePage() {
       <form className="stack" onSubmit={(event) => void onTranslate(event)}>
         <label>
           From
-          <select value={source} onChange={(event) => setSource(event.target.value === "am" ? "am" : "en")}>
+          <select name="source" autoComplete="off" value={source} onChange={(event) => setSource(event.target.value === "am" ? "am" : "en")}>
             <option value="en">English</option>
             <option value="am">Amharic</option>
           </select>
         </label>
         <label>
           Text
-          <textarea value={text} onChange={(event) => setText(event.target.value)} rows={4} />
+          <textarea name="text" autoComplete="off" spellCheck value={text} onChange={(event) => setText(event.target.value)} rows={4} />
         </label>
         <button type="submit" disabled={busy}>
-          {busy ? "Translating" : `Translate to ${target === "am" ? "Amharic" : "English"}`}
+          {busy ? "Translating…" : `Translate to ${target === "am" ? "Amharic" : "English"}`}
         </button>
       </form>
       {result ? (
-        <div role="status">
+        <div className={result.source === "unavailable" ? "notice notice-error" : "notice"} role="status">
           <p>Source: {result.source}</p>
           <p>{result.message}</p>
           {result.translation ? (

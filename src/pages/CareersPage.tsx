@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import { Breadcrumbs } from "../components/Breadcrumbs";
 import { jobs } from "../content/jobs";
 import { speak, stopSpeaking } from "../lib/speech";
@@ -28,6 +29,9 @@ export function CareersPage() {
           </div>
         </article>
       ))}
+      <p className="next">
+        <Link to="/verify">Next: check a certificate</Link>
+      </p>
     </div>
   );
 }
