@@ -13,6 +13,19 @@ html { scroll-padding-top: 5rem; scroll-padding-bottom: 7rem; }
   background: #1b3048; color: #f7f4ee; padding: 0.6rem 1rem; z-index: 2147483001;
 }
 .learnable-skip:focus { transform: none; }
+.learnable-alt-note { display: inline-block; margin-left: 0.35rem; color: #172033; background: #ffee00; padding: 0.15rem 0.4rem; }
+.learnable-gateway {
+  margin: 2rem 1rem; padding: 1rem; max-width: 40rem;
+  background: #f2f0ea; color: #172033; border-top: 0.28rem solid #1b3048;
+  font-family: "Atkinson Hyperlegible", "Noto Sans Ethiopic", sans-serif;
+}
+.learnable-gateway h2 { font-family: Literata, Georgia, serif; }
+.learnable-gateway a, .learnable-gateway button {
+  min-height: 2.75rem; color: #f7f4ee; background: #1b3048; border: 2px solid #1b3048;
+  padding: 0.4rem 0.8rem;
+}
+.learnable-row { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.learnable-gateway input { min-height: 2.75rem; max-width: 100%; }
 html[data-learnable-text="large"] { font-size: 112.5%; }
 html[data-learnable-contrast="high"] :focus-visible { outline: 3px solid #ffee00; outline-offset: 3px; }
 html[data-learnable-contrast="high"] a { text-decoration: underline; }

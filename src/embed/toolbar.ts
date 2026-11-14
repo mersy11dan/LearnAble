@@ -25,6 +25,9 @@ export class LearnAbleToolbar extends HTMLElement {
         <button type="button" data-key="stopMotion" aria-pressed="false">Stop motion</button>
         <button type="button" data-act="read">Read this page</button>
         <button type="button" data-act="images">Image check</button>
+        <a href="#learnable-pipeline">Transcript</a>
+        <a href="#learnable-job">Job card</a>
+        <a href="#learnable-session">Session</a>
         <label>Caption size <input data-key="captionScale" type="range" min="1" max="2.2" step="0.1" value="1.15" /></label>
         <label>Caption background
           <select data-key="captionPreset">
@@ -93,6 +96,12 @@ export class LearnAbleToolbar extends HTMLElement {
     const images = this.root.querySelector<HTMLButtonElement>("[data-act=images]");
     if (read) read.textContent = copy.read;
     if (images) images.textContent = copy.images;
+    const pipeline = this.root.querySelector<HTMLAnchorElement>("[href='#learnable-pipeline']");
+    const job = this.root.querySelector<HTMLAnchorElement>("[href='#learnable-job']");
+    const session = this.root.querySelector<HTMLAnchorElement>("[href='#learnable-session']");
+    if (pipeline) pipeline.textContent = copy.pipeline;
+    if (job) job.textContent = copy.job;
+    if (session) session.textContent = copy.session;
     const scale = this.root.querySelector<HTMLInputElement>("[data-key=captionScale]");
     const preset = this.root.querySelector<HTMLSelectElement>("[data-key=captionPreset]");
     const uiLang = this.root.querySelector<HTMLSelectElement>("[data-key=uiLang]");

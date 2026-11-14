@@ -103,7 +103,14 @@ for (const [before, after] of pairs) {
     const beforeIds = new Set(plain.violations.map((item) => item.id));
     const added = enhanced.violations.filter((item) => !beforeIds.has(item.id) || item.nodes > (plain.violations.find((hit) => hit.id === item.id)?.nodes || 0));
     table.push({ page: before, width: view.width, zoom: view.zoom, before: plain.count, after: enhanced.count, added: added.map((item) => `${item.id}:${item.nodes}`) });
-    console.log(`${before} ${view.width} ${view.zoom}: before ${plain.count}, with ${enhanced.count}${added.length ? ` added ${added.map((item) => item.id).join(",")}` : ""}`);
+    console.log(`${before} ${view.width} ${view.zoom}: before ${plain.count}, with ${enhanced.count}`);
+    if (view.width === 1280 && view.zoom === "100%") {
+      console.log("  without", plain.violations.map((item) => `${item.id} ${item.nodes}`).join("; ") || "none");
+      console.log("  with", enhanced.violations.map((item) => `${item.id} ${item.nodes}`).join("; ") || "none");
+    }
+    if (enhanced.count >= plain.count) {
+      throw new Error(`${before} at ${view.width}px ${view.zoom} did not drop: ${plain.count} to ${enhanced.count}`);
+    }
   }
 }
 
