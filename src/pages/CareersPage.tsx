@@ -26,6 +26,7 @@ export function CareersPage() {
             <button type="button" onClick={() => stopSpeaking()}>
               Stop audio
             </button>
+            <Link to="/verify">Verifiable certificate</Link>
           </div>
         </article>
       ))}

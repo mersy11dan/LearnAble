@@ -32,6 +32,12 @@ License, loaded from the Fontsource packages.
 Noto Sans Ethiopic and Noto Serif Ethiopic are SIL Open Font License.
 Copyright Google. See `public/fonts/Noto-copyright.txt`.
 
+## Optional models
+
+NLLB-200 (`facebook/nllb-200-distilled-600M`) is CC-BY-NC-4.0. It is not downloaded, not called, and not named as the default. Translation uses it only when `HF_MT_MODEL` is set to that id and the person has given consent.
+
+`waxal-benchmarking/whisper-small-waxal-amh` is CC-BY-4.0. `Salesforce/blip-image-captioning-base` is BSD-3-Clause. Both stay on Hugging Face and run only with a token and consent.
+
 ## Patterns, not copied code
 
 The player’s keyboard and caption behaviour follows ideas from Able Player

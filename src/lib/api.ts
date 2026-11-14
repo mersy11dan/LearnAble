@@ -34,7 +34,12 @@ export function getHealth(): Promise<PipelineHealth | null> {
 export function translateText(text: string, source: "en" | "am", target: "en" | "am"): Promise<TranslateResult | null> {
   return request<TranslateResult>("/api/translate", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      ...(typeof sessionStorage !== "undefined" && sessionStorage.getItem("learnable-consent") === "yes"
+        ? { "X-LearnAble-Consent": "yes" }
+        : {}),
+    },
     body: JSON.stringify({ text, source, target }),
   });
 }

@@ -10,6 +10,7 @@ export function PipelinePage() {
   const [text, setText] = useState(demoLesson.segments[0].en);
   const [result, setResult] = useState<TranslateResult | null>(null);
   const [busy, setBusy] = useState(false);
+  const [consent, setConsent] = useState(false);
 
   useEffect(() => {
     void getHealth().then(setHealth);
@@ -17,6 +18,8 @@ export function PipelinePage() {
 
   async function onTranslate(event: React.FormEvent) {
     event.preventDefault();
+    if (!consent) return;
+    sessionStorage.setItem("learnable-consent", "yes");
     setBusy(true);
     const target = source === "en" ? "am" : "en";
     const next = await translateText(text, source, target);
@@ -66,7 +69,11 @@ export function PipelinePage() {
           Text
           <textarea name="text" autoComplete="off" spellCheck value={text} onChange={(event) => setText(event.target.value)} rows={4} />
         </label>
-        <button type="submit" disabled={busy}>
+        <label>
+          <input type="checkbox" checked={consent} onChange={(event) => setConsent(event.target.checked)} />
+          I agree this text may be sent to Hasab or Hugging Face if a key is set. Nothing is sent until this is checked.
+        </label>
+        <button type="submit" disabled={busy || !consent}>
           {busy ? "Translating…" : `Translate to ${target === "am" ? "Amharic" : "English"}`}
         </button>
       </form>

@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { Breadcrumbs } from "../components/Breadcrumbs";
 import { certificates } from "../content/certificates";
+import { demoBadge, verifyOpenBadge } from "../lib/badge";
+import { dualDate } from "../lib/calendar";
 import { certificateCode, type CertificateRecord } from "../lib/certificate";
 
 type Checked = CertificateRecord & { code: string };
@@ -9,6 +11,7 @@ type Checked = CertificateRecord & { code: string };
 export function VerifyPage() {
   const { code } = useParams();
   const [records, setRecords] = useState<Checked[] | null>(null);
+  const [badgeOk, setBadgeOk] = useState<boolean | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -17,6 +20,9 @@ export function VerifyPage() {
         if (!cancelled) setRecords(next);
       },
     );
+    void verifyOpenBadge().then((ok) => {
+      if (!cancelled) setBadgeOk(ok);
+    });
     return () => {
       cancelled = true;
     };
@@ -40,6 +46,12 @@ export function VerifyPage() {
         items={[{ to: "/", label: "LearnAble" }, ...(code ? [{ to: "/verify", label: "Certificates" }] : []), { label: code ? "Check" : "Certificates" }]}
       />
       <h1>{code ? "Certificate check" : "Certificates"}</h1>
+      <article className="certificate">
+        <h2>Open Badge for {demoBadge.credential.credentialSubject.name}</h2>
+        <p>Issued {dualDate(demoBadge.credential.validFrom.slice(0, 10))}.</p>
+        <p role="status">{badgeOk === null ? "Checking the signature…" : badgeOk ? "The Ed25519 proof matches the published public key." : "The proof does not match."}</p>
+        <p className="wrap">{demoBadge.jwt}</p>
+      </article>
       {code ? (
         match ? (
           <article className="certificate">
@@ -67,8 +79,7 @@ export function VerifyPage() {
         </ul>
       )}
       <p className="measure">
-        The code is the first 12 characters of a SHA-256 hash of the learner, the course, and the date. Change any of
-        those and the link stops matching. This is a demo an employer can open. It is not a signed credential.
+        Employers can share the badge link. The proof is an Open Badges 3.0 credential signed with Ed25519. The private key is not in this repository. The older short code remains as a second check.
       </p>
     </div>
   );

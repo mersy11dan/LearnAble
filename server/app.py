@@ -8,6 +8,7 @@ used for image captions and as a second path for speech and translation.
 
 from __future__ import annotations
 
+import json
 import os
 from pathlib import Path
 
@@ -164,6 +165,17 @@ def create_app() -> Flask:
     def offline_pack():
         return jsonify({"builtIn": "browser", "path": "/packs/demo/index.html", "message": "The 3G pack is assembled on the phone from the saved lesson files."})
 
+    @app.post("/api/certificates/verify")
+    def verify_certificate():
+        body = request.get_json(silent=True) or {}
+        credential = body.get("credential") or {}
+        jwt = credential.get("jwt") if isinstance(credential, dict) else None
+        published = json.loads((ROOT / "src" / "content" / "open-badge.json").read_text(encoding="utf-8"))
+        if jwt and jwt == published["jwt"]:
+            subject = published["credential"]["credentialSubject"]
+            return jsonify({"valid": True, "learner": subject["name"], "proof": "Ed25519"})
+        return jsonify({"valid": False, "learner": None, "proof": "Ed25519"})
+
     @app.post("/api/braille")
     def braille():
         body = request.get_json(silent=True) or {}
@@ -261,6 +273,8 @@ def create_app() -> Flask:
                     "message": "No speech key is set, so this recording was not transcribed. The sample lesson is unchanged.",
                 }
             )
+        if not consent_granted():
+            return jsonify({"source": "unavailable", "text": None, "message": "Nothing was sent. Send X-LearnAble-Consent: yes before a provider is called."}), 403
         if configured("HASAB_API_KEY"):
             try:
                 response = requests.post(
@@ -302,6 +316,8 @@ def create_app() -> Flask:
                     "message": "No Hugging Face token is set, so this picture was not captioned. The lesson picture still has its written description.",
                 }
             )
+        if not consent_granted():
+            return jsonify({"source": "unavailable", "text": None, "message": "Nothing was sent. Send X-LearnAble-Consent: yes before a provider is called."}), 403
         try:
             model = configured("HF_CAPTION_MODEL") or "Salesforce/blip-image-captioning-base"
             payload = hf_post(model, data=image, content_type=upload.mimetype or "image/jpeg")
@@ -326,6 +342,8 @@ def create_app() -> Flask:
                     "message": "No Hasab key is set. Use the device voice on the page. No server audio was generated.",
                 }
             )
+        if not consent_granted():
+            return jsonify({"source": "browser", "message": "Hasab was not called. Send X-LearnAble-Consent: yes before speech is generated."}), 403
         codes = {"en": "eng", "am": "amh"}
         speakers = {"en": "Hanna", "am": "Hanna"}
         try:
@@ -353,4 +371,4 @@ if __name__ == "__main__":
         load_dotenv(ROOT / ".env")
     except ImportError:
         pass
-    create_app().run(host="127.0.0.1", port=5050)
+    create_app().run(host=os.environ.get("LEARNABLE_HOST", "127.0.0.1"), port=5050)

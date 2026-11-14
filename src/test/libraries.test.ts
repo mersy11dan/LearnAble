@@ -3,6 +3,8 @@ import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import { demoLesson } from "../content/lesson";
 import { ethiopicCellCount, toBrf } from "../lib/braille";
+import { verifyOpenBadge } from "../lib/badge";
+import { gregorianToEthiopian } from "../lib/calendar";
 import { certificateCode } from "../lib/certificate";
 import { commandForKey } from "../lib/commands";
 import { buildTaggedPdf } from "../lib/taggedPdf";
@@ -26,6 +28,18 @@ describe("captions", () => {
     const last = demoLesson.segments.at(-1);
     expect(last).toBeDefined();
     expect(cueAt(demoLesson.segments, last!.end)?.en).toBe(last?.en);
+  });
+});
+
+describe("open badge and calendar", () => {
+  it("verifies the published Ed25519 badge", async () => {
+    expect(await verifyOpenBadge()).toBe(true);
+    expect(await verifyOpenBadge("a.b.c")).toBe(false);
+  });
+
+  it("converts 15 November 2026 to the Ethiopian calendar", () => {
+    expect(gregorianToEthiopian(2026, 11, 15)).toEqual({ year: 2019, month: 3, day: 6, monthName: "Hidar" });
+    expect(gregorianToEthiopian(2026, 9, 11)).toEqual({ year: 2019, month: 1, day: 1, monthName: "Meskerem" });
   });
 });
 

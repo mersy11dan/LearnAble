@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { AccessiblePlayer } from "../components/AccessiblePlayer";
 import { Breadcrumbs } from "../components/Breadcrumbs";
 import { demoLesson } from "../content/lesson";
+import { dualDate } from "../lib/calendar";
 import { formatTime } from "../lib/time";
 
 export function SessionPage() {
@@ -15,7 +16,7 @@ export function SessionPage() {
       <h1>Recorded session: captions on a slow phone</h1>
       <p className="measure">
         This is a sample of a live class that was recorded. Captions follow the lesson. Chat lines appear at the
-        moment they were sent. Nothing here is a recording of a real class.
+        moment they were sent. Recorded {dualDate("2026-11-14")}. Nothing here is a recording of a real class.
       </p>
       <div className="session-grid">
         <AccessiblePlayer
