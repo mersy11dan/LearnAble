@@ -11,6 +11,9 @@ export const chromeCopy = {
     images: "Image check",
     skip: "Skip to content",
     menu: "Menu",
+    pipeline: "Transcript",
+    job: "Job card",
+    session: "Session",
   },
   am: {
     larger: "ትልቅ ጽሑፍ",
@@ -22,5 +25,8 @@ export const chromeCopy = {
     images: "የምስል ምርመራ",
     skip: "ወደ ዋናው ይዘት ዝለል",
     menu: "ምናሌ",
+    pipeline: "ጽሑፍ",
+    job: "የስራ ካርድ",
+    session: "ክፍለ ጊዜ",
   },
 } as const;

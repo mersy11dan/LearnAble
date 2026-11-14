@@ -1,5 +1,12 @@
+import lesson from "../content/lesson.json";
+import { jobs } from "../content/jobs";
+import { verifyOpenBadge } from "../lib/badge";
+import { saveFile } from "../lib/pack";
+import { speak } from "../lib/speech";
+import { cuesToVtt } from "../lib/vtt";
 import { chromeCopy } from "./copy";
 import { LearnAblePlayer } from "./player";
+import { repairHost } from "./repair";
 import { enhancePart, getSettings } from "./settings";
 
 const MEDIA_ATTRS = ["captions-en", "captions-am", "sign", "describe", "audio-en", "audio-am", "offline", "braille", "docs"] as const;
@@ -139,11 +146,82 @@ export function imageReport(): string {
   return `${images.length} image${images.length === 1 ? "" : "s"} need a description. Nothing was sent off this page. ${lines.join(" ")}`;
 }
 
+function mountGateway(): void {
+  if (document.getElementById("learnable-gateway")) return;
+  const main = document.querySelector("main") || document.body;
+  const job = jobs[0];
+  const section = document.createElement("section");
+  section.id = "learnable-gateway";
+  section.className = "learnable-gateway";
+  section.setAttribute("aria-label", "LearnAble lesson tools");
+  const chat = lesson.chat.map((line) => `<li>${line.speaker}: ${line.text}</li>`).join("");
+  section.innerHTML = `
+    <h2 id="learnable-pipeline">Transcript</h2>
+    <p>These are the lesson captions. English is the transcript. Amharic is the bundled translation. Nothing is sent off this page.</p>
+    <div class="learnable-row">
+      <button type="button" data-vtt="en">Download English VTT</button>
+      <button type="button" data-vtt="am">Download Amharic VTT</button>
+    </div>
+    <label>Choose a text file to check against the sample lesson
+      <input type="file" accept=".txt,.vtt,text/plain" data-pipeline-file />
+    </label>
+    <p data-pipeline-note></p>
+    <h2 id="learnable-job">Job card</h2>
+    <p>${job?.title ?? "Caption partner"}</p>
+    <p lang="am">${job?.titleAm ?? ""}</p>
+    <p data-job-summary>${job?.summary ?? ""}</p>
+    <div class="learnable-row">
+      <button type="button" data-job>Play audio summary</button>
+      <button type="button" data-badge>Check certificate</button>
+    </div>
+    <p data-cert></p>
+    <h2 id="learnable-session">Session</h2>
+    <p>Recorded session chat. The captions are the lesson transcript above.</p>
+    <ol>${chat}</ol>
+  `;
+  main.append(section);
+  section.querySelectorAll<HTMLButtonElement>("[data-vtt]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const amharic = button.dataset.vtt === "am";
+      const cues = lesson.segments.map((segment) => ({
+        start: segment.start,
+        end: segment.end,
+        text: amharic ? segment.am : segment.en,
+      }));
+      saveFile(new TextEncoder().encode(cuesToVtt(cues)), amharic ? "captions-am.vtt" : "captions-en.vtt", "text/vtt");
+      const note = section.querySelector("[data-pipeline-note]");
+      if (note) note.textContent = amharic ? "Amharic captions downloaded from the sample lesson." : "English captions downloaded from the sample lesson.";
+    });
+  });
+  section.querySelector<HTMLInputElement>("[data-pipeline-file]")?.addEventListener("change", () => {
+    const file = section.querySelector<HTMLInputElement>("[data-pipeline-file]")?.files?.[0];
+    const note = section.querySelector("[data-pipeline-note]");
+    if (!file || !note) return;
+    void file.text().then((text) => {
+      const known = lesson.segments.find((segment) => text.includes(segment.en));
+      note.textContent = known
+        ? `Sample translation: ${known.am}`
+        : "No translation service is running, and this text is not in the sample lesson.";
+    });
+  });
+  section.querySelector<HTMLButtonElement>("[data-job]")?.addEventListener("click", () => {
+    speak(section.querySelector("[data-job-summary]")?.textContent || "", "en");
+  });
+  section.querySelector<HTMLButtonElement>("[data-badge]")?.addEventListener("click", () => {
+    const note = section.querySelector("[data-cert]");
+    void verifyOpenBadge().then((ok) => {
+      if (note) note.textContent = ok ? "The certificate proof matches the published public key." : "The certificate proof does not match.";
+    });
+  });
+}
+
 export function runEnhance(): void {
   upgradeMedia();
   ensureSkip();
   ensureLandmarks();
   ensureKeyboard();
+  mountGateway();
+  repairHost();
 }
 
 export function readPage(): { text: string; lang: "en" | "am"; notice: string } {
