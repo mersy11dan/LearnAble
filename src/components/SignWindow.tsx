@@ -1,5 +1,4 @@
-import { useEffect, useRef, useState } from "react";
-import { usePreferences } from "../a11y/preferences";
+import { useEffect, useState } from "react";
 
 type SignWindowProps = {
   gloss: string;
@@ -17,10 +16,8 @@ function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
 }
 
-export function SignWindow({ gloss, videoSrc, poster, onClose }: SignWindowProps) {
-  const { stopMotion } = usePreferences();
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const [box, setBox] = useState<Box>({ x: 24, y: 420, width: 320, height: 250 });
+export function SignWindow({ gloss, videoSrc, onClose }: SignWindowProps) {
+  const [box, setBox] = useState<Box>({ x: 24, y: 420, width: 320, height: 280 });
 
   useEffect(() => {
     const stage = document.querySelector("#player .stage");
@@ -35,21 +32,6 @@ export function SignWindow({ gloss, videoSrc, poster, onClose }: SignWindowProps
       y: Math.min(Math.max(72, rect.top + 16), Math.max(72, window.innerHeight - height - 12)),
     });
   }, []);
-
-  useEffect(() => {
-    const video = videoRef.current;
-    if (!video) return;
-    if (stopMotion) {
-      video.pause();
-      return;
-    }
-    try {
-      const pending = video.play();
-      if (pending && typeof pending.then === "function") void pending.catch(() => undefined);
-    } catch {
-      // Some test browsers throw from play() instead of returning a rejected promise.
-    }
-  }, [stopMotion, videoSrc]);
 
   function move(dx: number, dy: number) {
     setBox((current) => ({
@@ -115,19 +97,14 @@ export function SignWindow({ gloss, videoSrc, poster, onClose }: SignWindowProps
         Ethiopian Sign Language
       </div>
       <div className="sign-body">
-        <video
-          ref={videoRef}
-          src={videoSrc}
-          poster={poster}
-          muted
-          loop
-          playsInline
-          aria-hidden="true"
-        />
+        <p className="sign-slot-title">Sign interpreter video goes here</p>
         <p className="gloss" lang="en">
           {gloss}
         </p>
-        <p className="sign-note">Placeholder gloss. A recorded Ethiopian Sign Language track replaces this window.</p>
+        <p className="sign-note">
+          This is not a signer. Add a recorded Ethiopian Sign Language clip at <code>{videoSrc}</code>. Until then, the
+          gloss follows the captions.
+        </p>
       </div>
       <div className="sign-actions">
         <button type="button" onClick={() => resize(-40, -32)}>
