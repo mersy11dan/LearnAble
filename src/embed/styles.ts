@@ -79,10 +79,14 @@ video { width: 100%; height: 100%; display: block; background: var(--color-stage
 label { display: flex; flex-direction: column; gap: 0.2rem; min-width: 8rem; }
 input[type="range"] { width: 100%; min-height: 2.75rem; }
 .bar {
-  position: fixed; z-index: 2147483000; right: 0.75rem; bottom: 0.75rem;
+  position: fixed; z-index: 2147483000; top: 0.5rem; right: 0.5rem; left: auto; bottom: auto;
   background: var(--color-navy); color: var(--color-navy-ink); padding: 0.6rem;
-  display: flex; flex-wrap: wrap; gap: 0.4rem; max-width: min(28rem, calc(100vw - 1.5rem));
+  display: flex; flex-wrap: wrap; gap: 0.4rem; max-width: min(22rem, calc(100vw - 1rem));
+  max-height: 70vh; overflow: auto;
 }
+.transcript { list-style: none; margin: 0.5rem 0; padding: 0; max-height: 16rem; overflow: auto; }
+.transcript button { background: transparent; color: var(--color-ink); border: 0; box-shadow: none; text-align: left; width: 100%; }
+.sign .row button { background: var(--color-paper); color: var(--color-ink); border-color: var(--color-navy); box-shadow: none; }
 .bar button { background: transparent; color: inherit; border-color: transparent; box-shadow: inset 0 calc(var(--bar-height) * -1) 0 transparent; }
 .bar button[aria-pressed="true"] { box-shadow: inset 0 calc(var(--bar-height) * -1) 0 var(--color-caption); background: transparent; }
 `;

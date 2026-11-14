@@ -57,6 +57,14 @@ a:hover { text-decoration-thickness: 0.12em; }
 :focus-visible {
   outline: var(--focus-width) solid var(--focus-color);
   outline-offset: var(--focus-offset);
+  scroll-margin: 4.5rem;
+}
+.page, .opening, .topbar-row, .site-footer, .demo-frame, img, video { max-width: 100%; }
+.snippet { white-space: pre-wrap; overflow-wrap: anywhere; }
+.site-footer a, .crumbs a, .route-line a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 1.75rem;
 }
 
 .skip {

@@ -3,9 +3,10 @@ import type { WidgetSettings } from "./settings";
 const STYLE_ID = "learnable-host-adjust";
 
 const HOST_CSS = `
+html { scroll-padding-top: 5rem; scroll-padding-bottom: 7rem; }
+:focus { scroll-margin-top: 5rem; scroll-margin-bottom: 7rem; }
 html[data-learnable-text="large"] { font-size: 125%; }
-html[data-learnable-contrast="high"] { background: #000 !important; color: #fff !important; }
-html[data-learnable-contrast="high"] body { background: #000 !important; color: #fff !important; }
+html[data-learnable-contrast="high"] { color-scheme: dark; }
 html[data-learnable-motion="reduce"] *,
 html[data-learnable-motion="reduce"] *::before,
 html[data-learnable-motion="reduce"] *::after {

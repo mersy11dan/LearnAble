@@ -107,6 +107,18 @@ export function SignWindow({ gloss, videoSrc, onClose }: SignWindowProps) {
         </p>
       </div>
       <div className="sign-actions">
+        <button type="button" onClick={() => move(-24, 0)}>
+          Move left
+        </button>
+        <button type="button" onClick={() => move(24, 0)}>
+          Move right
+        </button>
+        <button type="button" onClick={() => move(0, -24)}>
+          Move up
+        </button>
+        <button type="button" onClick={() => move(0, 24)}>
+          Move down
+        </button>
         <button type="button" onClick={() => resize(-40, -32)}>
           Smaller
         </button>

@@ -90,15 +90,25 @@ export class LearnAblePlayer extends HTMLElement {
           ${braille ? `<button type="button" data-act="braille">Download braille</button>` : ""}
           ${docs ? `<button type="button" data-act="pdf">Download tagged PDF</button>` : ""}
         </div>
+        <h2>Transcript</h2>
+        <ol class="transcript"></ol>
         ${
           sign
-            ? `<div class="sign" data-sign hidden>
+            ? `<div class="sign" data-sign>
                 <h2>Ethiopian Sign Language</h2>
                 <div style="padding:0.75rem">
                   <span class="mark" aria-hidden="true"></span>
-                  <p class="sign-title">Sign interpreter video goes here</p>
+                  <p>Sign interpreter video goes here</p>
                   <p class="gloss">OPEN</p>
-                  <p>This is not a signer. Point the sign attribute at a recorded Ethiopian Sign Language clip.</p>
+                  <p>This is not a signer. Point the sign attribute at a recorded clip. The gloss follows the captions. Move and resize with the buttons. S also toggles this window when the picture is selected.</p>
+                  <div class="row">
+                    <button type="button" data-act="left">Move left</button>
+                    <button type="button" data-act="right">Move right</button>
+                    <button type="button" data-act="up">Move up</button>
+                    <button type="button" data-act="down">Move down</button>
+                    <button type="button" data-act="shrink">Smaller</button>
+                    <button type="button" data-act="grow">Larger</button>
+                  </div>
                 </div>
               </div>`
             : ""
@@ -139,7 +149,27 @@ export class LearnAblePlayer extends HTMLElement {
     this.ad = await this.fetchCues(this.getAttribute("describe"));
     const sign = this.root.querySelector<HTMLElement>("[data-sign]");
     if (sign) sign.hidden = !this.signOn;
+    this.renderTranscript();
     this.sync();
+  }
+
+  private renderTranscript(): void {
+    const list = this.root.querySelector(".transcript");
+    if (!list) return;
+    const cues = this.en.length ? this.en : this.am;
+    list.replaceChildren();
+    for (const cue of cues) {
+      const item = document.createElement("li");
+      const button = document.createElement("button");
+      button.type = "button";
+      button.dataset.seek = String(cue.start);
+      button.textContent = `${formatTime(cue.start)} ${cue.text}`;
+      button.addEventListener("click", () => {
+        if (this.video) this.video.currentTime = cue.start;
+      });
+      item.append(button);
+      list.append(item);
+    }
   }
 
   private async fetchCues(url: string | null): Promise<Cue[]> {
@@ -244,6 +274,23 @@ export class LearnAblePlayer extends HTMLElement {
     if (button) button.setAttribute("aria-pressed", String(this.adOn));
   }
 
+  private nudge(direction: string): void {
+    const sign = this.root.querySelector<HTMLElement>("[data-sign]");
+    if (!sign) return;
+    const current = sign.style.transform.match(/-?\d+/g)?.map(Number) ?? [0, 0];
+    const x = (current[0] ?? 0) + (direction === "left" ? -24 : direction === "right" ? 24 : 0);
+    const y = (current[1] ?? 0) + (direction === "up" ? -24 : direction === "down" ? 24 : 0);
+    sign.style.transform = `translate(${x}px, ${y}px)`;
+  }
+
+  private scaleSign(step: number): void {
+    const sign = this.root.querySelector<HTMLElement>("[data-sign]");
+    if (!sign) return;
+    const width = Math.min(560, Math.max(180, (sign.offsetWidth || 280) + step * 40));
+    sign.style.width = `${width}px`;
+    sign.style.maxWidth = "100%";
+  }
+
   private toggleSign(): void {
     this.signOn = !this.signOn;
     const sign = this.root.querySelector<HTMLElement>("[data-sign]");
@@ -266,6 +313,8 @@ export class LearnAblePlayer extends HTMLElement {
     if (action === "captions") this.cycleCaptions();
     if (action === "ad") this.toggleAd();
     if (action === "sign") this.toggleSign();
+    if (action === "left" || action === "right" || action === "up" || action === "down") this.nudge(action);
+    if (action === "shrink" || action === "grow") this.scaleSign(action === "grow" ? 1 : -1);
     if (action === "pack") {
       try {
         const zip = await buildOfflinePack(this.textOf(this.en), this.textOf(this.am));

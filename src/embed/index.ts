@@ -23,7 +23,7 @@ function defineElements(): void {
 }
 
 function mountToolbar(): void {
-  if (!getFeatures().toolbar) {
+  if (!getFeatures().toolbar || document.documentElement.dataset.learnableToolbar === "page") {
     autoToolbar?.remove();
     autoToolbar = null;
     return;
