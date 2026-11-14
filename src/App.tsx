@@ -2,6 +2,8 @@ import { Route, Routes } from "react-router-dom";
 import { Layout } from "./components/Layout";
 import { AccessibilityPage } from "./pages/AccessibilityPage";
 import { CareersPage } from "./pages/CareersPage";
+import { DemoPage } from "./pages/DemoPage";
+import { IntegratePage } from "./pages/IntegratePage";
 import { HomePage } from "./pages/HomePage";
 import { LessonPage } from "./pages/LessonPage";
 import { OfflinePage } from "./pages/OfflinePage";
@@ -26,6 +28,8 @@ export function App() {
         <Route path="verify/:code" element={<VerifyPage />} />
         <Route path="pipeline" element={<PipelinePage />} />
         <Route path="savanna" element={<SavannaPage />} />
+        <Route path="demo" element={<DemoPage />} />
+        <Route path="integrate" element={<IntegratePage />} />
         <Route path="tracks" element={<TracksPage />} />
         <Route path="accessibility" element={<AccessibilityPage />} />
         <Route

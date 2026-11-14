@@ -74,6 +74,12 @@ export function Layout() {
             <NavLink to="/savanna">Savanna pages</NavLink>
           </li>
           <li>
+            <NavLink to="/demo">Before / with</NavLink>
+          </li>
+          <li>
+            <NavLink to="/integrate">Embed</NavLink>
+          </li>
+          <li>
             <NavLink to="/accessibility">Accessibility</NavLink>
           </li>
         </ul>

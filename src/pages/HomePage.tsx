@@ -50,7 +50,7 @@ export function HomePage() {
           </ul>
         </nav>
         <p>
-          The Savanna learner pages sit beside this, unchanged. <Link to="/savanna">Open them</Link>.
+          LearnAble is a plug-in. The Savanna pages stay as they were. <Link to="/demo">See them before and with one script tag</Link>.
         </p>
       </div>
     </section>

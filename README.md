@@ -1,10 +1,57 @@
 # LearnAble
 
-An accessible lesson player for a phone on a slow connection. English and Amharic captions, a movable Ethiopian Sign Language window, audio description, a light offline pack, a tagged text page, braille export, a recorded-session viewer, and a job card with a checkable certificate link.
+LearnAble is a plug-in educational sites embed. One script tag adds an accessible player and a floating display toolbar. The host page keeps its own layout. The player draws inside a shadow tree, so the host stylesheet does not restyle it.
 
-It runs with no API keys. Sample captions, sample transcripts, and the browser’s own voice are the fallback. Hasab and Hugging Face are used only when a key is present.
+English and Amharic captions, a sign window, audio description, and optional 3G pack, braille, and tagged PDF controls ship in the same file. It runs with no API keys. Sample captions and the browser voice are the fallback.
 
-Built for the ALX Accessibility Hackathon, 14–15 November 2026, on top of the frozen Savanna learner pages.
+## Embed
+
+```html
+<script src="https://your-host/learnable.js" defer></script>
+<learnable-player
+  src="/media/lesson-en.mp4"
+  captions-en="/media/captions-en.vtt"
+  captions-am="/media/captions-am.vtt"
+  sign="/media/esl-placeholder.mp4"
+  describe="/media/descriptions.vtt"
+  offline
+  braille
+  docs>
+</learnable-player>
+```
+
+The script also mounts `<learnable-toolbar>` when the page does not include one. Call `LearnAble.init` to choose the language and which features start on.
+
+| Option | Default | What it does |
+| --- | --- | --- |
+| `lang` | `"en"` | `"en"` or `"am"` caption language |
+| `theme` | `"paper"` | `"paper"` or `"navy"` |
+| `features.toolbar` | on | Floating larger text, high contrast, stop motion, caption size and colour |
+| `features.signWindow` | on | Sign window. Turn off with `sign="false"` |
+| `features.audioDescription` | on | Spoken description. Turn off with `describe="false"` |
+| `features.offlinePack` | off | 3G zip. Also on when the element has `offline` |
+| `features.braille` | off | `.brf` download. Also on when the element has `braille` |
+| `features.taggedDocs` | off | Tagged PDF. Also on when the element has `docs` |
+
+`LearnAble.getSettings()`, `LearnAble.setSettings({ largeText: true })`, and `LearnAble.reset()` read and write the same choices. They are stored in `localStorage` under `learnable-widget`. Larger text, contrast, and reduced motion are applied with one removable style tag, `learnable-host-adjust`.
+
+Events, on the element and on `window`: `learnable-ready`, `learnable-play`, `learnable-captions`, `learnable-settings`.
+
+Build both the site and the bundle with `npm run build`. The plug-in files are `dist/learnable.js` (IIFE, for the script tag) and `dist/learnable.es.js`, each with a sourcemap. The IIFE is about 41 KB, about 15 KB gzipped.
+
+Copy-paste snippets for HTML, React, WordPress, and an iframe fallback are on `/integrate`.
+
+## Demo script
+
+About two and a half minutes. Start on Savanna as it shipped.
+
+1. Open **Before / with** and leave it on Before. Say this is the learner page, unchanged, with no captions and no display controls.
+2. Switch to **With LearnAble**. Say the only addition is a script tag and a `learnable-player` element.
+3. Press Play. Press the captions control so the line switches to Amharic. Open the toolbar and choose yellow on black, then a larger caption size.
+4. Point at the sign window. Say it tells the host where a recorded Ethiopian Sign Language clip goes, and the gloss follows the captions until then.
+5. Turn on audio description. Then press **Larger text**, **High contrast**, and **Stop motion** on the toolbar. Say those settings stick on this browser and can be reset.
+6. If the player was given `offline`, `braille`, and `docs`, download the 3G pack, the braille file, and the tagged PDF. Say those three are off until the host opts in.
+7. Open **Embed** and show the HTML snippet. Mention the React wrapper and the WordPress shortcode on the same page.
 
 ## Run it
 
@@ -33,21 +80,6 @@ The dev server proxies `/api` to http://127.0.0.1:5050. With `.env` empty, known
 `npm run preview` serves the production build on http://127.0.0.1:4173. The service worker is registered only in that build, so the app shell can be reopened after one online visit.
 
 Rebuild the demo media (needs `espeak-ng` and `ffmpeg`) with `npm run media`.
-
-## Demo script
-
-About two and a half minutes. Start at the home page with the network on. Say the lesson is the frame: a phone, a sign gloss, English in white, Amharic in yellow.
-
-1. Click **Open the lesson**. Say the voice is a device voice so it plays with no key, and the captions are the text to trust.
-2. Select the picture and press Space. Press C so the captions switch to Amharic. Drag the caption size up and choose yellow on black.
-3. Point at the sign window. Say it is an honest placeholder, not a signer, and it already moves and resizes. Press the arrow keys on its title bar, then Larger.
-4. Turn on **Audio description**. Say it speaks what the picture is doing.
-5. Click **Larger text**, then **High contrast**, then **Stop motion**. Turn them off again so the judges see they stick and come back.
-6. Open **Download the 3G pack** from the next-step link. Say the zip is sound, text, captions, and a light page, and the video stays behind. Mention the production build also keeps the app after one visit.
-7. Open the text version. Show the picture description, then **Download English braille** and **Download Amharic braille**. Say the tagged PDF is English, and the Amharic stays on this page.
-8. Open **Jobs**. Press **Play audio summary** and say the same words are on the card, including at 200 percent zoom. Follow **Next: check a certificate** and show a matching code.
-
-If time is left, open **Session** and let the chat appear with the recording.
 
 ## Design system
 
