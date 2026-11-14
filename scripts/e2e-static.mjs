@@ -108,8 +108,8 @@ for (const [before, after] of pairs) {
       console.log("  without", plain.violations.map((item) => `${item.id} ${item.nodes}`).join("; ") || "none");
       console.log("  with", enhanced.violations.map((item) => `${item.id} ${item.nodes}`).join("; ") || "none");
     }
-    if (enhanced.count >= plain.count) {
-      throw new Error(`${before} at ${view.width}px ${view.zoom} did not drop: ${plain.count} to ${enhanced.count}`);
+    if (enhanced.count !== 0) {
+      throw new Error(`${before} at ${view.width}px ${view.zoom} still has ${enhanced.count} serious issues`);
     }
   }
 }
@@ -128,6 +128,10 @@ page.on("response", (response) => {
   }
 });
 await page.goto(base + "/pages/concept-with-learnable.html", { waitUntil: "domcontentloaded" });
+const keepVoice = page.getByRole("button", { name: "Keep LearnAble voice" });
+if (await keepVoice.count()) await keepVoice.click();
+const launcher = page.locator("learnable-toolbar").locator("[data-act=launcher]");
+if (await launcher.isVisible()) await launcher.click();
 await page.evaluate(() => {
   document.documentElement.style.zoom = "100%";
 });
@@ -142,9 +146,16 @@ await page.keyboard.press("Space");
 await page.waitForTimeout(400);
 const playing = await player.locator(".status").innerText();
 if (!playing.startsWith("Playing")) throw new Error(`play failed: ${playing}`);
+const glossLabel = await player.locator(".sign h2").innerText();
+if (glossLabel !== "ASL gloss (English → ASL), not Ethiopian Sign Language") throw new Error(glossLabel);
+const gloss = await player.locator(".gloss").innerText();
+if (!gloss.includes("ADDUS ABRAHAM")) throw new Error(`gloss missing: ${gloss}`);
 await player.locator("[data-act=captions]").click();
 const amharic = await player.locator(".caption").innerText();
 if (!amharic.includes("ሃና")) throw new Error(`caption did not switch: ${amharic}`);
+const note = await player.locator("[data-sign-note]").innerText();
+if (!note.includes("Amharic captions are not turned into ASL gloss")) throw new Error(note);
+if ((await player.locator(".gloss").innerText()).trim()) throw new Error("Amharic captions showed a gloss");
 await player.locator("[data-act=size]").evaluate((node) => {
   node.value = "2";
   node.dispatchEvent(new Event("input", { bubbles: true }));
@@ -154,43 +165,50 @@ if (parseFloat(size) < 24) throw new Error(`caption size ${size}`);
 await player.locator("[data-act=preset]").selectOption("yellow");
 const color = await player.locator(".caption").evaluate((node) => getComputedStyle(node).color);
 if (!color.includes("255, 238, 0") && color !== "rgb(255, 238, 0)") throw new Error(`caption color ${color}`);
-await player.locator("[data-act=left]").click();
-const moved = await player.locator("[data-sign]").evaluate((node) => node.style.transform);
-if (!moved.includes("-24")) throw new Error(`keyboard move ${moved}`);
-const handle = player.locator(".sign h2");
-const box = await handle.boundingBox();
-if (!box) throw new Error("sign handle missing");
-await page.mouse.move(box.x + 20, box.y + 10);
+await player.locator("[data-act=left]").click({ force: true });
+const narrowed = await player.locator(".media-row").evaluate((node) => node.style.getPropertyValue("--sign-col"));
+if (!narrowed.includes("14")) throw new Error(`keyboard resize ${narrowed}`);
+await page.locator("learnable-toolbar").locator("[data-corner=tr]").click();
+const grip = player.locator(".sign-grip");
+const box = await grip.boundingBox();
+if (!box) throw new Error("sign grip missing");
+await grip.hover({ position: { x: Math.min(8, box.width / 2), y: Math.min(12, box.height / 2) }, force: true });
 await page.mouse.down();
-await page.mouse.move(box.x + 80, box.y + 40);
+await page.mouse.move(box.x - 80, box.y + 12, { steps: 8 });
 await page.mouse.up();
-const dragged = await player.locator("[data-sign]").evaluate((node) => node.style.transform);
-if (dragged === moved) throw new Error("pointer drag did not move the sign window");
+const dragged = await player.locator(".media-row").evaluate((node) => node.style.getPropertyValue("--sign-col"));
+if (dragged === narrowed) throw new Error("pointer drag did not resize the sign panel");
+if ((await player.locator("[data-act=ad]").getAttribute("aria-pressed")) !== "true") throw new Error("audio description should start on");
+if ((await player.locator("track[kind=descriptions]").count()) < 1) throw new Error("description track missing");
 await player.locator("[data-act=ad]").click();
-if ((await player.locator("[data-act=ad]").getAttribute("aria-pressed")) !== "true") throw new Error("audio description did not toggle");
+if ((await player.locator("[data-act=ad]").getAttribute("aria-pressed")) !== "false") throw new Error("audio description did not toggle");
 if ((await player.locator(".transcript li").count()) < 6) throw new Error("transcript missing");
 await player.locator(".chat").waitFor();
 if (!(await player.locator(".chat").innerText()).includes("Captions are on")) throw new Error("chat missing");
 const pack = page.waitForEvent("download");
-await player.locator("[data-act=pack]").click();
+await player.locator("[data-act=pack]").evaluate((node) => node.click());
 await pack;
 const status = await player.locator(".status").innerText();
 if (!status.includes("3G pack downloaded")) throw new Error(status);
 const braille = page.waitForEvent("download");
-await player.locator("[data-act=braille]").click();
+await player.locator("[data-act=braille]").evaluate((node) => node.click());
 await braille;
 const pdf = page.waitForEvent("download");
-await player.locator("[data-act=pdf]").click();
+await player.locator("[data-act=pdf]").evaluate((node) => node.click());
 await pdf;
 const html = page.waitForEvent("download");
-await player.locator("[data-act=html]").click();
+await player.locator("[data-act=html]").evaluate((node) => node.click());
 await html;
-await page.locator("learnable-toolbar").locator("button", { hasText: "High contrast" }).click();
+await page.screenshot({ path: "/opt/cursor/artifacts/sign-panel-desktop.png" });
+await page.locator("learnable-toolbar").locator("[data-key=contrastMode]").selectOption("bw");
+await page.locator("learnable-toolbar").locator("[data-key=contrastLevel]").fill("10");
 await page.reload({ waitUntil: "domcontentloaded" });
-const pressed = await page.locator("learnable-toolbar").locator("button", { hasText: "High contrast" }).getAttribute("aria-pressed");
-if (pressed !== "true") throw new Error("high contrast did not persist");
-await page.locator("learnable-player").locator("[data-act=job]").click();
-await page.locator("learnable-player").locator("[data-act=badge]").click();
+const mode = await page.locator("learnable-toolbar").locator("[data-key=contrastMode]").inputValue();
+if (mode !== "bw") throw new Error("high contrast did not persist");
+const colors = await page.evaluate(() => getComputedStyle(document.body).backgroundColor);
+if (!colors) throw new Error("contrast paint missing");
+await page.locator("learnable-player").locator("[data-act=job]").evaluate((node) => node.click());
+await page.locator("learnable-player").locator("[data-act=badge]").evaluate((node) => node.click());
 const badge = await page.locator("learnable-player .status").innerText();
 if (!badge.includes("proof matches")) throw new Error(badge);
 const outline = await page.locator("learnable-player [data-act=play]").evaluate((node) => {

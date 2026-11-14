@@ -3,9 +3,10 @@ info:
   title: LearnAble transcript API
   version: 0.2.0
   description: |
-    Captions, translation, speech recognition, image description, braille, and certificate checks.
+    Captions, translation, ASL gloss, speech recognition, image description, braille, and certificate checks.
     External providers are called only when X-LearnAble-Consent is yes and a key is set.
     facebook/nllb-200-distilled-600M is CC-BY-NC-4.0. It is not the default. Set HF_MT_MODEL yourself if you accept that licence.
+    POST /api/gloss returns gloss precomputed by Suyash2205/signbridge-t5-base-asl-gloss for the sample lesson. The model card says Apache-2.0. Its training set, achrafothman/aslg_pc12, is CC-BY-NC-4.0, so the weights stay opt-in. Set LEARNABLE_GLOSS_LOCAL=1 to run them on this machine. Set HF_GLOSS_REMOTE=1 plus HF_TOKEN, and send the consent header, to call the Hugging Face Inference API. Amharic text is not glossed.
 servers:
   - url: http://127.0.0.1:5050
 paths:
@@ -36,6 +37,31 @@ paths:
           description: A translation or a sample caption. source is sample, hasab, huggingface, or unavailable.
         "400":
           description: Missing text or language.
+  /api/gloss:
+    post:
+      summary: English caption to ASL gloss
+      description: |
+        Known lesson captions return the shipped precomputed gloss and do not load the model.
+        Amharic is refused. Unknown English uses a local transformers model only when LEARNABLE_GLOSS_LOCAL is set.
+        A remote Hugging Face call happens only when HF_GLOSS_REMOTE and HF_TOKEN are set and X-LearnAble-Consent is yes.
+        The output is ASLG-PC12 gloss (English word order), not Ethiopian Sign Language.
+      parameters:
+        - $ref: "#/components/parameters/Consent"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [text]
+              properties:
+                text: { type: string }
+                language: { type: string, enum: [en, am] }
+      responses:
+        "200":
+          description: gloss text, or null. source is precomputed, model, huggingface, or unavailable. precomputed is true only for the shipped lesson lines.
+        "400":
+          description: Missing English text.
   /api/transcribe:
     post:
       summary: Speech to text

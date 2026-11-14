@@ -1,0 +1,52 @@
+{
+  "model": "Suyash2205/signbridge-t5-base-asl-gloss",
+  "prompt": "translate English to ASL gloss: ",
+  "license": "apache-2.0",
+  "trainingData": "achrafothman/aslg_pc12",
+  "trainingDataLicense": "cc-by-nc-4.0",
+  "precomputed": true,
+  "weightsFile": "model.safetensors",
+  "weightsBytes": 891644712,
+  "onnx": false,
+  "hardware": "Intel Xeon, 4 CPU threads, no GPU",
+  "loadSeconds": 9.94,
+  "note": "Precomputed by Suyash2205/signbridge-t5-base-asl-gloss. ASLG-PC12 gloss keeps English word order. It is not Ethiopian Sign Language and not a recorded signer. Names and rare words drift.",
+  "cues": [
+    {
+      "en": "Hana opens her lesson on a phone in Addis Ababa.",
+      "gloss": "HANA DESC-OPEN X-SHE LESSON ON PHONE IN ADDUS ABRAHAM .",
+      "seconds": 0.786,
+      "pass": "cold"
+    },
+    {
+      "en": "She needs English and Amharic captions she can make larger.",
+      "gloss": "X-SHE NEED , AND AMHARAC , CAPTEXT X-SHE CAN MAKE DESC-LARGER .",
+      "seconds": 0.709,
+      "pass": "warm"
+    },
+    {
+      "en": "A sign window can move and grow, so Ethiopian Sign Language sits where she needs it.",
+      "gloss": "SIGN WINDOW CAN MOVE AND GROW , DESC-SO ETHIOPIAN SIGN LANGUAGE SIT WHERE X-SHE NEED X-IT .",
+      "seconds": 0.942,
+      "pass": "warm"
+    },
+    {
+      "en": "Audio description says what the picture is doing, for a learner who cannot see it.",
+      "gloss": "AUDIO DESCRIPTION SAY WHAT PICTURE BE DO , FOR LEARNER WHO CAN DESC-NOT SEE X-IT .",
+      "seconds": 0.806,
+      "pass": "warm"
+    },
+    {
+      "en": "When the network is slow she keeps a small pack: sound, text, and a light page.",
+      "gloss": "WHEN NETWORK BE DESC-SLOW , X-SHE KEEP DESC-SMALL PACK : SOUND , TEXT , AND LIGHT PAGE .",
+      "seconds": 0.945,
+      "pass": "warm"
+    },
+    {
+      "en": "The lesson on this page is the same one, with the network or without it.",
+      "gloss": "LESSON ON THIS PAGE BE DESC-SAME ONE , WITH NETWORK OR WITHOUT X-IT .",
+      "seconds": 0.699,
+      "pass": "warm"
+    }
+  ]
+}

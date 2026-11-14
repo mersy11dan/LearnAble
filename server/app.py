@@ -20,6 +20,9 @@ from flask import Flask, jsonify, request
 
 ROOT = Path(__file__).resolve().parents[1]
 LESSON_PATH = ROOT / "src" / "content" / "lesson.json"
+GLOSS_PATH = ROOT / "src" / "content" / "asl-gloss.json"
+GLOSS_MODEL = "Suyash2205/signbridge-t5-base-asl-gloss"
+GLOSS_PROMPT = "translate English to ASL gloss: "
 
 
 def lesson() -> dict:
@@ -98,6 +101,39 @@ def hasab_translate(text: str, source: str, target: str) -> str:
     return found
 
 
+def gloss_table() -> dict:
+    return json.loads(GLOSS_PATH.read_text(encoding="utf-8"))
+
+
+def precomputed_gloss(text: str) -> str | None:
+    cleaned = text.strip()
+    for cue in gloss_table().get("cues", []):
+        if str(cue.get("en", "")).strip() == cleaned:
+            gloss = cue.get("gloss")
+            if isinstance(gloss, str) and gloss.strip():
+                return gloss.strip()
+    return None
+
+
+def run_local_gloss(text: str) -> str:
+    bundle = getattr(run_local_gloss, "bundle", None)
+    if bundle is None:
+        from transformers import AutoModelForSeq2SeqLM, AutoTokenizer
+
+        tokenizer = AutoTokenizer.from_pretrained(GLOSS_MODEL)
+        model = AutoModelForSeq2SeqLM.from_pretrained(GLOSS_MODEL)
+        model.eval()
+        bundle = (tokenizer, model)
+        run_local_gloss.bundle = bundle  # type: ignore[attr-defined]
+    tokenizer, model = bundle
+    import torch
+
+    inputs = tokenizer(GLOSS_PROMPT + text, return_tensors="pt", max_length=64, truncation=True)
+    with torch.no_grad():
+        output = model.generate(**inputs, max_length=64, num_beams=4)
+    return tokenizer.decode(output[0], skip_special_tokens=True)
+
+
 def huggingface_translate(text: str, source: str, target: str) -> str:
     langs = {"en": "eng_Latn", "am": "amh_Ethi"}
     model = configured("HF_MT_MODEL") or "facebook/nllb-200-distilled-600M"
@@ -144,7 +180,7 @@ def create_app() -> Flask:
     @app.after_request
     def cors(response):
         response.headers["Access-Control-Allow-Origin"] = "*"
-        response.headers["Access-Control-Allow-Headers"] = "Content-Type"
+        response.headers["Access-Control-Allow-Headers"] = "Content-Type, X-LearnAble-Consent"
         response.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
         return response
 
@@ -168,6 +204,7 @@ def create_app() -> Flask:
 <ul>
 <li>GET /api/health</li>
 <li>POST /api/translate</li>
+<li>POST /api/gloss</li>
 <li>POST /api/transcribe</li>
 <li>POST /api/describe-image</li>
 <li>POST /api/speak</li>
@@ -211,6 +248,105 @@ def create_app() -> Flask:
                 "asrModel": configured("HF_ASR_MODEL") or "waxal-benchmarking/whisper-small-waxal-amh",
                 "mtModel": configured("HF_MT_MODEL"),
                 "captionModel": configured("HF_CAPTION_MODEL") or "Salesforce/blip-image-captioning-base",
+                "glossModel": GLOSS_MODEL,
+                "glossLocal": bool(configured("LEARNABLE_GLOSS_LOCAL")),
+            }
+        )
+
+    @app.post("/api/gloss")
+    def gloss():
+        body = request.get_json(silent=True) or {}
+        text = str(body.get("text") or "").strip()
+        language = body.get("language") or "en"
+        if language == "am":
+            return jsonify(
+                {
+                    "gloss": None,
+                    "source": "unavailable",
+                    "precomputed": False,
+                    "model": GLOSS_MODEL,
+                    "message": "Amharic captions are not turned into ASL gloss.",
+                }
+            )
+        if not text:
+            return jsonify({"gloss": None, "source": "unavailable", "precomputed": False, "model": GLOSS_MODEL, "message": "Include the English caption."}), 400
+        known = precomputed_gloss(text)
+        if known:
+            return jsonify(
+                {
+                    "gloss": known,
+                    "source": "precomputed",
+                    "precomputed": True,
+                    "model": GLOSS_MODEL,
+                    "message": "This gloss was precomputed by Suyash2205/signbridge-t5-base-asl-gloss and shipped with the lesson. No model was loaded.",
+                }
+            )
+        if configured("LEARNABLE_GLOSS_LOCAL"):
+            try:
+                return jsonify(
+                    {
+                        "gloss": run_local_gloss(text),
+                        "source": "model",
+                        "precomputed": False,
+                        "model": GLOSS_MODEL,
+                        "message": "Gloss from the local transformers model. No request left this machine.",
+                    }
+                )
+            except Exception as exc:  # noqa: BLE001
+                return jsonify(
+                    {
+                        "gloss": None,
+                        "source": "unavailable",
+                        "precomputed": False,
+                        "model": GLOSS_MODEL,
+                        "message": f"The local model did not run ({exc.__class__.__name__}).",
+                    }
+                )
+        if configured("HF_GLOSS_REMOTE") and configured("HF_TOKEN"):
+            if not consent_granted():
+                return jsonify(
+                    {
+                        "gloss": None,
+                        "source": "unavailable",
+                        "precomputed": False,
+                        "model": GLOSS_MODEL,
+                        "message": "Hugging Face was not called. Send X-LearnAble-Consent: yes first.",
+                    }
+                )
+            try:
+                payload = hf_post(
+                    GLOSS_MODEL,
+                    json_body={"inputs": GLOSS_PROMPT + text, "parameters": {"max_length": 64, "num_beams": 4}},
+                )
+                found = extract_text(payload)
+                if not found:
+                    raise ValueError("empty gloss")
+                return jsonify(
+                    {
+                        "gloss": found,
+                        "source": "huggingface",
+                        "precomputed": False,
+                        "model": GLOSS_MODEL,
+                        "message": "Gloss from the Hugging Face Inference API.",
+                    }
+                )
+            except Exception as exc:  # noqa: BLE001
+                return jsonify(
+                    {
+                        "gloss": None,
+                        "source": "unavailable",
+                        "precomputed": False,
+                        "model": GLOSS_MODEL,
+                        "message": f"Hugging Face did not gloss ({exc.__class__.__name__}).",
+                    }
+                )
+        return jsonify(
+            {
+                "gloss": None,
+                "source": "unavailable",
+                "precomputed": False,
+                "model": GLOSS_MODEL,
+                "message": "This caption is not in the shipped gloss file. Set LEARNABLE_GLOSS_LOCAL=1 to run the model on this machine. The panel then fingerspells the English words.",
             }
         )
 

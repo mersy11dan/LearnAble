@@ -1,0 +1,13 @@
+{
+  "language": "gloss-clips",
+  "placeholder": true,
+  "note": "Pluggable clip dictionary. Each gloss token, after X- and DESC- are removed, is looked up here. clip null means fingerspelling. Swap this file, or call setSignDictionary, to plug in another list. These are not recorded Ethiopian Sign Language or ASL videos.",
+  "signs": [
+    { "match": "Hana opens", "gloss": "OPEN", "clip": null },
+    { "match": "captions she can make larger", "gloss": "LARGER", "clip": null },
+    { "match": "sign window", "gloss": "SIGN", "clip": null },
+    { "match": "Audio description", "gloss": "SPEAK", "clip": null },
+    { "match": "small pack", "gloss": "PACK", "clip": null },
+    { "match": "same one", "gloss": "SAME", "clip": null }
+  ]
+}

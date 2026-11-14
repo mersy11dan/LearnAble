@@ -133,7 +133,7 @@ Navigation: the wordmark is home. Lesson, Pack, Session, and Jobs are the primar
 - `/savanna` links into the frozen Savanna pages
 - `/reference/savanna/` those pages themselves
 
-Keyboard, once the picture frame is selected: Space or K play, C cycles captions, D audio description, S the sign window, arrows seek and change volume, M mute, F full screen, question mark lists them. Arrow keys move the sign window. Smaller and Larger resize it.
+Keyboard on the host page: Tab and Shift+Tab, H and Shift+H for headings, L and Shift+L for landmarks, question mark for the shortcut dialog, Escape to close it, Alt+Shift+S for the LearnAble voice. Inside the picture frame, Space or K play, C captions, D audio description, S the sign window, arrows seek, and L seeks instead of jumping landmarks. The shortcut list can be turned off or changed. See docs/VOICE.md.
 
 ## Savanna
 

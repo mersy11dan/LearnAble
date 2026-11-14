@@ -26,13 +26,34 @@ function insideWidget(element: Element): boolean {
   return Boolean(element.closest("learnable-player, learnable-toolbar, .learnable-gateway"));
 }
 
+function readable(text: string): boolean {
+  return /[\p{L}\p{N}]/u.test(text);
+}
+
+function visibleText(element: Element): string {
+  const parts: string[] = [];
+  const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
+  while (walker.nextNode()) {
+    const parent = walker.currentNode.parentElement;
+    if (!parent) continue;
+    const style = getComputedStyle(parent);
+    if (style.display === "none" || style.visibility === "hidden") continue;
+    parts.push(walker.currentNode.textContent || "");
+  }
+  return parts.join(" ").replace(/\s+/g, " ").trim();
+}
+
 export function repairNames(): void {
   document.querySelectorAll("a, button, [role='button']").forEach((element) => {
-    if (insideWidget(element) || nameOf(element)) return;
+    if (insideWidget(element) || element.getAttribute("aria-label") || element.getAttribute("aria-labelledby")) return;
+    const alt = element.querySelector("img[alt]")?.getAttribute("alt")?.trim() || "";
+    if (readable(visibleText(element)) || readable(alt)) return;
     const title = element.getAttribute("title")?.trim();
-    const logo = element.classList.contains("logo-container") || element.querySelector(".logo");
-    const fallback = logo ? "ALX home" : element.tagName === "A" ? "Link" : "Button";
-    element.setAttribute("aria-label", title || fallback);
+    const href = element.getAttribute("href") || "";
+    const home = href === "/" || href === "#/" || /(^|\/)home\/?$/.test(href);
+    const citation = /cite_|#cite|reference/i.test(href);
+    const fallback = citation ? "Back to reference" : home ? "Home" : element.tagName === "A" ? "Link" : "Button";
+    element.setAttribute("aria-label", (title && readable(title) ? title : "") || fallback);
     element.setAttribute(REPAIR_ATTR, "name");
   });
 
@@ -60,10 +81,10 @@ export function repairImages(): void {
       img.alt = "";
       img.setAttribute("role", "presentation");
     } else {
-      img.alt = "Needs a description";
+      img.alt = "Description not yet provided";
       const note = document.createElement("span");
       note.className = "learnable-alt-note";
-      note.textContent = "Needs a description";
+      note.textContent = "Description not yet provided";
       img.after(note);
     }
     img.setAttribute(REPAIR_ATTR, "alt");
@@ -88,12 +109,14 @@ export function repairAria(): void {
     element.setAttribute(REPAIR_ATTR, "aria");
   });
 
-  document.querySelectorAll("a.anchor[aria-hidden='true'], [aria-hidden='true'][tabindex]").forEach((element) => {
-    element.setAttribute("tabindex", "-1");
-    if (element.getAttribute("aria-hidden") === "true" && element.classList.contains("modal")) {
-      element.removeAttribute("tabindex");
-    }
-    element.setAttribute(REPAIR_ATTR, "aria");
+  document.querySelectorAll("[aria-hidden='true']").forEach((element) => {
+    if (insideWidget(element)) return;
+    const hidden = element instanceof HTMLElement ? [element] : [];
+    const focusable = element.querySelectorAll<HTMLElement>("a, button, input, select, textarea, [tabindex]");
+    [...hidden, ...focusable].forEach((node) => {
+      if (node.tabIndex >= 0) node.tabIndex = -1;
+      node.setAttribute(REPAIR_ATTR, "aria");
+    });
   });
 
   document.querySelectorAll("span[aria-label], div[aria-label]").forEach((element) => {
@@ -180,8 +203,16 @@ function neededRatio(element: Element): number {
   return size >= 24 || (size >= 18.67 && weight >= 700) ? 3 : 4.5;
 }
 
+export function clearContrastPaints(): void {
+  document.querySelectorAll<HTMLElement>("[data-learnable-repair='contrast']").forEach((element) => {
+    element.style.removeProperty("color");
+    element.removeAttribute(REPAIR_ATTR);
+  });
+}
+
 export function repairContrast(): void {
-  document.querySelectorAll("a, button, span, p, h1, h2, h3, h4, li, label, div, td, th, code, small, strong, b, em").forEach((element) => {
+  if (document.documentElement.dataset.learnableContrast === "on") return;
+    document.querySelectorAll("a, button, span, p, h1, h2, h3, h4, h5, h6, li, label, div, td, th, code, small, strong, b, em, i, u, abbr, acronym, font, cite, sup, sub").forEach((element) => {
     if (insideWidget(element) || element.getAttribute(REPAIR_ATTR) === "contrast") return;
     const direct = [...element.childNodes].some((node) => node.nodeType === Node.TEXT_NODE && node.textContent?.trim());
     if (!direct || element.getClientRects().length === 0) return;
@@ -218,14 +249,91 @@ export function repairContrast(): void {
       chosen = ratio(black, background) >= ratio(white, background) ? black : white;
     }
     (element as HTMLElement).style.setProperty("color", `rgb(${chosen[0]}, ${chosen[1]}, ${chosen[2]})`, "important");
+    if (element.tagName === "A") (element as HTMLElement).style.setProperty("text-decoration", "underline", "important");
     element.setAttribute(REPAIR_ATTR, "contrast");
   });
 }
 
+export function repairOutline(): void {
+  const headings = [...document.querySelectorAll<HTMLElement>("h1, h2, h3, h4, h5, h6")].filter((heading) => !insideWidget(heading));
+  let previous = 0;
+  for (const heading of headings) {
+    const level = Number(heading.tagName.slice(1));
+    if (!heading.textContent?.trim() && !heading.getAttribute("aria-label")) {
+      heading.setAttribute("aria-label", "Heading");
+      heading.setAttribute(REPAIR_ATTR, "outline");
+    }
+    const expected = previous === 0 ? 1 : Math.min(level, previous + 1);
+    if (level > expected) {
+      heading.setAttribute("aria-level", String(expected));
+      heading.setAttribute(REPAIR_ATTR, "outline");
+      previous = expected;
+    } else previous = level;
+  }
+}
+
+export function repairLanguage(): void {
+  const root = document.documentElement;
+  if (root.lang || root.getAttribute("xml:lang")) return;
+  const bodyLang = document.body?.getAttribute("lang") || document.body?.getAttribute("xml:lang") || "";
+  const meta = document.querySelector('meta[http-equiv="content-language" i], meta[name="language" i], meta[property="og:locale" i]');
+  const metaLang = meta?.getAttribute("content") || "";
+  const lang = (bodyLang || metaLang).split(/[,;]/)[0]?.trim().replace("_", "-");
+  if (!lang) return;
+  root.lang = lang;
+  root.dataset.learnableLangAdded = "true";
+}
+
+export function repairInlineLinks(): void {
+  document.documentElement.dataset.learnableLinkCue = "on";
+}
+
+export function clearRepairs(): void {
+  document.querySelectorAll<HTMLElement>("[data-learnable-repair]").forEach((element) => {
+    const kind = element.getAttribute(REPAIR_ATTR);
+    if (kind === "name" || kind === "label") element.removeAttribute("aria-label");
+    if (kind === "aria" || kind === "landmark") element.removeAttribute("role");
+    if (kind === "outline") {
+      element.removeAttribute("aria-level");
+      if (element.getAttribute("aria-label") === "Heading") element.removeAttribute("aria-label");
+    }
+    if (kind === "alt") element.removeAttribute("alt");
+    if (kind === "contrast") {
+      element.style.removeProperty("color");
+      element.style.removeProperty("text-decoration");
+    }
+    element.removeAttribute(REPAIR_ATTR);
+  });
+  document.querySelectorAll(".learnable-skip, .learnable-alt-note, #learnable-gateway").forEach((node) => node.remove());
+  const root = document.documentElement;
+  if (root.dataset.learnableLangAdded === "true") {
+    root.removeAttribute("lang");
+    delete root.dataset.learnableLangAdded;
+  }
+  delete root.dataset.learnableLinkCue;
+}
+
 export function repairHost(): void {
-  repairNames();
+  if (document.readyState !== "complete" && document.documentElement.dataset.learnableRepairLoad !== "true") {
+    document.documentElement.dataset.learnableRepairLoad = "true";
+    window.addEventListener("load", () => repairHost(), { once: true });
+  }
+  if (window.matchMedia?.("(forced-colors: active)").matches) {
+  repairLanguage();
   repairImages();
+  repairNames();
   repairAria();
   repairLists();
+  repairOutline();
+  repairInlineLinks();
+  return;
+  }
+  repairLanguage();
+  repairImages();
+  repairNames();
+  repairAria();
+  repairLists();
+  repairOutline();
+  repairInlineLinks();
   repairContrast();
 }

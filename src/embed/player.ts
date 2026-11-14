@@ -4,11 +4,13 @@ import { verifyOpenBadge } from "../lib/badge";
 import { toBrf } from "../lib/braille";
 import { commandForKey } from "../lib/commands";
 import { buildClientPack, saveFile } from "../lib/pack";
+import { needsExtendedDescription } from "../lib/describe";
 import { speak, stopSpeaking } from "../lib/speech";
 import { buildTaggedPdf } from "../lib/taggedPdf";
 import { formatTime } from "../lib/time";
 import { cueAt, cuesToVtt, parseVtt, type Cue } from "../lib/vtt";
 import { resolveUrl } from "./assets";
+import { ASL_GLOSS_LABEL, signPanel } from "./signs";
 import { getFeatures, getSettings, getTheme, optedIn, PRESETS, updateSettings, type CaptionPreset } from "./settings";
 import { widgetCss } from "./styles";
 
@@ -29,6 +31,7 @@ export class LearnAblePlayer extends HTMLElement {
   private adOn = false;
   private signOn = true;
   private lastAd = "";
+  private held = false;
   private built = false;
 
   constructor() {
@@ -41,6 +44,7 @@ export class LearnAblePlayer extends HTMLElement {
     void this.loadTracks();
     this.applySettings();
     window.addEventListener("learnable-settings", this.onSettings);
+    window.addEventListener("learnable-speech-cancel", this.onSpeechCancel);
   }
 
   refresh(): void {
@@ -52,11 +56,16 @@ export class LearnAblePlayer extends HTMLElement {
 
   disconnectedCallback(): void {
     window.removeEventListener("learnable-settings", this.onSettings);
+    window.removeEventListener("learnable-speech-cancel", this.onSpeechCancel);
     stopSpeaking();
   }
 
   private onSettings = (): void => {
     this.applySettings();
+  };
+
+  private onSpeechCancel = (): void => {
+    this.resumeHeld();
   };
 
   private mount(): void {
@@ -70,16 +79,36 @@ export class LearnAblePlayer extends HTMLElement {
     this.root.innerHTML = `
       <style>${widgetCss}</style>
       <section aria-label="LearnAble lesson">
+        <div class="media-row">
         <div class="stage" tabindex="0" role="region" aria-label="Lesson picture. Press question mark for keyboard shortcuts.">
           <slot name="media"></slot>
           <video data-fallback playsinline preload="metadata"></video>
           <p class="caption" aria-hidden="true"></p>
         </div>
+        <button type="button" class="sign-grip" aria-label="Resize the sign panel">Resize</button>
+        ${
+          sign
+            ? `<aside class="sign" data-sign aria-label="${ASL_GLOSS_LABEL}">
+                <h2>${ASL_GLOSS_LABEL}</h2>
+                <p class="sign-note" data-sign-note>English captions use a precomputed ASL gloss. Amharic captions are not glossed. This is not a recorded signer.</p>
+                <p class="gloss" lang="en"></p>
+                <p class="spell" data-spell></p>
+                <video data-sign-video muted playsinline preload="metadata" hidden></video>
+                <div class="row">
+                  <button type="button" data-act="left">Narrower</button>
+                  <button type="button" data-act="right">Wider</button>
+                  <button type="button" data-act="shrink">Smaller</button>
+                  <button type="button" data-act="grow">Larger</button>
+                </div>
+              </aside>`
+            : ""
+        }
+        </div>
         <p class="status" aria-live="polite">Paused.</p>
         <div class="row">
           <button type="button" data-act="play">Play</button>
           <button type="button" data-act="captions">Captions: English</button>
-          ${describe ? `<button type="button" data-act="ad" aria-pressed="false">Audio description</button>` : ""}
+          ${describe ? `<button type="button" data-act="ad" aria-pressed="${getSettings().audioDescription}">Audio description</button>` : ""}
           ${sign ? `<button type="button" data-act="sign" aria-pressed="true">Sign window</button>` : ""}
           <label>Caption size <input data-act="size" type="range" min="1" max="2.2" step="0.1" value="1.15" /></label>
           <label>Caption colours
@@ -111,37 +140,17 @@ export class LearnAblePlayer extends HTMLElement {
         <ol class="chat">
           ${lesson.chat.map((line) => `<li><span>${formatTime(line.time)}</span> ${line.speaker}: ${line.text}</li>`).join("")}
         </ol>
-        ${
-          sign
-            ? `<div class="sign" data-sign>
-                <h2 tabindex="0">Ethiopian Sign Language</h2>
-                <div style="padding:0.75rem">
-                  <video data-sign-video muted playsinline preload="metadata"></video>
-                  <span class="mark" aria-hidden="true"></span>
-                  <p class="gloss">OPEN</p>
-                  <p>This is not a signer. Point the sign attribute at a recorded clip. The gloss follows the captions. Move and resize with the buttons. S also toggles this window when the picture is selected.</p>
-                  <div class="row">
-                    <button type="button" data-act="left">Move left</button>
-                    <button type="button" data-act="right">Move right</button>
-                    <button type="button" data-act="up">Move up</button>
-                    <button type="button" data-act="down">Move down</button>
-                    <button type="button" data-act="shrink">Smaller</button>
-                    <button type="button" data-act="grow">Larger</button>
-                  </div>
-                </div>
-              </div>`
-            : ""
-        }
+        <button type="button" data-act="txt">Download transcript text</button>
       </section>
     `;
     this.bindMedia();
-    const signHead = this.root.querySelector<HTMLElement>(".sign h2");
-    signHead?.addEventListener("pointerdown", (event) => this.dragSign(event));
-    signHead?.addEventListener("keydown", (event) => {
-      if (event.key === "ArrowLeft") this.nudge("left");
-      if (event.key === "ArrowRight") this.nudge("right");
-      if (event.key === "ArrowUp") this.nudge("up");
-      if (event.key === "ArrowDown") this.nudge("down");
+    const grip = this.root.querySelector<HTMLElement>(".sign-grip");
+    grip?.addEventListener("pointerdown", (event) => this.dragSign(event));
+    grip?.addEventListener("keydown", (event) => {
+      if (event.key === "ArrowLeft" || event.key === "ArrowDown") this.nudge("left");
+      if (event.key === "ArrowRight" || event.key === "ArrowUp") this.nudge("right");
+      if (event.key === "Home") this.setSignColumn(12);
+      if (event.key === "End") this.setSignColumn(24);
     });
     const stage = this.root.querySelector<HTMLElement>(".stage");
     stage?.addEventListener("keydown", (event) => this.onKey(event));
@@ -181,6 +190,7 @@ export class LearnAblePlayer extends HTMLElement {
       const src = this.getAttribute("src");
       if (src) fallback.src = resolveUrl(src);
     }
+    this.ensureDescriptionTrack();
     this.signClip = this.root.querySelector("[data-sign-video]");
     const signUrl = this.getAttribute("sign");
     if (this.signClip && signUrl && signUrl !== "false") this.signClip.src = resolveUrl(signUrl);
@@ -188,19 +198,24 @@ export class LearnAblePlayer extends HTMLElement {
     if (frame && !frame.getAttribute("title")) frame.setAttribute("title", "Embedded lesson video");
   }
 
+  private signColumn(): number {
+    const row = this.root.querySelector<HTMLElement>(".media-row");
+    const value = Number.parseFloat(row?.style.getPropertyValue("--sign-col") || "16");
+    return Number.isFinite(value) ? value : 16;
+  }
+
+  private setSignColumn(rem: number): void {
+    const row = this.root.querySelector<HTMLElement>(".media-row");
+    if (row) row.style.setProperty("--sign-col", `${Math.min(28, Math.max(10, rem))}rem`);
+  }
+
   private dragSign(event: PointerEvent): void {
     if (event.button !== 0) return;
-    const sign = this.root.querySelector<HTMLElement>("[data-sign]");
     const handle = event.currentTarget;
-    if (!sign || !(handle instanceof HTMLElement)) return;
+    if (!(handle instanceof HTMLElement)) return;
     const startX = event.clientX;
-    const startY = event.clientY;
-    const current = sign.style.transform.match(/-?\d+/g)?.map(Number) ?? [0, 0];
-    const originX = current[0] ?? 0;
-    const originY = current[1] ?? 0;
-    const move = (next: PointerEvent) => {
-      sign.style.transform = `translate(${originX + next.clientX - startX}px, ${originY + next.clientY - startY}px)`;
-    };
+    const origin = this.signColumn();
+    const move = (next: PointerEvent) => this.setSignColumn(origin + (startX - next.clientX) / 16);
     const up = () => {
       handle.removeEventListener("pointermove", move);
       handle.removeEventListener("pointerup", up);
@@ -253,7 +268,7 @@ export class LearnAblePlayer extends HTMLElement {
   private applySettings(): void {
     const settings = getSettings();
     this.mode = settings.lang;
-    if (settings.highContrast) this.setAttribute("contrast", "high");
+    if (settings.contrastMode !== "off" || settings.highContrast) this.setAttribute("contrast", "high");
     else this.removeAttribute("contrast");
     this.setAttribute("theme", getTheme());
     const preset = this.root.querySelector<HTMLSelectElement>("[data-act=preset]");
@@ -261,7 +276,32 @@ export class LearnAblePlayer extends HTMLElement {
     if (preset) preset.value = settings.captionPreset;
     if (size) size.value = String(settings.captionScale);
     this.styleCaption(settings.captionScale, settings.captionPreset);
+    this.adOn = settings.audioDescription;
+    const ad = this.root.querySelector<HTMLButtonElement>("[data-act=ad]");
+    if (ad) ad.setAttribute("aria-pressed", String(this.adOn));
     this.sync();
+  }
+
+  private ensureDescriptionTrack(): void {
+    if (!(this.video instanceof HTMLVideoElement)) return;
+    const src = this.getAttribute("describe");
+    if (!src || src === "false") return;
+    const url = resolveUrl(src);
+    let track = this.video.querySelector<HTMLTrackElement>("track[kind='descriptions']");
+    if (!track) {
+      track = document.createElement("track");
+      track.kind = "descriptions";
+      track.label = "Audio description";
+      track.srclang = "en";
+      this.video.append(track);
+    }
+    if (track.getAttribute("src") !== url) track.src = url;
+  }
+
+  private resumeHeld(): void {
+    if (!this.held || !this.video) return;
+    this.held = false;
+    void this.video.play().catch(() => undefined);
   }
 
   private styleCaption(scale: number, preset: CaptionPreset): void {
@@ -293,16 +333,39 @@ export class LearnAblePlayer extends HTMLElement {
       caption.textContent = cue?.text ?? "";
       caption.setAttribute("lang", this.mode === "am" ? "am" : "en");
     }
+    const panel = signPanel(cue?.text || "", this.mode);
     const gloss = this.root.querySelector(".gloss");
-    if (gloss) gloss.textContent = cue ? cue.text.split(" ").slice(0, 2).join(" ") : "OPEN";
+    if (gloss) gloss.textContent = panel.gloss;
+    const note = this.root.querySelector("[data-sign-note]");
+    if (note) note.textContent = panel.note;
+    const spell = this.root.querySelector("[data-spell]");
+    if (spell) spell.textContent = panel.spell;
+    if (this.signClip) {
+      if (panel.clip) {
+        this.signClip.hidden = false;
+        if (this.signClip.getAttribute("src") !== resolveUrl(panel.clip)) this.signClip.src = resolveUrl(panel.clip);
+      } else this.signClip.hidden = true;
+    }
     if (this.signClip?.getAttribute("src") && this.video && Math.abs(this.signClip.currentTime - time) > 0.4) {
       this.signClip.currentTime = time;
     }
     if (this.adOn) {
       const description = cueAt(this.ad, time);
-      if (description && description.text !== this.lastAd) {
+      if (!description) this.lastAd = "";
+      else if (description.text !== this.lastAd) {
         this.lastAd = description.text;
-        speak(description.text, "en");
+        const settings = getSettings();
+        const gap = description.end - description.start;
+        const extended = needsExtendedDescription(description.text, gap, settings.readRate);
+        if (extended && !this.video.paused) {
+          this.video.pause();
+          this.held = true;
+        }
+        speak(description.text, "en", settings.readRate, {
+          pitch: settings.readPitch,
+          onend: () => this.resumeHeld(),
+          oncancel: () => this.resumeHeld(),
+        });
       }
     }
     const button = this.root.querySelector<HTMLButtonElement>("[data-act=captions]");
@@ -346,27 +409,21 @@ export class LearnAblePlayer extends HTMLElement {
   }
 
   private toggleAd(): void {
-    this.adOn = !this.adOn;
-    if (!this.adOn) stopSpeaking();
-    const button = this.root.querySelector<HTMLButtonElement>("[data-act=ad]");
-    if (button) button.setAttribute("aria-pressed", String(this.adOn));
+    const on = !getSettings().audioDescription;
+    updateSettings({ audioDescription: on });
+    if (!on) {
+      stopSpeaking();
+      this.resumeHeld();
+    }
   }
 
   private nudge(direction: string): void {
-    const sign = this.root.querySelector<HTMLElement>("[data-sign]");
-    if (!sign) return;
-    const current = sign.style.transform.match(/-?\d+/g)?.map(Number) ?? [0, 0];
-    const x = (current[0] ?? 0) + (direction === "left" ? -24 : direction === "right" ? 24 : 0);
-    const y = (current[1] ?? 0) + (direction === "up" ? -24 : direction === "down" ? 24 : 0);
-    sign.style.transform = `translate(${x}px, ${y}px)`;
+    const delta = direction === "left" || direction === "shrink" ? -2 : 2;
+    this.setSignColumn(this.signColumn() + delta);
   }
 
   private scaleSign(step: number): void {
-    const sign = this.root.querySelector<HTMLElement>("[data-sign]");
-    if (!sign) return;
-    const width = Math.min(560, Math.max(180, (sign.offsetWidth || 280) + step * 40));
-    sign.style.width = `${width}px`;
-    sign.style.maxWidth = "100%";
+    this.setSignColumn(this.signColumn() + step * 2);
   }
 
   private toggleSign(): void {
@@ -439,6 +496,11 @@ export class LearnAblePlayer extends HTMLElement {
       const html = `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>LearnAble lesson</title></head><body><main><h1>LearnAble lesson</h1><p>Picture: A navy phone on a paper background, with an English and Amharic caption under the screen.</p>${english}${amharic}</main></body></html>`;
       saveFile(new TextEncoder().encode(html), "learnable-lesson.html", "text/html");
       this.setStatus("HTML text version downloaded, with the picture description.");
+    }
+    if (action === "txt") {
+      const text = `English\n${this.textOf(this.en)}\n\nAmharic\n${this.textOf(this.am)}\n`;
+      saveFile(new TextEncoder().encode(text), "learnable-transcript.txt", "text/plain");
+      this.setStatus("Transcript text downloaded.");
     }
     if (action === "vtt-en" || action === "vtt-am") {
       const cues = action === "vtt-am" ? this.am : this.en;

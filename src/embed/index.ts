@@ -2,8 +2,11 @@ import { rememberScript, setAssetBase } from "./assets";
 import { runEnhance } from "./enhance";
 import { applyHost, clearHost } from "./host";
 import { LearnAblePlayer } from "./player";
+import { setSignDictionary, type SignEntry } from "./signs";
+import { clearRepairs } from "./repair";
 import { enhancePart, type LearnAbleConfig } from "./settings";
 import { LearnAbleToolbar } from "./toolbar";
+import { startVoice } from "./voice";
 import {
   configure,
   getFeatures,
@@ -31,11 +34,13 @@ function scriptConfig(): LearnAbleConfig {
   const attr = script?.getAttribute("data-learnable-enhance");
   const root = document.documentElement.dataset.learnableEnhance;
   const lang = script?.getAttribute("data-learnable-lang");
+  const voiceAttr = script?.getAttribute("data-learnable-voice");
   const off = root === "off" || attr === "false" || attr === "off";
   return {
     enhance: off ? false : true,
     lang: lang === "am" || lang === "en" ? lang : undefined,
     assetBase: script?.getAttribute("data-learnable-base") || undefined,
+    voice: voiceAttr === "on" || voiceAttr === "off" ? voiceAttr : undefined,
   };
 }
 
@@ -60,6 +65,7 @@ function startup(extra: LearnAbleConfig = {}): void {
   applyHost(getSettings());
   mountToolbar();
   if (enhance !== false) runEnhance();
+  startVoice();
   document.querySelectorAll("learnable-player").forEach((element) => {
     if (element instanceof LearnAblePlayer) element.refresh();
   });
@@ -96,6 +102,10 @@ const api = {
     return next;
   },
   getFeatures,
+  clearRepairs,
+  setSignDictionary(next: SignEntry[]) {
+    setSignDictionary(next);
+  },
   version: "0.3.0",
 };
 

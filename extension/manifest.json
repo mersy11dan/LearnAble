@@ -1,0 +1,13 @@
+{
+  "manifest_version": 3,
+  "name": "LearnAble",
+  "version": "0.4.0",
+  "description": "Add LearnAble to the page you are reading. Click the icon. Nothing is loaded from the network.",
+  "action": {
+    "default_title": "LearnAble"
+  },
+  "permissions": ["activeTab", "scripting"],
+  "background": {
+    "service_worker": "background.js"
+  }
+}

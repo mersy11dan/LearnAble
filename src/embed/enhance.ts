@@ -6,6 +6,8 @@ import { speak } from "../lib/speech";
 import { cuesToVtt } from "../lib/vtt";
 import { chromeCopy } from "./copy";
 import { LearnAblePlayer } from "./player";
+import { prepareImages } from "./images";
+import { applySavannaProfile, isSavannaHost } from "./profiles/savanna";
 import { repairHost } from "./repair";
 import { enhancePart, getSettings } from "./settings";
 
@@ -29,6 +31,7 @@ function upgradeElement(node: HTMLElement): void {
   if (!player.hasAttribute("offline")) player.setAttribute("offline", "");
   if (!player.hasAttribute("braille")) player.setAttribute("braille", "");
   if (!player.hasAttribute("docs")) player.setAttribute("docs", "");
+  if (!player.hasAttribute("describe")) player.setAttribute("describe", "/media/descriptions.vtt");
   node.slot = "media";
   node.replaceWith(player);
   player.append(node);
@@ -46,93 +49,79 @@ export function upgradeMedia(): void {
   });
 }
 
+function markLandmark(element: Element): void {
+  element.setAttribute("data-learnable-repair", "landmark");
+}
+
+function ensureTarget(element: HTMLElement, id: string): string {
+  if (!element.id) element.id = id;
+  if (!element.hasAttribute("tabindex")) element.tabIndex = -1;
+  return `#${element.id}`;
+}
+
+function skipHref(): string {
+  const main = document.querySelector<HTMLElement>("main, [role='main']");
+  if (main) return ensureTarget(main, "learnable-main");
+  const named = document.querySelector<HTMLElement>("#main, #content, [role='main']");
+  if (named) return ensureTarget(named, named.id || "learnable-main");
+  const heading = document.querySelector<HTMLElement>("h1, h2");
+  if (heading) return ensureTarget(heading, "learnable-top");
+  return "#learnable-main";
+}
+
 function ensureSkip(): void {
   if (!enhancePart("skip")) return;
-  if (document.querySelector("a.learnable-skip, a[href='#content'], a[href='#main']")) return;
-  const main = document.querySelector("main");
-  if (main && !main.id) main.id = "content";
+  if (document.querySelector("a.learnable-skip, a[href='#content'], a[href='#main'], a[href='#learnable-main']")) return;
   const link = document.createElement("a");
   link.className = "learnable-skip";
-  link.href = main?.id ? `#${main.id}` : "#content";
+  link.href = skipHref();
   link.textContent = chromeCopy[getSettings().uiLang].skip;
   document.body.prepend(link);
 }
 
+function guess(selector: string): HTMLElement | null {
+  const found = document.querySelector<HTMLElement>(selector);
+  return found && !found.closest("learnable-player, learnable-toolbar") ? found : null;
+}
+
 function ensureLandmarks(): void {
   if (!enhancePart("landmarks")) return;
-  const header = document.querySelector(".header");
-  if (header && !document.querySelector("header, [role='banner']")) {
-    header.setAttribute("role", "banner");
+  if (!document.querySelector("header, [role='banner']")) {
+    const header = guess("#header, #banner, .site-header, .page-header, .header");
+    if (header) {
+      header.setAttribute("role", "banner");
+      markLandmark(header);
+    }
   }
-  const sidebar = document.getElementById("sidebar");
-  if (sidebar && !document.querySelector("nav, [role='navigation']")) {
-    sidebar.setAttribute("role", "navigation");
-    if (!sidebar.getAttribute("aria-label")) sidebar.setAttribute("aria-label", "Sidebar");
+  if (!document.querySelector("nav, [role='navigation']")) {
+    const nav = guess("#nav, #navigation, #menu, .site-nav, .nav, .navbar, .menu");
+    if (nav) {
+      nav.setAttribute("role", "navigation");
+      if (!nav.getAttribute("aria-label")) nav.setAttribute("aria-label", "Site");
+      markLandmark(nav);
+    }
   }
-}
-
-function focusables(selector: string): HTMLElement[] {
-  return [...document.querySelectorAll<HTMLElement>(selector)].filter((node) => !node.closest("learnable-player, learnable-toolbar"));
-}
-
-function move(items: HTMLElement[], current: HTMLElement, delta: number): void {
-  const index = items.indexOf(current);
-  if (index < 0) return;
-  const next = items[(index + delta + items.length) % items.length];
-  next.focus();
-}
-
-function onKey(event: KeyboardEvent): void {
-  const target = event.target;
-  if (!(target instanceof HTMLElement)) return;
-  if (target.closest("learnable-player, learnable-toolbar, input, textarea, select")) return;
-
-  if (target.classList.contains("hamburger") && (event.key === "Enter" || event.key === " ")) {
-    event.preventDefault();
-    target.click();
-    target.setAttribute("aria-expanded", String(document.body.classList.contains("sidebar-collapsed") ? "false" : "true"));
+  if (!document.querySelector("main, [role='main']")) {
+    const main = guess("#main, #content, article, [role='main']");
+    if (main && main.tagName !== "MAIN" && main.tagName !== "ARTICLE") {
+      main.setAttribute("role", "main");
+      markLandmark(main);
+    } else if (!main) {
+      const heading = document.querySelector("h1");
+      const region = heading?.parentElement;
+      if (region && region !== document.body && region !== document.documentElement) {
+        region.setAttribute("role", "main");
+        markLandmark(region);
+      }
+    }
   }
-
-  if (event.key === "Escape") {
-    document.querySelectorAll<HTMLElement>(".collapse.show").forEach((panel) => {
-      const button = document.querySelector<HTMLElement>(`[data-bs-target="#${panel.id}"]`);
-      if (button?.getAttribute("aria-expanded") === "true") button.click();
-    });
-    document.querySelectorAll<HTMLElement>(".dropdown-menu.show").forEach((menu) => {
-      menu.classList.remove("show");
-    });
+  if (!document.querySelector("footer, [role='contentinfo']")) {
+    const footer = guess("#footer, .site-footer, .footer");
+    if (footer) {
+      footer.setAttribute("role", "contentinfo");
+      markLandmark(footer);
+    }
   }
-
-  const groups = [
-    ".homepage-nav .nav-link",
-    "button[data-section-index]",
-    ".accordion-button",
-    ".dropdown-menu.show .dropdown-item",
-  ];
-  if (event.key !== "ArrowRight" && event.key !== "ArrowLeft" && event.key !== "ArrowDown" && event.key !== "ArrowUp") return;
-  for (const selector of groups) {
-    const items = focusables(selector);
-    if (!items.includes(target)) continue;
-    event.preventDefault();
-    const delta = event.key === "ArrowRight" || event.key === "ArrowDown" ? 1 : -1;
-    move(items, target, delta);
-    break;
-  }
-}
-
-function ensureKeyboard(): void {
-  if (!enhancePart("keyboard")) return;
-  document.querySelectorAll<HTMLElement>(".hamburger").forEach((burger) => {
-    if (burger.dataset.learnableKey === "true") return;
-    burger.dataset.learnableKey = "true";
-    burger.tabIndex = 0;
-    burger.setAttribute("role", "button");
-    burger.setAttribute("aria-label", chromeCopy[getSettings().uiLang].menu);
-    burger.setAttribute("aria-expanded", String(!document.body.classList.contains("sidebar-collapsed")));
-  });
-  if (document.documentElement.dataset.learnableKeys === "true") return;
-  document.documentElement.dataset.learnableKeys = "true";
-  document.addEventListener("keydown", onKey);
 }
 
 function missingAlt(): HTMLImageElement[] {
@@ -219,9 +208,16 @@ export function runEnhance(): void {
   upgradeMedia();
   ensureSkip();
   ensureLandmarks();
-  ensureKeyboard();
+  if (isSavannaHost()) applySavannaProfile();
   mountGateway();
+  if (!document.getElementById("learnable-reader-live")) {
+    const live = document.createElement("p");
+    live.id = "learnable-reader-live";
+    live.setAttribute("role", "status");
+    document.body.append(live);
+  }
   repairHost();
+  prepareImages();
 }
 
 export function readPage(): { text: string; lang: "en" | "am"; notice: string } {
