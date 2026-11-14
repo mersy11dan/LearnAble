@@ -23,8 +23,10 @@
   --color-focus: #0b3d91;
   --color-muted: #3d4d63;
   --color-caption: #ffee00;
+  --color-caption-ink: #111111;
   --color-stage: #111111;
   --color-surface: #ffffff;
+  --color-link: var(--color-focus);
 
   --font-text: "Atkinson Hyperlegible", "Noto Sans Ethiopic", sans-serif;
   --font-display: Literata, "Noto Serif Ethiopic", serif;
@@ -32,30 +34,38 @@
   --text-xs: 0.875rem;
   --text-sm: 1rem;
   --text-md: 1.125rem;
-  --text-lg: 1.5rem;
-  --text-xl: 2rem;
-  --text-2xl: clamp(2.15rem, 4.2vw, 3.35rem);
+  --text-lg: 1.35rem;
+  --text-xl: 1.75rem;
+  --text-2xl: clamp(2.05rem, 3.6vw, 3.15rem);
   --leading-body: 1.55;
-  --leading-display: 1.12;
-  --tracking-display: -0.025em;
+  --leading-ui: 1.35;
+  --leading-display: 1.08;
+  --tracking-display: -0.03em;
 
+  --space-0: 0;
   --space-1: 0.25rem;
   --space-2: 0.5rem;
   --space-3: 0.75rem;
   --space-4: 1rem;
   --space-5: 1.5rem;
-  --space-6: 2.5rem;
-  --space-7: 4rem;
-  --measure: 68ch;
+  --space-6: 2.25rem;
+  --space-7: 3.5rem;
+  --space-8: 5rem;
+  --measure: 66ch;
   --page: 76rem;
 
   --radius-none: 0;
+  --radius-control: 0;
   --size-target: 2.75rem;
+  --bar-height: 0.28rem;
+  --bar-width: 2.5rem;
 
   --elevation-flat: none;
   --elevation-float: 4px 4px 0 var(--color-navy);
+  --elevation-press: inset 0 calc(var(--bar-height) * -1) 0 var(--color-caption);
 
   --motion-fast: 120ms;
+  --motion-press: 80ms;
   --motion-ease: ease-out;
 
   --focus-width: 3px;
@@ -85,6 +95,7 @@ html[data-contrast="high"] {
   --color-stage: #000000;
   --color-surface: #000000;
   --elevation-float: 4px 4px 0 #ffffff;
+  --elevation-press: inset 0 calc(var(--bar-height) * -1) 0 var(--color-caption);
   --focus-color: #ffee00;
   color-scheme: dark;
 }
