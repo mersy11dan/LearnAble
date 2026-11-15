@@ -267,6 +267,7 @@ function moveByKey(event: KeyboardEvent): void {
 }
 
 export function closeHands(restore = false): void {
+  if (typeof window === "undefined") return;
   window.clearInterval(timer);
   timer = 0;
   frames = [];
@@ -281,6 +282,7 @@ export function closeSelectionHands(): void {
 }
 
 export function presentHands(next: SignVisual[], options: HandsOptions = {}): void {
+  if (typeof document === "undefined") return;
   if (!next.length) {
     if (options.source !== "selection") closeHands(false);
     return;
@@ -303,6 +305,7 @@ export function presentHands(next: SignVisual[], options: HandsOptions = {}): vo
 }
 
 export function showSignerFrame(host: HTMLElement | null, next: SignVisual[], frameIndex: number): void {
+  if (typeof document === "undefined") return;
   if (!next.length) {
     closeHands(false);
     return;
