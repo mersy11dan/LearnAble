@@ -125,14 +125,9 @@ export function useHumanizedVoice(): HumanizedVoice {
       utterance.volume = options.volume ?? 1.0;
     }
 
-    const prosodyVariations = [0, 0.05, -0.05, 0.03, -0.03];
-    let wordIndex = 0;
-    
-    utterance.onboundary = (event) => {
-      if (event.name === "word") {
-        const variation = prosodyVariations[wordIndex % prosodyVariations.length];
-        wordIndex++;
-      }
+    // Note: Prosody variations would be implemented here for more natural speech
+    utterance.onboundary = () => {
+      // Future: Add prosody variation logic
     };
 
     utterance.onstart = () => {

@@ -67,7 +67,7 @@ function generateSimpleEmbedding(text: string): number[] {
   const words = text.toLowerCase().split(/\s+/);
   const embedding = new Array(768).fill(0);
   
-  words.forEach((word, idx) => {
+  words.forEach((word) => {
     const hash = word.split('').reduce((acc, char) => {
       return ((acc << 5) - acc) + char.charCodeAt(0);
     }, 0);

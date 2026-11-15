@@ -1,8 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { Box, IconButton, Typography, Paper, Tooltip, Fab } from "@mui/material";
 import {
-  ZoomIn,
-  ZoomOut,
   DragIndicator,
   Visibility,
   VisibilityOff,
@@ -16,12 +14,12 @@ import { generateASLSummary } from "../../utils/aslSummary";
 import "./styles.css";
 
 interface ASLInterpreterProps {
-  videoRef: React.RefObject<HTMLVideoElement>;
+  videoRef?: React.RefObject<HTMLVideoElement>;
   captions?: string;
   isPlaying: boolean;
 }
 
-export function ASLInterpreter({ videoRef, captions, isPlaying }: ASLInterpreterProps) {
+export function ASLInterpreter({ captions, isPlaying }: ASLInterpreterProps) {
   const [isVisible, setIsVisible] = useState(true);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [size, setSize] = useState({ width: 280, height: 200 });
@@ -65,7 +63,7 @@ export function ASLInterpreter({ videoRef, captions, isPlaying }: ASLInterpreter
     }
   };
 
-  const handleResize = (event: any, { size: newSize }: any) => {
+  const handleResize = (_event: any, { size: newSize }: any) => {
     setSize({ width: newSize.width, height: newSize.height });
   };
 
