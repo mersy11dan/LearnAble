@@ -9,7 +9,8 @@ export function ReadPage() {
   const [message, setMessage] = useState("");
 
   async function downloadPdf() {
-    const shipped = await fetch("/media/learnable-lesson.pdf");
+    const { safeFetch } = await import("../lib/guard");
+    const shipped = await safeFetch("/media/learnable-lesson.pdf");
     if (shipped.ok) {
       saveFile(new Uint8Array(await shipped.arrayBuffer()), "learnable-lesson.pdf", "application/pdf");
       setMessage("Tagged PDF downloaded. It includes the English, the Amharic, and the picture description.");

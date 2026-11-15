@@ -1,4 +1,7 @@
+import { allowOrigin } from "./guard";
+
 const base = import.meta.env.VITE_API_BASE ?? "";
+if (base) allowOrigin(base);
 
 export type IssuedCredential = {
   id: string;
@@ -21,7 +24,8 @@ export type CredentialCheck = {
 };
 
 async function readJson<T>(path: string, init?: RequestInit): Promise<{ ok: boolean; status: number; body: T | null }> {
-  const response = await fetch(`${base}${path}`, { ...init, signal: AbortSignal.timeout(8000) });
+  const { safeFetch } = await import("./guard");
+  const response = await safeFetch(`${base}${path}`, { ...init, signal: AbortSignal.timeout(8000) });
   const body = (await response.json().catch(() => null)) as T | null;
   return { ok: response.ok, status: response.status, body };
 }

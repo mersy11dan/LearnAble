@@ -141,7 +141,8 @@ export function AccessiblePlayer({
     async function load(url: string | undefined, apply: (cues: Cue[]) => void) {
       if (!url) return;
       try {
-        const response = await fetch(url);
+        const { safeFetch } = await import("../lib/guard");
+        const response = await safeFetch(url);
         if (!response.ok) return;
         const cues = parseVtt(await response.text());
         if (!cancelled) apply(cues);

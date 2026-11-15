@@ -1,4 +1,5 @@
 import type { ContrastMode } from "../lib/contrast";
+import { ownData } from "../lib/guard";
 
 export type CaptionPreset = "white" | "yellow" | "black" | "cyan";
 export type Lang = "en" | "am";
@@ -144,7 +145,7 @@ export function loadSettings(): WidgetSettings {
   try {
     const saved = localStorage.getItem(KEY);
     if (!saved) return base;
-    const parsed = JSON.parse(saved) as Partial<WidgetSettings>;
+    const parsed = ownData(JSON.parse(saved)) as Partial<WidgetSettings>;
     const lang = parsed.lang === "am" ? "am" : parsed.lang === "en" ? "en" : base.lang;
     const uiLang = parsed.uiLang === "am" ? "am" : parsed.uiLang === "en" ? "en" : base.uiLang;
     const contrastMode = parsed.contrastMode === "bw" || parsed.contrastMode === "yb" ? parsed.contrastMode : "off";
@@ -160,7 +161,6 @@ export function loadSettings(): WidgetSettings {
           : base.descriptionMode;
     return {
       ...base,
-      ...parsed,
       lang,
       uiLang,
       contrastMode,
@@ -204,13 +204,17 @@ export function saveSettings(next: WidgetSettings): void {
 }
 
 export function updateSettings(partial: Partial<WidgetSettings>): WidgetSettings {
-  const next = { ...getSettings(), ...partial };
+  const next = { ...getSettings(), ...ownData(partial) } as WidgetSettings;
   saveSettings(next);
   return getSettings();
 }
 
 export function configure(config: LearnAbleConfig = {}): void {
-  features = { ...defaultFeatures(), ...config.features };
+  const incoming = ownData(config.features);
+  features = { ...defaultFeatures() };
+  for (const key of Object.keys(defaultFeatures()) as (keyof FeatureFlags)[]) {
+    if (typeof incoming[key] === "boolean") features[key] = incoming[key] as boolean;
+  }
   if (config.theme) themeName = config.theme;
   if (config.enhance !== undefined) enhance = config.enhance;
   const stored = loadSettings();

@@ -1,5 +1,6 @@
 import { zipSync } from "fflate";
 import { toBrf } from "./braille";
+import { escapeHtml, safeFetch } from "./guard";
 
 const PACK_FILES = [
   "index.html",
@@ -18,7 +19,7 @@ const PACK_FILES = [
 export async function buildOfflinePack(english: string, amharic: string): Promise<Uint8Array> {
   const entries: Record<string, Uint8Array> = {};
   for (const name of PACK_FILES) {
-    const response = await fetch(`/packs/demo/${name}`);
+    const response = await safeFetch(`/packs/demo/${name}`);
     if (!response.ok) {
       throw new Error(`The light pack is missing ${name}.`);
     }
@@ -69,15 +70,16 @@ function packHtml(english: string, amharic: string, descriptions: string, englis
   const lines = english.split("\n").filter(Boolean);
   const amLines = amharic.split("\n").filter(Boolean);
   const sections = lines
-    .map((line, index) => `<section><h2>${line}</h2>${amLines[index] ? `<p lang="am">${amLines[index]}</p>` : ""}</section>`)
+    .map((line, index) => `<section><h2>${escapeHtml(line)}</h2>${amLines[index] ? `<p lang="am">${escapeHtml(amLines[index])}</p>` : ""}</section>`)
     .join("");
-  return `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>LearnAble light lesson</title></head><body><main><h1>LearnAble light lesson</h1><p>Sound, text, and this page. The video is not in the pack.</p><figure><img src="lesson-figure.svg" alt="${FIGURE_ALT}"></figure><h2>English</h2>${audioElement(englishAudio, true)}<h2 lang="am">አማርኛ</h2>${audioElement(amharicAudio, false)}${sections}${descriptions ? `<h2>Audio description</h2><p>${descriptions}</p>` : ""}</main></body></html>`;
+  const described = descriptions ? `<h2>Audio description</h2><p>${escapeHtml(descriptions)}</p>` : "";
+  return `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>LearnAble light lesson</title></head><body><main><h1>LearnAble light lesson</h1><p>Sound, text, and this page. The video is not in the pack.</p><figure><img src="lesson-figure.svg" alt="${escapeHtml(FIGURE_ALT)}"></figure><h2>English</h2>${audioElement(englishAudio, true)}<h2 lang="am">አማርኛ</h2>${audioElement(amharicAudio, false)}${sections}${described}</main></body></html>`;
 }
 
 async function optionalFile(url: string | undefined): Promise<Uint8Array | null> {
   if (!url) return null;
   try {
-    const response = await fetch(url);
+    const response = await safeFetch(url);
     if (!response.ok) return null;
     return new Uint8Array(await response.arrayBuffer());
   } catch {

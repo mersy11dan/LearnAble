@@ -9,6 +9,7 @@ import { speak, stopSpeaking, whenVoice } from "../lib/speech";
 import { buildTaggedPdf } from "../lib/taggedPdf";
 import { formatTime } from "../lib/time";
 import { cueAt, cuesToVtt, parseVtt, type Cue } from "../lib/vtt";
+import { safeFetch } from "../lib/guard";
 import { resolveUrl } from "./assets";
 import {
   DEFAULT_FRAME,
@@ -322,7 +323,10 @@ export class LearnAblePlayer extends HTMLElement {
     }
     this.ensureDescriptionTrack();
     const frame = this.querySelector("iframe");
-    if (frame && !frame.getAttribute("title")) frame.setAttribute("title", "Embedded lesson video");
+    if (frame) {
+      if (!frame.getAttribute("title")) frame.setAttribute("title", "Embedded lesson video");
+      if (!frame.getAttribute("sandbox")) frame.setAttribute("sandbox", "allow-scripts allow-same-origin allow-presentation");
+    }
   }
 
   private signColumn(): number {
@@ -386,7 +390,7 @@ export class LearnAblePlayer extends HTMLElement {
   private async fetchCues(url: string | null): Promise<Cue[]> {
     if (!url || url === "false") return [];
     try {
-      const response = await fetch(resolveUrl(url));
+      const response = await safeFetch(resolveUrl(url));
       if (!response.ok) return [];
       return parseVtt(await response.text());
     } catch {
@@ -963,7 +967,7 @@ export class LearnAblePlayer extends HTMLElement {
     }
     if (action === "pdf") {
       try {
-        const shipped = await fetch(resolveUrl(this.getAttribute("pdf") || "/media/learnable-lesson.pdf"));
+        const shipped = await safeFetch(resolveUrl(this.getAttribute("pdf") || "/media/learnable-lesson.pdf"));
         if (shipped.ok) {
           saveFile(new Uint8Array(await shipped.arrayBuffer()), "learnable-lesson.pdf", "application/pdf");
           this.setStatus("Tagged PDF downloaded, with Amharic and the picture description.");
