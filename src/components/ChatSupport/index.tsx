@@ -1,9 +1,10 @@
-import { useState, useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ChatMessage } from "./ChatMessage";
 import { ChatInput } from "./ChatInput";
 import { VoiceControl } from "./VoiceControl";
 import { ASLTranslator } from "./ASLTranslator";
 import { useChatSupport } from "./useChatSupport";
+import { useSpeechSynthesis } from "../../utils/speechSynthesis";
 import "./styles.css";
 
 function storedConsent(): boolean {
@@ -13,29 +14,36 @@ function storedConsent(): boolean {
 export function ChatSupport() {
   const [isOpen, setIsOpen] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
+  const [draft, setDraft] = useState("");
+  const [listening, setListening] = useState(false);
   const { messages, sendMessage, isLoading } = useChatSupport();
   const [consent, setConsent] = useState(storedConsent);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  };
+  const { speak, stop: stopSpeaking } = useSpeechSynthesis();
 
   useEffect(() => {
-    scrollToBottom();
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  const handleVoiceInput = (text: string) => {
-    sendMessage(text);
+  const handleSend = (text: string) => {
+    stopSpeaking();
+    setDraft("");
+    setListening(false);
+    void sendMessage(text);
+  };
+
+  const handleVoiceFinal = (text: string) => {
+    setListening(false);
+    setDraft("");
+    stopSpeaking();
+    void sendMessage(text).then((reply) => {
+      if (reply) speak(reply);
+    });
   };
 
   if (!isOpen) {
     return (
-      <button
-        className="chat-support-fab"
-        onClick={() => setIsOpen(true)}
-        aria-label="Open support chat"
-      >
+      <button className="chat-support-fab" onClick={() => setIsOpen(true)} aria-label="Open support chat">
         <svg
           width="24"
           height="24"
@@ -53,13 +61,9 @@ export function ChatSupport() {
   }
 
   return (
-    <div
-      className={`chat-support-container ${isMinimized ? "minimized" : ""}`}
-      role="dialog"
-      aria-label="Support chat"
-    >
+    <div className={`chat-support-container ${isMinimized ? "minimized" : ""}`} role="dialog" aria-label="Support chat">
       <div className="chat-support-header">
-        <h2 className="chat-support-title">LearnAble Support</h2>
+        <h2 className="chat-support-title">LearnAble guide</h2>
         <div className="chat-support-actions">
           <button
             onClick={() => setIsMinimized(!isMinimized)}
@@ -77,7 +81,10 @@ export function ChatSupport() {
             )}
           </button>
           <button
-            onClick={() => setIsOpen(false)}
+            onClick={() => {
+              stopSpeaking();
+              setIsOpen(false);
+            }}
             aria-label="Close chat"
             className="chat-support-btn"
           >
@@ -120,8 +127,15 @@ export function ChatSupport() {
               saved text and nothing leaves this site.
             </label>
             <ASLTranslator />
-            <ChatInput onSend={sendMessage} disabled={isLoading} />
-            <VoiceControl onVoiceInput={handleVoiceInput} disabled={isLoading} />
+            <div className="chat-input-row">
+              <VoiceControl
+                onVoiceInput={handleVoiceFinal}
+                onDraft={setDraft}
+                onListening={setListening}
+                disabled={isLoading}
+              />
+              <ChatInput onSend={handleSend} disabled={isLoading} draft={draft} listening={listening} />
+            </div>
           </div>
         </>
       )}

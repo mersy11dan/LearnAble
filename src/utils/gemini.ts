@@ -33,7 +33,7 @@ function getFallbackResponse(userMessage: string): string {
     return "LearnAble includes a sign language interpretation window. Press 'S' to toggle the sign window, and use arrow keys to reposition it. The window has Smaller and Larger buttons for adjusting its size without needing a mouse.";
   }
 
-  if (message.includes("voice") || message.includes("audio description")) {
+  if (message.includes("audio description") || message.includes("audio descriptions")) {
     return "Audio descriptions provide spoken narration of visual content. Press 'D' to toggle audio descriptions. This feature helps users who are blind or have low vision understand the visual elements of the lesson.";
   }
 
@@ -53,9 +53,5 @@ function getFallbackResponse(userMessage: string): string {
     return "LearnAble includes an accessibility toolbar with:\n• Larger Text: Increases font size by 25%\n• High Contrast: Black, white, and yellow color scheme\n• Stop Motion: Reduces or eliminates animations\n\nThese settings are saved in your browser and work across all pages.";
   }
 
-  if (message.includes("navigate") || message.includes("find") || message.includes("where")) {
-    return "LearnAble has several main sections:\n• Lesson: Watch the video lesson\n• Pack: Download offline content\n• Session: View recorded sessions\n• Jobs: Browse career opportunities\n• Verify: Check certificate authenticity\n\nThe navigation bar at the top provides access to all sections.";
-  }
-
-  return "I'm here to help you with LearnAble! You can ask me about:\n• Captions and language options\n• Sign language features\n• Audio descriptions\n• Offline downloads\n• Certificates and verification\n• Keyboard shortcuts\n• Accessibility features\n\nWhat would you like to know?";
+  return "I did not match that to a saved answer. Say a page such as sessions, jobs, lesson, or pack. Or ask how captions, audio description, or keyboard shortcuts work.";
 }

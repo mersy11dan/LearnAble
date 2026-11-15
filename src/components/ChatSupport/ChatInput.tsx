@@ -1,17 +1,27 @@
-import { useState, FormEvent } from "react";
+import { FormEvent, useEffect, useRef, useState } from "react";
 
 interface ChatInputProps {
   onSend: (message: string) => void;
   disabled?: boolean;
+  draft?: string;
+  listening?: boolean;
 }
 
-export function ChatInput({ onSend, disabled }: ChatInputProps) {
+export function ChatInput({ onSend, disabled, draft, listening }: ChatInputProps) {
   const [input, setInput] = useState("");
+  const wasListening = useRef(false);
+  const value = listening ? draft || "" : input;
+
+  useEffect(() => {
+    if (wasListening.current && !listening) setInput("");
+    wasListening.current = Boolean(listening);
+  }, [listening]);
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
-    if (input.trim() && !disabled) {
-      onSend(input);
+    const text = (listening ? draft : input)?.trim();
+    if (text && !disabled && !listening) {
+      onSend(text);
       setInput("");
     }
   };
@@ -24,22 +34,19 @@ export function ChatInput({ onSend, disabled }: ChatInputProps) {
       <input
         id="chat-input"
         type="text"
-        value={input}
-        onChange={(e) => setInput(e.target.value)}
-        placeholder="Type your question..."
-        disabled={disabled}
-        className="chat-input"
+        value={value}
+        onChange={(e) => {
+          if (!listening) setInput(e.target.value);
+        }}
+        placeholder={listening ? "Listening…" : "Say or type a page, like sessions or jobs"}
+        disabled={disabled || listening}
+        className={`chat-input${listening ? " chat-input-listening" : ""}`}
         aria-describedby="chat-input-hint"
       />
       <span id="chat-input-hint" className="sr-only">
-        Press Enter to send your message
+        Press Enter to send. Use the microphone to search by voice, like Google.
       </span>
-      <button
-        type="submit"
-        disabled={!input.trim() || disabled}
-        className="chat-send-btn"
-        aria-label="Send message"
-      >
+      <button type="submit" disabled={!value.trim() || disabled || listening} className="chat-send-btn" aria-label="Send message">
         <svg
           width="20"
           height="20"

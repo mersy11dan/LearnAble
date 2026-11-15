@@ -1,45 +1,61 @@
-import { useState, useEffect, useRef } from "react";
+import { useEffect } from "react";
 import { useSpeechRecognition } from "../../utils/speechRecognition";
+
+const ERROR_COPY = {
+  "not-allowed": "Microphone is blocked. Allow it in the browser, then tap the mic again.",
+  "no-speech": "I did not catch that. Tap the mic and try again.",
+  "audio-capture": "No microphone found.",
+  network: "Voice search needs a network connection.",
+  aborted: "",
+  other: "Voice search could not start. Tap the mic and try again.",
+} as const;
 
 interface VoiceControlProps {
   onVoiceInput: (text: string) => void;
+  onDraft?: (text: string) => void;
+  onListening?: (listening: boolean) => void;
   disabled?: boolean;
 }
 
-export function VoiceControl({ onVoiceInput, disabled }: VoiceControlProps) {
-  const [isListening, setIsListening] = useState(false);
-  const { startListening, stopListening, transcript, isSupported } = useSpeechRecognition();
-  const previousTranscriptRef = useRef("");
+export function VoiceControl({ onVoiceInput, onDraft, onListening, disabled }: VoiceControlProps) {
+  const { startListening, stopListening, interimTranscript, error, isSupported, isListening } = useSpeechRecognition({
+    onFinal: onVoiceInput,
+    onInterim: onDraft,
+  });
 
   useEffect(() => {
-    if (transcript && transcript !== previousTranscriptRef.current) {
-      previousTranscriptRef.current = transcript;
-      onVoiceInput(transcript);
-      setIsListening(false);
-    }
-  }, [transcript, onVoiceInput]);
+    onListening?.(isListening);
+    if (!isListening) onDraft?.("");
+  }, [isListening, onListening, onDraft]);
 
-  const handleVoiceToggle = () => {
+  if (!isSupported) {
+    return (
+      <p className="voice-unsupported" role="status">
+        Voice search is not available in this browser. Type a page name instead.
+      </p>
+    );
+  }
+
+  const handleToggle = () => {
     if (isListening) {
       stopListening();
-      setIsListening(false);
+      onDraft?.("");
     } else {
+      onDraft?.("");
       startListening();
-      setIsListening(true);
     }
   };
 
-  if (!isSupported) {
-    return null;
-  }
+  const errorText = error && error !== "aborted" ? ERROR_COPY[error] : "";
 
   return (
     <div className="voice-control-container">
       <button
-        onClick={handleVoiceToggle}
+        type="button"
+        onClick={handleToggle}
         disabled={disabled}
         className={`voice-control-btn ${isListening ? "listening" : ""}`}
-        aria-label={isListening ? "Stop listening" : "Start voice input"}
+        aria-label={isListening ? "Stop voice search" : "Search by voice"}
         aria-pressed={isListening}
       >
         {isListening ? (
@@ -56,12 +72,16 @@ export function VoiceControl({ onVoiceInput, disabled }: VoiceControlProps) {
           </svg>
         )}
       </button>
-      {isListening && (
-        <div className="voice-control-indicator" role="status" aria-live="polite">
-          <span className="voice-pulse"></span>
-          <span className="sr-only">Listening for voice input</span>
-        </div>
-      )}
+      {isListening ? (
+        <span className="sr-only" role="status">
+          Listening. {interimTranscript || "Speak a page name."}
+        </span>
+      ) : null}
+      {errorText ? (
+        <p className="voice-error" role="alert">
+          {errorText}
+        </p>
+      ) : null}
     </div>
   );
 }

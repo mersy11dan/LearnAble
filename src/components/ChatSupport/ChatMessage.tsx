@@ -9,9 +9,11 @@ export function ChatMessage({ message }: ChatMessageProps) {
   const origin =
     !isUser && message.source === "gemini"
       ? `Answered by ${message.model || "Gemini"} through the transcript service.`
-      : !isUser && message.source === "saved"
-        ? "Saved answer. No model is running."
-        : null;
+      : !isUser && message.source === "guide"
+        ? "Spoken guide. No model is running."
+        : !isUser && message.source === "saved"
+          ? "Saved answer. No model is running."
+          : null;
 
   return (
     <div
