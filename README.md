@@ -41,9 +41,22 @@ Build both the site and the bundle with `npm run build`. The plug-in files are `
 
 Copy-paste snippets for HTML, React, WordPress, and an iframe fallback are on `/integrate`.
 
+## New Features
+
+### 💬 Chat Support (v0.2.0)
+
+LearnAble now includes an intelligent support chat with:
+- **AI-powered assistance** using Google Gemini (optional)
+- **Voice input** for hands-free questions
+- **ASL translation** for American Sign Language support
+- **Mobile optimized** responsive design
+- **Full accessibility** with keyboard navigation and screen reader support
+
+See [docs/CHAT-SUPPORT.md](docs/CHAT-SUPPORT.md) for detailed documentation.
+
 ## Install in an hour
 
-Prerequisites: Node.js 22, npm, Python 3.12, and a current browser. Docker is optional. No API key is required.
+Prerequisites: Node.js 22, npm, Python 3.12, and a current browser. Docker is optional. No API key is required for core features.
 
 ```bash
 git clone https://github.com/mersy11dan/LearnAble.git

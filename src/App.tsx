@@ -1,6 +1,7 @@
 import { Route, Routes } from "react-router-dom";
 import { LocaleProvider } from "./a11y/locale";
 import { Layout } from "./components/Layout";
+import { ChatSupport } from "./components/ChatSupport";
 import { AccessibilityPage } from "./pages/AccessibilityPage";
 import { CareersPage } from "./pages/CareersPage";
 import { DemoPage } from "./pages/DemoPage";
@@ -45,6 +46,7 @@ export function App() {
         />
       </Route>
     </Routes>
+    <ChatSupport />
     </LocaleProvider>
   );
 }
