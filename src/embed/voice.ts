@@ -88,6 +88,7 @@ function shortcutList(): string {
     <li>${escapeHtml(keys.landmark.toUpperCase())} next landmark. Shift+${escapeHtml(keys.landmark.toUpperCase())} previous landmark.</li>
     <li>${escapeHtml(keys.help)} opens this help. Escape closes it and returns focus.</li>
     <li>${escapeHtml(keys.voice)} toggles LearnAble voice. The LearnAble voice button does the same. This chord is not an NVDA, JAWS, Orca, VoiceOver, or Chrome shortcut. On some Mac layouts it types a character in a text field, so it does not run there.</li>
+    <li>Alt+Shift+L opens the LearnAble tools and focuses the first control. Escape closes them and returns focus.</li>
     <li>Picture frame, while it is focused: Space or K play, C captions, D audio description, S sign panel, arrows seek, J and L move further. L is landmarks everywhere else.</li>
     <li>NVDA and JAWS browse mode take H and L before the page sees them. That is expected.</li>
     <li>Single-letter keys do nothing in a text field, and they can be turned off or changed below.</li>
@@ -187,6 +188,13 @@ function onKey(event: KeyboardEvent): void {
   if (prompt) trapTab(prompt, event);
   if (help) trapTab(help, event);
 
+  if (matchesChord(event, "Alt+Shift+L") && !typingTarget(event)) {
+    event.preventDefault();
+    event.stopPropagation();
+    window.dispatchEvent(new CustomEvent("learnable-open-tools"));
+    return;
+  }
+
   if (matchesChord(event, settings.keys.voice) && !typingTarget(event)) {
     event.preventDefault();
     event.stopPropagation();
@@ -253,6 +261,7 @@ export function startVoice(): void {
   openPrompt();
   if (started) return;
   started = true;
+  announce("LearnAble loaded. Press Alt+Shift+L for accessibility tools.");
   document.addEventListener("keydown", onKey, true);
   document.addEventListener("focusin", onFocus, true);
   document.addEventListener("pointerdown", onPointer, true);

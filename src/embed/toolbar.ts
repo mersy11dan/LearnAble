@@ -17,6 +17,7 @@ export class LearnAbleToolbar extends HTMLElement {
   private root: ShadowRoot;
   private built = false;
   private open = true;
+  private returnFocus: HTMLElement | null = null;
 
   constructor() {
     super();
@@ -33,6 +34,7 @@ export class LearnAbleToolbar extends HTMLElement {
       <button type="button" class="handle" data-act="move" aria-label="Move LearnAble. Arrow keys move it. The corner buttons place it without dragging.">Move</button>
       <div class="bar" id="learnable-panel" role="toolbar" aria-label="LearnAble display" aria-orientation="horizontal">
         <button type="button" data-act="voice" aria-pressed="true" aria-keyshortcuts="Alt+Shift+S">LearnAble voice</button>
+        <button type="button" data-act="sign-selection">Sign selection</button>
         <button type="button" data-act="describe" aria-pressed="true">Audio description</button>
         <button type="button" data-key="largeText" aria-pressed="false">Larger text</button>
         <button type="button" data-key="stopMotion" aria-pressed="false">Stop motion</button>
@@ -166,7 +168,7 @@ export class LearnAbleToolbar extends HTMLElement {
       if (note) note.textContent = consent ? describeImages(true) : imageReport();
     });
     const saved = getSettings();
-    this.open = saved.toolbarVisited ? !saved.toolbarCollapsed : true;
+    this.open = saved.toolbarVisited ? !saved.toolbarCollapsed : false;
     if (!saved.toolbarVisited) updateSettings({ toolbarVisited: true, toolbarCollapsed: true });
     this.place(saved.toolbarCorner);
     this.root.querySelector<HTMLButtonElement>("[data-act=launcher]")?.addEventListener("click", () => this.setOpen(true));
@@ -179,6 +181,22 @@ export class LearnAbleToolbar extends HTMLElement {
     handle?.addEventListener("keydown", (event) => this.moveByKey(event));
     this.root.querySelector(".bar")?.addEventListener("keydown", (event) => this.rove(event as KeyboardEvent));
     document.addEventListener("focusin", (event) => this.avoid(event));
+    window.addEventListener("learnable-open-tools", () => {
+      const active = document.activeElement;
+      if (active instanceof HTMLElement && !this.contains(active)) this.returnFocus = active;
+      this.setOpen(true);
+    });
+    this.addEventListener("keydown", (event) => {
+      if (event.key !== "Escape" || !this.open) return;
+      event.preventDefault();
+      const back = this.returnFocus;
+      this.returnFocus = null;
+      this.setOpen(false);
+      if (back && document.contains(back)) back.focus();
+    });
+    this.root.querySelector<HTMLButtonElement>("[data-act=sign-selection]")?.addEventListener("click", () => {
+      window.dispatchEvent(new CustomEvent("learnable-sign-selection"));
+    });
     this.paint();
     this.reflect();
   }

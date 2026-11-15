@@ -170,7 +170,7 @@ video { width: 100%; height: 100%; display: block; background: var(--color-stage
   font-weight: 500;
   margin: 0;
   padding: var(--space-3) var(--space-4);
-  background: linear-gradient(135deg, var(--color-navy) 0%, color-mix(in srgb, var(--color-navy) 85%, var(--color-moss)) 100%);
+  background: var(--color-navy);
   color: var(--color-navy-ink);
   overflow-wrap: anywhere;
   display: flex;
@@ -182,7 +182,7 @@ video { width: 100%; height: 100%; display: block; background: var(--color-stage
   display: block;
   width: 6px;
   height: 20px;
-  background: repeating-linear-gradient(to bottom, var(--color-navy-ink) 0, var(--color-navy-ink) 2px, transparent 2px, transparent 5px);
+  background: var(--color-navy-ink);
   opacity: 0.6;
   flex-shrink: 0;
 }
@@ -340,6 +340,7 @@ section {
   box-shadow: inset 0 -3px 0 var(--color-caption);
   background: rgba(255, 238, 0, 0.15);
 }
+.bar button[aria-pressed="true"]::after { content: " On"; }
 [hidden] { display: none !important; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {

@@ -60,7 +60,8 @@ describe("ASL gloss panel", () => {
     expect(player.shadowRoot?.querySelector("[data-gloss-model]")?.textContent).toContain("ADDUS ABRAHAM");
     expect(player.shadowRoot?.querySelector("h2")?.textContent).toBe("ASL");
     expect(player.shadowRoot?.querySelector(".sign-info")?.textContent).toContain(ASL_GLOSS_LABEL);
-    expect(player.shadowRoot?.querySelector("[data-hands] img")?.getAttribute("alt")).toBe("ASL fingerspelling: A");
+    expect(player.shadowRoot?.querySelector(".signer-label")?.textContent).toContain("Computer-generated signing");
+    expect(player.shadowRoot?.querySelector("[data-signer-now]")?.textContent).toContain("Fingerspelling A");
     player.shadowRoot?.querySelector<HTMLButtonElement>("[data-act=captions]")?.click();
     expect(player.shadowRoot?.querySelector("[data-gloss-corrected]")?.textContent).toBe("");
     expect(player.shadowRoot?.querySelector("[data-hands]")?.childElementCount).toBe(0);

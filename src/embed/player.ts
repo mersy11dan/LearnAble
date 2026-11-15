@@ -29,6 +29,7 @@ import {
 } from "../lib/signFrame";
 import { presentSign, type SignLoad } from "../lib/signLabel";
 import { attachSignSync } from "../lib/signSync";
+import { ensureSigner, motionReduced, showSignerFrame } from "./signer";
 import { ASL_GLOSS_LABEL, GLOSS_MODEL, signPanel, signSummary, visualsFor, type SignVisual } from "./signs";
 import { getFeatures, getSettings, getTheme, optedIn, PRESETS, updateSettings, type CaptionPreset, type DescriptionMode } from "./settings";
 import { widgetCss } from "./styles";
@@ -54,6 +55,8 @@ export class LearnAblePlayer extends HTMLElement {
   private adTimer = 0;
   private built = false;
   private handKey = "";
+  private handFrames: SignVisual[] = [];
+  private handIndex = 0;
   private signLoad: SignLoad = "idle";
   private moving = false;
   private frame: Frame = { ...DEFAULT_FRAME };
@@ -120,12 +123,18 @@ export class LearnAblePlayer extends HTMLElement {
   .media-row { grid-template-columns: 1fr; }
 }
 .sign h2 { font-size: 1rem; }
-.hands { display: flex; flex-wrap: wrap; gap: 0.35rem; margin: 0.5rem 0.75rem; }
-.hands figure { margin: 0; width: 3.4rem; }
-.hands img, .hands .point { width: 3.4rem; height: 3.4rem; object-fit: contain; background: #f7f4ee; border: 2px solid var(--color-line); }
-.hands figcaption { font-size: 0.75rem; text-align: center; color: var(--color-ink); }
-.hands figure[data-current] img, .hands figure[data-current] .point { border-color: var(--color-focus); }
-.point { display: grid; place-items: center; font-size: 0.7rem; color: #172033; }
+.signer { margin: 0.5rem 0.75rem; }
+.signer-label { margin: 0 0 0.35rem; font-weight: 700; }
+.signer-stage { width: 100%; height: auto; max-height: 16rem; background: #f7f4ee; border: 2px solid var(--color-line); }
+.signer-arm { transform-origin: 150px 86px; transition: transform 280ms ease-in-out; }
+.signer-arm[data-pose="0"] { transform: rotate(-12deg); }
+.signer-arm[data-pose="1"] { transform: rotate(10deg); }
+.signer-arm[data-pose="2"] { transform: rotate(-2deg); }
+.signer-now { margin: 0.35rem 0 0; }
+.signer-steps { display: flex; gap: 0.4rem; margin-top: 0.4rem; }
+@media (prefers-reduced-motion: reduce) {
+  .signer-arm { transition: none; }
+}
 .gloss-small { font-size: 0.95rem; }
 .sign-info { margin: 0.35rem 0.75rem 0.6rem; }
 .sign-info summary { cursor: pointer; min-height: 2.75rem; display: flex; align-items: center; }
@@ -160,14 +169,13 @@ export class LearnAblePlayer extends HTMLElement {
                 <p class="sign-missing" data-sign-notice hidden></p>
                 <p class="sign-video-label" data-sign-label hidden></p>
                 <video data-sign-video muted playsinline preload="metadata" hidden></video>
-                <p class="sign-slot-title">ASL fingerspelling fallback</p>
                 <div class="hands" data-hands></div>
                 <p class="sign-kind" data-sign-kind></p>
                 <p class="gloss gloss-small" data-gloss-corrected lang="en"></p>
                 <p class="sign-note" data-sign-note></p>
                 <details class="sign-info">
                   <summary>About this ASL</summary>
-                  <p>${ASL_GLOSS_LABEL}. The pictures are the main content. The corrected gloss is under them. A Deaf ASL signer should review the hand correction. This is not a recorded signer.</p>
+                  <p>${ASL_GLOSS_LABEL}. Computer-generated signing uses ASL fingerspelling. A real recording is optional. If you have one, put an H.264 file at public/media/signs/ and set its clip in src/content/signs.json. This panel does not require that file.</p>
                   <p data-model-term>Model output (${GLOSS_MODEL})</p>
                   <p class="gloss gloss-small" data-gloss-model lang="en"></p>
                   <p>Fingerspelling drawings are public domain, from WPClipart (edited by Paul Sherman), the files Sign language A.svg through Z.svg on Wikimedia Commons. ASL-LEX is CC BY-NC, so it is not included. Lifeprint and Handspeak are not open licences, so they are not included. No lexical sign picture is shipped. Every word here is fingerspelled.</p>
@@ -270,6 +278,12 @@ export class LearnAblePlayer extends HTMLElement {
     stage?.addEventListener("keydown", (event) => this.onKey(event));
     this.root.querySelectorAll<HTMLButtonElement>("button[data-act]").forEach((button) => {
       button.addEventListener("click", () => this.onAction(button.dataset.act || ""));
+    });
+    this.root.addEventListener("click", (event) => {
+      const button = event.target instanceof Element ? event.target.closest("button[data-act]") : null;
+      if (!(button instanceof HTMLButtonElement)) return;
+      if (button.dataset.act === "sign-prev") this.stepHand(-1);
+      if (button.dataset.act === "sign-next") this.stepHand(1);
     });
     this.root.querySelectorAll<HTMLInputElement>("[data-ad-mode]").forEach((input) => {
       input.addEventListener("change", () => {
@@ -468,44 +482,35 @@ export class LearnAblePlayer extends HTMLElement {
   }
 
   private paintHands(frames: SignVisual[], cue?: Cue): void {
-    const host = this.root.querySelector("[data-hands]");
+    const host = this.root.querySelector<HTMLElement>("[data-hands]");
     if (!host) return;
+    if (!frames.length) {
+      host.replaceChildren();
+      this.handKey = "";
+      this.handFrames = [];
+      this.handIndex = 0;
+      return;
+    }
     const key = frames.map((frame) => frame.alt).join("|");
     if (key !== this.handKey) {
       this.handKey = key;
-      host.replaceChildren();
-      for (const frame of frames) {
-        const figure = document.createElement("figure");
-        if (frame.src) {
-          const image = document.createElement("img");
-          image.src = resolveUrl(frame.src);
-          image.alt = frame.alt;
-          figure.append(image);
-        } else {
-          const point = document.createElement("div");
-          point.className = "point";
-          point.textContent = frame.caption;
-          point.setAttribute("role", "img");
-          point.setAttribute("aria-label", frame.alt);
-          figure.append(point);
-        }
-        const caption = document.createElement("figcaption");
-        caption.textContent = frame.caption;
-        figure.append(caption);
-        host.append(figure);
-      }
+      this.handFrames = frames;
+      this.handIndex = 0;
     }
-    const count = frames.length;
-    let current = -1;
-    if (cue && count && this.video) {
+    if (!motionReduced() && cue && this.handFrames.length && this.video) {
       const span = Math.max(0.2, cue.end - cue.start);
       const ratio = Math.min(0.999, Math.max(0, (this.video.currentTime - cue.start) / span));
-      current = Math.floor(ratio * count);
+      this.handIndex = Math.floor(ratio * this.handFrames.length);
     }
-    host.querySelectorAll("figure").forEach((figure, index) => {
-      if (index === current) figure.setAttribute("data-current", "true");
-      else figure.removeAttribute("data-current");
-    });
+    showSignerFrame(host, this.handFrames, this.handIndex);
+  }
+
+  private stepHand(delta: number): void {
+    if (!this.handFrames.length) return;
+    const count = this.handFrames.length;
+    this.handIndex = (this.handIndex + delta + count) % count;
+    const host = this.root.querySelector<HTMLElement>("[data-hands]");
+    if (host) showSignerFrame(host, this.handFrames, this.handIndex);
   }
 
   private sync(): void {

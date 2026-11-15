@@ -105,7 +105,7 @@ export const defaultSettings = (): WidgetSettings => ({
   keyboard: true,
   keys: { heading: "h", landmark: "l", help: "?", voice: "Alt+Shift+S" },
   toolbarCorner: "bl",
-  toolbarCollapsed: false,
+  toolbarCollapsed: true,
   toolbarVisited: false,
 });
 

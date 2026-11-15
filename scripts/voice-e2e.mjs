@@ -160,7 +160,9 @@ const promptFocus = await page.evaluate(() => document.activeElement?.textConten
 if (!promptFocus.includes("Keep LearnAble voice")) throw new Error(`prompt focus ${promptFocus}`);
 await prompt.screenshot({ path: "/opt/cursor/artifacts/voice-prompt.png" });
 await page.keyboard.press("Enter");
-await page.locator("learnable-toolbar").locator(".bar").screenshot({ path: "/opt/cursor/artifacts/voice-toggle.png" });
+const voiceBar = page.locator("learnable-toolbar").locator(".bar");
+if (!(await voiceBar.isVisible())) await page.locator("learnable-toolbar").locator("[data-act=launcher]").click();
+await voiceBar.screenshot({ path: "/opt/cursor/artifacts/voice-toggle.png" });
 if ((await page.locator("learnable-toolbar").locator("[data-act=voice]").getAttribute("aria-pressed")) !== "true") {
   throw new Error("voice toggle was not pressed");
 }
