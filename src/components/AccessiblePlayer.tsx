@@ -277,41 +277,48 @@ export function AccessiblePlayer({
         <button type="button" onClick={() => void togglePlay()}>
           {playing ? "Pause" : "Play"}
         </button>
-        <label className="grow">
-          Position
-          <input
-            type="range"
-            min={0}
-            max={duration || 0}
-            step={0.1}
-            value={Math.min(time, duration || 0)}
-            aria-valuetext={`${formatTime(time)} of ${formatTime(duration)}`}
-            onChange={(event) => seek(Number(event.target.value))}
-          />
-        </label>
-        <label>
-          Volume
-          <input
-            type="range"
-            min={0}
-            max={1}
-            step={0.05}
-            value={muted ? 0 : volume}
-            aria-valuetext={muted ? "Muted" : `${Math.round(volume * 100)} percent`}
-            onChange={(event) => {
-              const next = Number(event.target.value);
-              setVolume(next);
-              setMuted(next === 0);
-              if (videoRef.current) {
-                videoRef.current.volume = next;
-                videoRef.current.muted = next === 0;
-              }
-            }}
-          />
-        </label>
-        <button type="button" aria-pressed={muted} onClick={() => apply({ type: "mute" })}>
-          {muted ? "Unmute" : "Mute"}
-        </button>
+        <div className="slider-group">
+          <label className="grow">
+            <span className="sr-only">Position</span>
+            <input
+              type="range"
+              min={0}
+              max={duration || 0}
+              step={0.1}
+              value={Math.min(time, duration || 0)}
+              aria-valuetext={`${formatTime(time)} of ${formatTime(duration)}`}
+              onChange={(event) => seek(Number(event.target.value))}
+            />
+          </label>
+          <span className="time-display" aria-hidden="true">
+            {formatTime(time)} / {formatTime(duration)}
+          </span>
+        </div>
+        <div className="volume-group">
+          <label>
+            <span className="sr-only">Volume</span>
+            <input
+              type="range"
+              min={0}
+              max={1}
+              step={0.05}
+              value={muted ? 0 : volume}
+              aria-valuetext={muted ? "Muted" : `${Math.round(volume * 100)} percent`}
+              onChange={(event) => {
+                const next = Number(event.target.value);
+                setVolume(next);
+                setMuted(next === 0);
+                if (videoRef.current) {
+                  videoRef.current.volume = next;
+                  videoRef.current.muted = next === 0;
+                }
+              }}
+            />
+          </label>
+          <button type="button" aria-pressed={muted} onClick={() => apply({ type: "mute" })}>
+            {muted ? "Unmute" : "Mute"}
+          </button>
+        </div>
         <button type="button" onClick={() => apply({ type: "fullscreen" })}>
           Full screen
         </button>

@@ -1,0 +1,84 @@
+import { GoogleGenerativeAI } from "@google/generative-ai";
+
+const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY || "";
+
+let genAI: GoogleGenerativeAI | null = null;
+
+if (GEMINI_API_KEY) {
+  genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
+}
+
+export async function generateResponse(
+  userMessage: string,
+  context: string
+): Promise<string> {
+  if (!genAI) {
+    return getFallbackResponse(userMessage);
+  }
+
+  try {
+    const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+
+    const prompt = `You are a helpful assistant for the LearnAble educational platform. LearnAble is an accessible learning platform with features like:
+- Multi-language support (English and Amharic)
+- Video lessons with captions and audio descriptions
+- Sign language interpretation
+- Offline packs for 3G connections
+- Braille and tagged PDF support
+- Accessibility toolbar with larger text, high contrast, and reduced motion
+- Certificate verification
+- Transcript pipeline
+
+Context about LearnAble:
+${context}
+
+User question: ${userMessage}
+
+Provide a helpful, concise response (2-3 paragraphs maximum). Focus on being clear and actionable. If you're not sure about something specific to LearnAble, acknowledge that and provide general guidance.`;
+
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    return response.text();
+  } catch (error) {
+    console.error("Gemini API error:", error);
+    return getFallbackResponse(userMessage);
+  }
+}
+
+function getFallbackResponse(userMessage: string): string {
+  const message = userMessage.toLowerCase();
+
+  if (message.includes("caption") || message.includes("subtitle")) {
+    return "LearnAble supports captions in both English and Amharic. You can toggle captions using the 'C' key or the caption button in the player controls. Captions are displayed in an accessible format with customizable size and color through the toolbar.";
+  }
+
+  if (message.includes("sign") || message.includes("asl")) {
+    return "LearnAble includes a sign language interpretation window. Press 'S' to toggle the sign window, and use arrow keys to reposition it. The window has Smaller and Larger buttons for adjusting its size without needing a mouse.";
+  }
+
+  if (message.includes("voice") || message.includes("audio description")) {
+    return "Audio descriptions provide spoken narration of visual content. Press 'D' to toggle audio descriptions. This feature helps users who are blind or have low vision understand the visual elements of the lesson.";
+  }
+
+  if (message.includes("offline") || message.includes("download") || message.includes("3g")) {
+    return "LearnAble offers offline packs for low-bandwidth scenarios. You can download a 3G-optimized pack that includes audio, text, and lightweight HTML versions of the content. Navigate to the Offline page to download the pack.";
+  }
+
+  if (message.includes("certificate") || message.includes("verify") || message.includes("badge")) {
+    return "You can verify certificates through the Verify page. LearnAble uses Open Badges 3.0 signatures. The certificate includes both Gregorian and Ethiopian calendar dates and can be verified directly in your browser.";
+  }
+
+  if (message.includes("keyboard") || message.includes("shortcut")) {
+    return "LearnAble is fully keyboard accessible. Common shortcuts:\n• Tab/Shift+Tab: Navigate\n• Space or K: Play/Pause\n• C: Toggle captions\n• D: Audio description\n• S: Sign window\n• Arrow keys: Seek or move sign window\n• H/Shift+H: Jump between headings\n• ?: Show all shortcuts";
+  }
+
+  if (message.includes("accessibility") || message.includes("contrast") || message.includes("large text")) {
+    return "LearnAble includes an accessibility toolbar with:\n• Larger Text: Increases font size by 25%\n• High Contrast: Black, white, and yellow color scheme\n• Stop Motion: Reduces or eliminates animations\n\nThese settings are saved in your browser and work across all pages.";
+  }
+
+  if (message.includes("navigate") || message.includes("find") || message.includes("where")) {
+    return "LearnAble has several main sections:\n• Lesson: Watch the video lesson\n• Pack: Download offline content\n• Session: View recorded sessions\n• Jobs: Browse career opportunities\n• Verify: Check certificate authenticity\n\nThe navigation bar at the top provides access to all sections.";
+  }
+
+  return "I'm here to help you with LearnAble! You can ask me about:\n• Captions and language options\n• Sign language features\n• Audio descriptions\n• Offline downloads\n• Certificates and verification\n• Keyboard shortcuts\n• Accessibility features\n\nWhat would you like to know?";
+}
