@@ -69,6 +69,12 @@ async function speakNow(text: string, lang: string, hooks: SpeakHooks): Promise<
   }
 
   const voices = window.speechSynthesis?.getVoices?.() ?? [];
+  if (!voices.length) {
+    const live = document.getElementById("learnable-reader-live");
+    if (live) live.textContent = "This browser has no speech voices, so LearnAble cannot speak aloud. The words stay on screen.";
+    hooks.onend?.();
+    return;
+  }
   const voice = matchingVoice(lang);
   if (!voice && voices.length > 0) {
     const spoken = await speakWithEspeak(text, lang, rate);

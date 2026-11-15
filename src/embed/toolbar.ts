@@ -1,3 +1,4 @@
+import { closeSelectionHands } from "./signer";
 import { chromeCopy } from "./copy";
 import { describeImages, imageReport } from "./enhance";
 import { applyHost } from "./host";
@@ -240,10 +241,13 @@ export class LearnAbleToolbar extends HTMLElement {
   private setOpen(open: boolean): void {
     this.open = open;
     updateSettings({ toolbarCollapsed: !open, toolbarVisited: true });
-    if (open) this.root.querySelector("[data-group=position]")?.setAttribute("open", "");
+    if (!open) closeSelectionHands();
+    if (open) this.root.querySelector("details.group")?.setAttribute("open", "");
     this.paint();
     if (open) this.clearLogo();
-    const focus = open ? this.root.querySelector<HTMLElement>("[data-act=move]") : this.root.querySelector<HTMLElement>("[data-act=launcher]");
+    const focus = open
+      ? this.root.querySelector<HTMLElement>("[data-key=largeText]")
+      : this.root.querySelector<HTMLElement>("[data-act=launcher]");
     focus?.focus();
   }
 

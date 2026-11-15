@@ -104,7 +104,7 @@ export const defaultSettings = (): WidgetSettings => ({
   descriptionMode: "spoken",
   keyboard: true,
   keys: { heading: "h", landmark: "l", help: "?", voice: "Alt+Shift+S" },
-  toolbarCorner: "bl",
+  toolbarCorner: "br",
   toolbarCollapsed: true,
   toolbarVisited: false,
 });
@@ -176,7 +176,7 @@ export function loadSettings(): WidgetSettings {
         help: cleanShortcut(keys.help, base.keys.help),
         voice: cleanShortcut(keys.voice, base.keys.voice),
       },
-      toolbarCorner: parsed.toolbarCorner === "tl" || parsed.toolbarCorner === "tr" || parsed.toolbarCorner === "br" || parsed.toolbarCorner === "bl" ? parsed.toolbarCorner : "bl",
+      toolbarCorner: parsed.toolbarCorner === "tl" || parsed.toolbarCorner === "tr" || parsed.toolbarCorner === "br" || parsed.toolbarCorner === "bl" ? parsed.toolbarCorner : "br",
       toolbarCollapsed: parsed.toolbarCollapsed === true,
       toolbarVisited: parsed.toolbarVisited === true,
     };
