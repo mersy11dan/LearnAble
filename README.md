@@ -45,6 +45,28 @@ Copy-paste snippets for HTML, React, WordPress, and an iframe fallback are on `/
 
 ## New Features
 
+### 🤟 ASL Video-to-Text Recognition (Latest)
+
+**Revolutionary sign language recognition** with multilingual support:
+
+#### Core Capabilities:
+- **🎥 Video Input**: Process ASL videos (MP4, AVI, MOV)
+- **🤲 MediaPipe Extraction**: 54 hand & body landmarks per frame
+- **🌐 Dual Backend**: 
+  - **Local**: Ollama (llava, llama3.2-vision) for offline processing
+  - **Online**: Hugging Face models for cloud inference
+- **🌍 Multilingual Output**: 
+  - English translation
+  - Amharic (አማርኛ) translation
+- **🎨 Humanized Text**: Natural, readable translations
+- **⚡ Real-time Processing**: ~30 FPS keypoint extraction
+- **💾 Smart Caching**: <100ms for repeated queries
+- **🔒 Privacy-First**: Videos processed and immediately deleted
+
+**Quick Start**: See [`QUICKSTART_ASL.md`](QUICKSTART_ASL.md) for 5-minute setup!
+
+**Full Docs**: [`docs/ASL-VIDEO-TO-TEXT.md`](docs/ASL-VIDEO-TO-TEXT.md)
+
 ### 🤟 Pocket Sign (v0.3.0) - AI-Powered Accessibility Platform
 
 **Pocket Sign** transforms LearnAble into an advanced platform for deaf and blind users:
