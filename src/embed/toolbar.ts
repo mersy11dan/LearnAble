@@ -31,65 +31,97 @@ export class LearnAbleToolbar extends HTMLElement {
       <style>${widgetCss}</style>
       <button type="button" class="launcher" data-act="launcher" aria-expanded="false" aria-controls="learnable-panel">LearnAble</button>
       <div class="dock">
-      <button type="button" class="handle" data-act="move" aria-label="Move LearnAble. Arrow keys move it. The corner buttons place it without dragging.">Move</button>
-      <div class="bar" id="learnable-panel" role="toolbar" aria-label="LearnAble display" aria-orientation="horizontal">
-        <button type="button" data-act="voice" aria-pressed="true" aria-keyshortcuts="Alt+Shift+S">LearnAble voice</button>
-        <button type="button" data-act="sign-selection">Sign selection</button>
-        <button type="button" data-act="describe" aria-pressed="true">Audio description</button>
-        <button type="button" data-key="largeText" aria-pressed="false">Larger text</button>
-        <button type="button" data-key="stopMotion" aria-pressed="false">Stop motion</button>
-        <label>Contrast
-          <select data-key="contrastMode">
-            <option value="off">Off</option>
-            <option value="bw">Black and white</option>
-            <option value="yb">Yellow on black</option>
-          </select>
-        </label>
-        <label>Contrast strength
-          <input data-key="contrastLevel" type="range" min="1" max="10" step="1" value="7" />
-          <span data-contrast-value>7</span>
-        </label>
-        <button type="button" data-act="read-play">Play reading</button>
-        <button type="button" data-act="read-pause">Pause reading</button>
-        <button type="button" data-act="read-stop">Stop reading</button>
-        <label>Speech speed <input data-key="readRate" type="range" min="0.6" max="1.6" step="0.1" value="1" /></label>
-        <label>Speech pitch <input data-key="readPitch" type="range" min="0.8" max="1.4" step="0.1" value="1" /></label>
-        <label>Verbosity
-          <select data-key="readVerbosity">
-            <option value="sentences">Sentences</option>
-            <option value="headings">Headings</option>
-            <option value="links">Links</option>
-          </select>
-        </label>
-        <label class="consent"><input type="checkbox" data-key="haptics" /> Vibration on Android, off until checked</label>
-        <button type="button" data-act="images">Image check</button>
-        <a href="#learnable-pipeline">Transcript</a>
-        <a href="#learnable-job">Job card</a>
-        <a href="#learnable-session">Session</a>
-        <label>Caption size <input data-key="captionScale" type="range" min="1" max="2.2" step="0.1" value="1.15" /></label>
-        <label>Caption background
-          <select data-key="captionPreset">
-            <option value="white">White on black</option>
-            <option value="yellow">Yellow on black</option>
-            <option value="black">Black on white</option>
-            <option value="cyan">Cyan on black</option>
-          </select>
-        </label>
-        <label class="lang-pick">Language
-          <select data-key="uiLang">
-            <option value="en">English</option>
-            <option value="am">አማርኛ</option>
-          </select>
-        </label>
-        <p class="status" data-note></p>
-        <label class="consent"><input type="checkbox" data-act="consent" /> I agree a description service may see pictures that have no alternative. Nothing is sent until this is checked.</label>
-        <button type="button" data-act="keys" aria-pressed="true">Keyboard shortcuts</button>
-        <button type="button" data-act="help">Keyboard help</button>
-        <button type="button" data-act="collapse">Minimise</button>
-        <button type="button" data-corner="tl">Top left</button>
-        <button type="button" data-corner="tr">Top right</button>
-        <button type="button" data-corner="bl">Bottom left</button>
-        <button type="button" data-corner="br">Bottom right</button>
+      <div class="bar" id="learnable-panel" role="region" aria-label="LearnAble tools">
+        <details class="group" open>
+          <summary>See</summary>
+          <div class="group-body">
+            <button type="button" data-key="largeText" aria-pressed="false">Larger text</button>
+            <button type="button" data-key="stopMotion" aria-pressed="false">Stop motion</button>
+            <label class="field">Contrast
+              <select data-key="contrastMode">
+                <option value="off">Off</option>
+                <option value="bw">Black and white</option>
+                <option value="yb">Yellow on black</option>
+              </select>
+            </label>
+            <label class="field">Strength
+              <input data-key="contrastLevel" type="range" min="1" max="10" step="1" value="7" aria-describedby="learnable-contrast-value" />
+            </label>
+            <p id="learnable-contrast-value" class="value">Contrast strength <span data-contrast-value>7</span></p>
+            <label class="field">Caption size <input data-key="captionScale" type="range" min="1" max="2.2" step="0.1" value="1.15" /></label>
+            <label class="field">Caption background
+              <select data-key="captionPreset">
+                <option value="white">White on black</option>
+                <option value="yellow">Yellow on black</option>
+                <option value="black">Black on white</option>
+                <option value="cyan">Cyan on black</option>
+              </select>
+            </label>
+            <label class="field lang-pick">Language
+              <select data-key="uiLang">
+                <option value="en">English</option>
+                <option value="am">አማርኛ</option>
+              </select>
+            </label>
+          </div>
+        </details>
+        <details class="group" open>
+          <summary>Hear</summary>
+          <div class="group-body">
+            <button type="button" data-act="voice" aria-pressed="true" aria-keyshortcuts="Alt+Shift+S">LearnAble voice</button>
+            <button type="button" data-act="describe" aria-pressed="true">Audio description</button>
+            <label class="field">Speech speed <input data-key="readRate" type="range" min="0.6" max="1.6" step="0.1" value="1" /></label>
+            <label class="field">Speech pitch <input data-key="readPitch" type="range" min="0.8" max="1.4" step="0.1" value="1" /></label>
+            <label class="field">Verbosity
+              <select data-key="readVerbosity">
+                <option value="sentences">Sentences</option>
+                <option value="headings">Headings</option>
+                <option value="links">Links</option>
+              </select>
+            </label>
+            <label class="check"><input type="checkbox" data-key="haptics" /> Vibration on Android, off until checked</label>
+          </div>
+        </details>
+        <details class="group" open>
+          <summary>Sign</summary>
+          <div class="group-body">
+            <button type="button" data-act="sign-selection">Sign selection</button>
+          </div>
+        </details>
+        <details class="group" open>
+          <summary>Read</summary>
+          <div class="group-body">
+            <button type="button" data-act="read-play">Play reading</button>
+            <button type="button" data-act="read-pause">Pause reading</button>
+            <button type="button" data-act="read-stop">Stop reading</button>
+            <button type="button" data-act="images">Image check</button>
+            <label class="check consent"><input type="checkbox" data-act="consent" /> I agree a description service may see pictures that have no alternative. Nothing is sent until this is checked.</label>
+            <a href="#learnable-pipeline">Transcript</a>
+            <a href="#learnable-job">Job card</a>
+            <a href="#learnable-session">Session</a>
+            <p class="status" data-note></p>
+          </div>
+        </details>
+        <details class="group" open>
+          <summary>Navigate</summary>
+          <div class="group-body">
+            <button type="button" data-act="keys" aria-pressed="true">Keyboard shortcuts</button>
+            <button type="button" data-act="help">Keyboard help</button>
+          </div>
+        </details>
+        <details class="group" data-group="position" open>
+          <summary>Position</summary>
+          <div class="group-body">
+            <button type="button" class="handle" data-act="move" aria-label="Move LearnAble. Arrow keys move it. The corner buttons place it without dragging.">Move</button>
+            <div class="corners">
+              <button type="button" data-corner="tl">Top left</button>
+              <button type="button" data-corner="tr">Top right</button>
+              <button type="button" data-corner="bl">Bottom left</button>
+              <button type="button" data-corner="br">Bottom right</button>
+            </div>
+            <button type="button" data-act="collapse">Minimise</button>
+          </div>
+        </details>
       </div>
       </div>
     `;
@@ -209,8 +241,22 @@ export class LearnAbleToolbar extends HTMLElement {
     this.open = open;
     updateSettings({ toolbarCollapsed: !open, toolbarVisited: true });
     this.paint();
+    if (open) this.clearLogo();
     const focus = open ? this.root.querySelector<HTMLElement>("[data-act=move]") : this.root.querySelector<HTMLElement>("[data-act=launcher]");
     focus?.focus();
+  }
+
+  private clearLogo(): void {
+    const marks = [...document.querySelectorAll("header img, header svg, img[alt*='logo' i], .navbar-brand")];
+    const hits = (box: DOMRect) => marks.some((node) => node instanceof Element && intersects(box, node.getBoundingClientRect()));
+    if (!hits(this.getBoundingClientRect())) return;
+    for (const corner of ["br", "bl", "tr", "tl"] as Corner[]) {
+      this.place(corner);
+      if (!hits(this.getBoundingClientRect())) {
+        updateSettings({ toolbarCorner: corner });
+        return;
+      }
+    }
   }
 
   private place(corner: Corner, save = false): void {
