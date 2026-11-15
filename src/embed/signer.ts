@@ -310,6 +310,7 @@ export function showSignerFrame(host: HTMLElement | null, next: SignVisual[], fr
   frames = next;
   index = Math.max(0, Math.min(next.length - 1, frameIndex));
   const node = ensureWindow();
-  if (host) place(node, host.closest("learnable-player") || undefined);
+  const player = host?.closest("learnable-player");
+  if (player instanceof HTMLElement) place(node, player);
   void paint();
 }

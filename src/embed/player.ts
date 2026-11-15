@@ -53,7 +53,6 @@ export class LearnAblePlayer extends HTMLElement {
   private adTimer = 0;
   private built = false;
   private handKey = "";
-  private handFrames: SignVisual[] = [];
   private signLoad: SignLoad = "idle";
   private moving = false;
   private frame: Frame = { ...DEFAULT_FRAME };
@@ -512,13 +511,11 @@ export class LearnAblePlayer extends HTMLElement {
     const key = frames.map((frame) => frame.alt).join("|") + note;
     if (!frames.length) {
       this.handKey = "";
-      this.handFrames = [];
       closeHands(false);
       return;
     }
     if (key === this.handKey) return;
     this.handKey = key;
-    this.handFrames = frames;
     presentHands(frames, { word, note, anchor: this, source: "lesson" });
   }
 
