@@ -27,6 +27,11 @@ async function expectClean(container: HTMLElement) {
 }
 
 describe("pages", () => {
+  it("does not mount the support chat unless the build flag is on", () => {
+    renderAt("/");
+    expect(screen.queryByRole("button", { name: "Open support chat" })).not.toBeInTheDocument();
+  });
+
   it("opens on the lesson promise", async () => {
     const { container } = renderAt("/");
     expect(screen.getByRole("heading", { level: 1, name: /still plays/i })).toBeInTheDocument();

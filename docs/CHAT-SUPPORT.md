@@ -71,22 +71,7 @@ The chat support button appears in the bottom-right corner of every page. Click 
 
 ## Configuration
 
-### Environment Variables
-
-Add to your `.env` file:
-
-```bash
-# Optional: Gemini API Key for enhanced AI responses
-VITE_GEMINI_API_KEY=your_api_key_here
-```
-
-**Getting a Gemini API Key:**
-1. Visit https://makersuite.google.com/app/apikey
-2. Sign in with your Google account
-3. Create a new API key (free tier available)
-4. Add to `.env` file
-
-**Note:** The chat works without an API key using intelligent fallback responses.
+The chat is not on the page unless the build sets `VITE_ENABLE_CHAT=true`. Answers come from `getFallbackResponse` in the browser. There is no Gemini key and no request leaves the machine. See `docs/EXPERIMENTAL.md`.
 
 ## Design System
 
@@ -132,25 +117,24 @@ src/components/ChatSupport/
 
 ```
 src/utils/
-├── gemini.ts              # Gemini API integration
-├── courseKnowledge.ts     # Fallback knowledge base
+├── gemini.ts              # Built-in offline answers. No network call
+├── courseKnowledge.ts     # Extra sentences for those answers
 ├── speechRecognition.ts   # Web Speech API wrapper
 ├── speechSynthesis.ts     # Text-to-speech wrapper
-└── aslTranslation.ts      # ASL translation with T5 model
+└── aslTranslation.ts      # Offline ASL gloss, not a downloaded model
 ```
 
 ### Dependencies
 
-- `@google/generative-ai`: Gemini API client
-- `@xenova/transformers`: HuggingFace Transformers.js for ASL
-- Web Speech API (native browser support)
+- Web Speech API, when the browser has it
+- No model SDK. The page does not download a translator
 
 ## Browser Support
 
 | Feature | Chrome | Firefox | Safari | Edge |
 |---------|--------|---------|--------|------|
 | Chat UI | ✅ | ✅ | ✅ | ✅ |
-| Gemini AI | ✅ | ✅ | ✅ | ✅ |
+| Built-in answers | yes | yes | yes | yes |
 | Voice Input | ✅ | ⚠️* | ✅** | ✅ |
 | ASL Translation | ✅ | ✅ | ✅ | ✅ |
 
@@ -161,7 +145,7 @@ src/utils/
 
 ### Bundle Size
 - Main chat component: ~15KB (gzipped)
-- Gemini SDK: ~45KB (gzipped)
+- No model SDK is bundled for the chat
 - Transformers.js: Loaded on-demand (~200KB)
 
 ### Loading Strategy
@@ -204,24 +188,18 @@ npm test  # Runs all existing tests
 ## Troubleshooting
 
 ### Chat button doesn't appear
-- Check browser console for errors
-- Ensure React app is running
-- Verify ChatSupport component is mounted in App.tsx
+The chat is off unless `VITE_ENABLE_CHAT=true` at build time. That is the default.
 
 ### Voice input not working
 - Check browser permissions for microphone
 - Verify browser supports Web Speech API
 - Check console for recognition errors
 
-### ASL translation shows "Translation unavailable"
-- Model may still be loading (first use takes ~10 seconds)
-- Check internet connection (model downloaded on first use)
-- Verify @xenova/transformers is installed
+### ASL translation
+The chat gloss is an offline word list. It does not download a model. It is not Ethiopian Sign Language.
 
-### Gemini API not responding
-- Verify API key is correct in `.env`
-- Check API key has not exceeded quota
-- Fallback responses will be used automatically
+### Answers
+There is no Gemini request. The sentences in `getFallbackResponse` are the whole answer.
 
 ## Future Enhancements
 

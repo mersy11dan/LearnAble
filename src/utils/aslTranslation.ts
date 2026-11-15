@@ -1,43 +1,6 @@
-import { pipeline } from "@xenova/transformers";
-
-let translator: any = null;
-
-async function initTranslator() {
-  if (!translator) {
-    try {
-      translator = await pipeline(
-        "text2text-generation",
-        "Suyash2205/signbridge-t5-base-asl-gloss"
-      );
-    } catch (error) {
-      console.error("Failed to initialize ASL translator:", error);
-      throw error;
-    }
-  }
-  return translator;
-}
-
+/** Offline gloss only. This does not download a model and it is not Ethiopian Sign Language. */
 export async function translateToASL(text: string): Promise<string> {
-  try {
-    const model = await initTranslator();
-    
-    const prompt = `translate English to ASL gloss: ${text}`;
-    
-    const result = await model(prompt, {
-      max_length: 64,
-      num_beams: 4,
-    });
-
-    if (result && result[0] && result[0].generated_text) {
-      return result[0].generated_text;
-    }
-
-    return "Translation unavailable";
-  } catch (error) {
-    console.error("ASL translation error:", error);
-    
-    return getFallbackASLGloss(text);
-  }
+  return getFallbackASLGloss(text);
 }
 
 function getFallbackASLGloss(text: string): string {

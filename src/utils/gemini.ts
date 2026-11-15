@@ -1,51 +1,10 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
-
-const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY || "";
-
-let genAI: GoogleGenerativeAI | null = null;
-
-if (GEMINI_API_KEY) {
-  genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
+/** Offline answers. The browser never calls Gemini and never reads an API key. */
+export async function generateResponse(userMessage: string, context: string): Promise<string> {
+  void context;
+  return getFallbackResponse(userMessage);
 }
 
-export async function generateResponse(
-  userMessage: string,
-  context: string
-): Promise<string> {
-  if (!genAI) {
-    return getFallbackResponse(userMessage);
-  }
-
-  try {
-    const model = genAI.getGenerativeModel({ model: "gemini-pro" });
-
-    const prompt = `You are a helpful assistant for the LearnAble educational platform. LearnAble is an accessible learning platform with features like:
-- Multi-language support (English and Amharic)
-- Video lessons with captions and audio descriptions
-- Sign language interpretation
-- Offline packs for 3G connections
-- Braille and tagged PDF support
-- Accessibility toolbar with larger text, high contrast, and reduced motion
-- Certificate verification
-- Transcript pipeline
-
-Context about LearnAble:
-${context}
-
-User question: ${userMessage}
-
-Provide a helpful, concise response (2-3 paragraphs maximum). Focus on being clear and actionable. If you're not sure about something specific to LearnAble, acknowledge that and provide general guidance.`;
-
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    return response.text();
-  } catch (error) {
-    console.error("Gemini API error:", error);
-    return getFallbackResponse(userMessage);
-  }
-}
-
-function getFallbackResponse(userMessage: string): string {
+export function getFallbackResponse(userMessage: string): string {
   const message = userMessage.toLowerCase();
 
   if (message.includes("caption") || message.includes("subtitle")) {

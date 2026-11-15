@@ -101,8 +101,6 @@ export function SignWindow({
       window.removeEventListener("resize", onResize);
       window.clearTimeout(moveTimer.current);
     };
-    // The stored frame is read once. Later moves go through commit.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
