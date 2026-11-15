@@ -103,6 +103,10 @@ button[aria-pressed="true"] {
   background: var(--color-moss);
   color: var(--color-paper);
   min-height: 2.75rem;
+  min-width: max-content;
+  white-space: nowrap;
+  overflow-wrap: normal;
+  word-break: keep-all;
   border-radius: var(--radius-sm);
   transition: background-color var(--motion-fast) var(--motion-ease);
 }

@@ -22,25 +22,23 @@ describe("sign window keyboard controls", () => {
     expect(root?.querySelector("[data-sign-heading]")?.textContent).toBe("ASL");
     expect(root?.querySelector("[data-sign-video]")?.hasAttribute("src")).toBe(false);
 
-    const start = Number.parseFloat(sign?.style.left || "0");
     move?.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
     expect(move?.getAttribute("aria-pressed")).toBe("true");
     move?.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true }));
     expect(root?.querySelector("[data-sign-moved]")?.textContent).toBe("");
-    expect(Number.parseFloat(sign?.style.left || "0")).toBe(start + 20);
+    expect(sign?.style.left || "").toBe("");
     move?.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight", shiftKey: true, bubbles: true }));
-    expect(Number.parseFloat(sign?.style.left || "0")).toBe(start + 100);
     move?.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
     expect(move?.getAttribute("aria-pressed")).toBe("false");
-    expect(root?.querySelector("[data-sign-moved]")?.textContent).toContain("Moved.");
-    expect(root?.querySelector("[data-sign-moved]")?.textContent).toContain("pixels from the left");
+    expect(root?.querySelector("[data-sign-moved]")?.textContent).toContain("Moved. 116 pixels from the left");
 
-    const width = Number.parseFloat(sign?.style.width || "0");
+    const row = root?.querySelector<HTMLElement>(".media-row");
     root?.querySelector<HTMLButtonElement>("[data-act=shrink]")?.click();
-    expect(Number.parseFloat(sign?.style.width || "0")).toBe(width - 40);
+    expect(row?.style.getPropertyValue("--sign-col")).toBe("14rem");
     root?.querySelector<HTMLButtonElement>("[data-act=reset]")?.click();
-    expect(Number.parseFloat(sign?.style.width || "0")).toBe(320);
-    expect(sign?.style.left).not.toBe("");
+    expect(row?.style.getPropertyValue("--sign-col")).toBe("16rem");
+    expect(sign?.style.left || "").toBe("");
+    expect(sign?.style.height || "").toBe("");
   });
 
   it("uses Ethiopian Sign Language as the heading only when the clip is declared and ready", () => {

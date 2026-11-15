@@ -16,14 +16,12 @@ import {
   EMBED_SIGN_FRAME_KEY,
   NUDGE_PX,
   NUDGE_SHIFT_PX,
-  RESIZE_STEP_PX,
   boundsFromRect,
   clampFrame,
   mediaMatches,
   movedAnnouncement,
   nudgeFrame,
   readStoredFrame,
-  resizeFrame,
   writeStoredFrame,
   type Frame,
 } from "../lib/signFrame";
@@ -122,18 +120,43 @@ export class LearnAblePlayer extends HTMLElement {
 @container (max-width: 36rem) {
   .media-row { grid-template-columns: 1fr; }
 }
-.sign h2 { font-size: 1rem; }
-.signer { margin: 0.5rem 0.75rem; }
-.signer-label { margin: 0 0 0.35rem; font-weight: 700; }
-.signer-stage { width: 100%; height: auto; max-height: 16rem; background: #f7f4ee; border: 2px solid var(--color-line); }
-.signer-arm { transform-origin: 150px 86px; transition: transform 280ms ease-in-out; }
-.signer-arm[data-pose="0"] { transform: rotate(-12deg); }
-.signer-arm[data-pose="1"] { transform: rotate(10deg); }
-.signer-arm[data-pose="2"] { transform: rotate(-2deg); }
-.signer-now { margin: 0.35rem 0 0; }
-.signer-steps { display: flex; gap: 0.4rem; margin-top: 0.4rem; }
-@media (prefers-reduced-motion: reduce) {
-  .signer-arm { transition: none; }
+.sign { height: auto; overflow: visible; }
+.sign-head {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  min-width: 0;
+  background: var(--color-navy);
+  color: var(--color-navy-ink);
+  padding: 0.5rem 0.75rem;
+}
+.sign-head h2 {
+  flex: 1 1 auto;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  background: transparent;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  overflow-wrap: normal;
+  word-break: keep-all;
+}
+.sign-head .sign-resize-grip,
+.sign .row button,
+.sign-grip {
+  position: static;
+  flex: 0 0 auto;
+  width: auto;
+  height: auto;
+  min-width: max-content;
+  max-width: none;
+  white-space: nowrap;
+  overflow-wrap: normal;
+  word-break: keep-all;
+  writing-mode: horizontal-tb;
 }
 .gloss-small { font-size: 0.95rem; }
 .sign-info { margin: 0.35rem 0.75rem 0.6rem; }
@@ -141,7 +164,7 @@ export class LearnAblePlayer extends HTMLElement {
 .sign-float { position: absolute; z-index: 5; margin-top: 0; }
 .sign-stacked.sign-float { position: static; left: auto; top: auto; width: auto; height: auto; }
 .sign-drag-handle { touch-action: none; cursor: grab; }
-.sign-resize-grip { position: absolute; right: 0; bottom: 0; width: 2.75rem; height: 2.75rem; cursor: nwse-resize; }
+.sign-resize-grip { position: static; width: auto; height: auto; min-width: max-content; cursor: nwse-resize; white-space: nowrap; }
 .sign-missing, .sign-video-label, .sign-moved { margin: 0.5rem 0.75rem; }
 .sign-move-controls { display: contents; }
 .sign-stacked .sign-move-controls, .sign-move-controls[hidden] { display: none; }
@@ -164,7 +187,10 @@ export class LearnAblePlayer extends HTMLElement {
         ${
           sign
             ? `<aside class="sign" data-sign aria-label="${ASL_GLOSS_LABEL}">
-                <h2 data-sign-heading class="sign-drag-handle">ASL</h2>
+                <div class="sign-head">
+                  <h2 data-sign-heading class="sign-drag-handle">ASL</h2>
+                  <button type="button" class="sign-resize-grip" data-sign-resize aria-label="Resize sign window">Resize</button>
+                </div>
                 <p class="sr" aria-live="polite" data-sign-live></p>
                 <p class="sign-missing" data-sign-notice hidden></p>
                 <p class="sign-video-label" data-sign-label hidden></p>
@@ -192,7 +218,6 @@ export class LearnAblePlayer extends HTMLElement {
                   <button type="button" data-act="reset">Reset</button>
                   <button type="button" data-act="left">Narrower</button>
                   <button type="button" data-act="right">Wider</button>
-                  <button type="button" class="sign-resize-grip" data-sign-resize aria-label="Resize sign window">Resize</button>
                 </div>
               </aside>`
             : ""
@@ -708,13 +733,7 @@ export class LearnAblePlayer extends HTMLElement {
   }
 
   private scaleSign(step: number): void {
-    if (this.signStacked()) {
-      this.setSignColumn(this.signColumn() + step * 2);
-      return;
-    }
-    this.frame = resizeFrame(this.frame, step * RESIZE_STEP_PX, step * RESIZE_STEP_PX, this.signBounds());
-    this.persistFrame();
-    this.layoutSign();
+    this.setSignColumn(this.signColumn() + step * 2);
   }
 
   private signLang(): string {
@@ -755,21 +774,13 @@ export class LearnAblePlayer extends HTMLElement {
     if (!sign) return;
     const stacked = this.signStacked();
     sign.classList.toggle("sign-stacked", stacked);
-    sign.classList.toggle("sign-float", !stacked);
+    sign.classList.remove("sign-float");
     const move = this.root.querySelector<HTMLElement>(".sign-move-controls");
     if (move) move.hidden = stacked;
-    if (stacked) {
-      sign.style.left = "";
-      sign.style.top = "";
-      sign.style.width = "";
-      sign.style.height = "";
-      return;
-    }
-    this.frame = clampFrame(this.frame, this.signBounds());
-    sign.style.left = `${this.frame.x}px`;
-    sign.style.top = `${this.frame.y}px`;
-    sign.style.width = `${this.frame.width}px`;
-    sign.style.height = `${this.frame.height}px`;
+    sign.style.left = "";
+    sign.style.top = "";
+    sign.style.width = "";
+    sign.style.height = "";
   }
 
   private applySignSource(): void {
@@ -899,11 +910,9 @@ export class LearnAblePlayer extends HTMLElement {
     const handle = event.currentTarget;
     if (!(handle instanceof HTMLElement)) return;
     const startX = event.clientX;
-    const startY = event.clientY;
-    const origin = { ...this.frame };
+    const origin = this.signColumn();
     const move = (next: PointerEvent) => {
-      this.frame = resizeFrame(origin, next.clientX - startX, next.clientY - startY, this.signBounds());
-      this.layoutSign();
+      this.setSignColumn(origin + (next.clientX - startX) / 16);
     };
     const up = () => {
       handle.removeEventListener("pointermove", move);
@@ -947,6 +956,7 @@ export class LearnAblePlayer extends HTMLElement {
     if (action === "reset") {
       this.frame = { ...DEFAULT_FRAME };
       this.persistFrame();
+      this.setSignColumn(16);
       this.layoutSign();
     }
     if (action === "pack") {
