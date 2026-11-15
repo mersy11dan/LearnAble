@@ -74,8 +74,13 @@ const keepVoice = contrast.getByRole("button", { name: "Keep LearnAble voice" })
 if (await keepVoice.count()) await keepVoice.click();
 const contrastLauncher = contrast.locator("learnable-toolbar").locator("[data-act=launcher]");
 if (await contrastLauncher.isVisible()) await contrastLauncher.click();
-await contrast.locator("learnable-toolbar").locator("summary", { hasText: "See" }).click();
-await contrast.locator("learnable-toolbar").locator("[data-key=contrastMode]").selectOption("bw");
+const contrastMode = contrast.locator("learnable-toolbar").locator("[data-key=contrastMode]");
+await contrastMode.evaluate((node) => {
+  const details = node.closest("details");
+  if (details) details.open = true;
+  node.scrollIntoView({ block: "center", inline: "nearest" });
+});
+await contrastMode.selectOption("bw");
 await contrast.addScriptTag({ path: "node_modules/axe-core/axe.min.js" });
 const widgetViolations = await contrast.evaluate(async () => {
   const nodes = [...document.querySelectorAll("learnable-player, learnable-toolbar")];

@@ -145,7 +145,11 @@ async function keyboardPass(page, path) {
   if (!(await page.locator("learnable-toolbar").locator(".bar").isVisible())) {
     await page.locator("learnable-toolbar").locator("[data-act=launcher]").click();
   }
-  await page.locator("learnable-toolbar").locator("summary", { hasText: "See" }).click();
+  await field.evaluate((node) => {
+    const details = node.closest("details");
+    if (details) details.open = true;
+    node.scrollIntoView({ block: "center", inline: "nearest" });
+  });
   await field.focus();
   await page.keyboard.press("h");
   const stayed = await page.evaluate(() => document.querySelector("learnable-toolbar")?.shadowRoot?.activeElement?.getAttribute("data-key"));

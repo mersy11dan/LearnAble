@@ -85,8 +85,13 @@ await plain.goto(`http://127.0.0.1:${port}/plain.html`, { waitUntil: "domcontent
 const keepPlain = plain.getByRole("button", { name: "Keep LearnAble voice" });
 if (await keepPlain.count()) await keepPlain.click();
 await plain.keyboard.press("Alt+Shift+L");
-await plain.locator("learnable-toolbar").locator("summary", { hasText: "Sign" }).click();
-await plain.locator("learnable-toolbar").locator("[data-act=sign-selection]").click();
+const signSelection = plain.locator("learnable-toolbar").locator("[data-act=sign-selection]");
+await signSelection.evaluate((node) => {
+  const details = node.closest("details");
+  if (details) details.open = true;
+  node.scrollIntoView({ block: "center", inline: "nearest" });
+});
+await signSelection.click();
 await plain.locator("#learnable-text-sign .signer-label").waitFor();
 const textLabel = await plain.locator("#learnable-text-sign .signer-label").innerText();
 if (!textLabel.includes("Computer-generated signing")) throw new Error(textLabel);
