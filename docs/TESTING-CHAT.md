@@ -4,10 +4,11 @@
 
 ### Prerequisites
 ```bash
-cd /workspace
 npm install
 npm run dev
 ```
+
+Optional, in a second terminal, for Gemini and the gloss model: `python server/app.py` with keys in `.env`.
 
 Open http://127.0.0.1:5173 in your browser.
 
@@ -22,11 +23,14 @@ Open http://127.0.0.1:5173 in your browser.
 4. Type "How do I use captions?" in the input field
 5. Press Enter or click Send button
 6. Verify you receive a helpful response about captions
+7. Verify the answer carries a source line
 
 **Expected Result:**
 - Chat opens smoothly
 - Welcome message explains available features
 - Response explains how to use captions (press C key, toggle in player controls)
+- With no key the source line reads "Saved answer. No model is running."
+- With `GEMINI_API_KEY` set on the service and the consent box ticked, the source line names the model
 
 ### 2. Voice Input 🎤
 
@@ -52,15 +56,18 @@ Open http://127.0.0.1:5173 in your browser.
 **Test Steps:**
 1. Open the chat
 2. Click the "ASL" button at the bottom
-3. Type "The doctor will help you now" in the text area
+3. Type "Hana opens her lesson on a phone in Addis Ababa." in the text area
 4. Click "Translate to ASL"
-5. Verify the ASL gloss appears: "DOCTOR WILL HELP YOU NOW"
-6. Try another phrase: "How do I use this?"
+5. Verify the gloss "fs-ADDIS fs-ABABA, HANA IX-3 PHONE LESSON OPEN" appears under "Corrected by hand"
+6. Try "The doctor will help you now"
 
 **Expected Result:**
-- ASL panel slides up smoothly
-- Translation completes in 1-2 seconds (first use may take 10 seconds to load model)
-- ASL gloss appears in uppercase with simplified grammar
+- ASL panel opens
+- The panel says it is ASL, not Ethiopian Sign Language
+- A lesson caption shows the hand-corrected gloss at once
+- Any other sentence shows the English words in capitals with "No model is running", unless the transcript
+  service has `LEARNABLE_GLOSS_LOCAL=1`, in which case the model line is labelled as model output
+- No model is downloaded by the browser
 - Panel can be closed by clicking ASL button again
 
 ### 4. Keyboard Navigation ⌨️
@@ -156,7 +163,7 @@ Open http://127.0.0.1:5173 in your browser.
    - Should list main sections and navigation
 
 **Expected Result:**
-All questions receive relevant, helpful responses even without Gemini API key.
+All questions receive relevant saved answers without a Gemini key, each labelled as saved.
 
 ### 8. Minimize/Expand 📐
 
@@ -225,9 +232,8 @@ Test in these browsers if available:
 - [ ] Messages render quickly (<50ms)
 
 ### Model Loading
-- [ ] First ASL translation may take 10 seconds (model download)
-- [ ] Subsequent translations are fast (<2 seconds)
-- [ ] No impact on page performance
+- [ ] No model is downloaded by the browser at any point
+- [ ] Lesson captions gloss instantly from the shipped file
 
 ### Memory Usage
 - [ ] Open DevTools → Performance → Memory
@@ -254,21 +260,22 @@ Run the full test suite:
 npm test
 ```
 
-Expected: 55 tests pass (including 10 chat support tests)
-
-Run specific chat tests:
+Run only the chat tests:
 ```bash
 npm test -- chat-support.test.tsx
 ```
 
-Expected: 10 tests pass
+Server side:
+```bash
+pytest server/test_app.py -k chat
+```
 
 ## Success Criteria
 
 Chat support is working correctly if:
 
 - ✅ All manual tests pass
-- ✅ All automated tests pass (55/55)
+- ✅ All automated tests pass
 - ✅ No console errors
 - ✅ Keyboard navigation works completely
 - ✅ Screen reader compatible
@@ -284,15 +291,14 @@ Chat support is working correctly if:
    - Requires microphone permission
    - May not work on older mobile devices
 
-2. **ASL Translation:**
-   - First use takes 10 seconds to download model
-   - Requires internet connection for first use
-   - Translations are gloss notation, not video
+2. **ASL gloss:**
+   - ASL, not Ethiopian Sign Language, and gloss notation, not video
+   - Only the six lesson captions are glossed without the model switched on
 
-3. **Gemini API:**
-   - Optional - works without it
-   - Rate limits may apply on free tier
-   - Requires API key for enhanced responses
+3. **Gemini:**
+   - Optional. Saved answers are shown without it
+   - The key lives on the transcript service, never in the browser
+   - Nothing is sent until the consent box is ticked
 
 ## Support
 

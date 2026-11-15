@@ -110,6 +110,33 @@ paths:
       responses:
         "200":
           description: Audio bytes when Hasab is configured and consent is given. Otherwise JSON telling the page to use the device voice.
+  /api/chat:
+    post:
+      summary: Answer a support question with Gemini, or say that a saved answer is shown
+      parameters:
+        - $ref: "#/components/parameters/Consent"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [message]
+              properties:
+                message: { type: string }
+                context: { type: string, description: Course notes the page already matched to the question }
+                history:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      role: { type: string, enum: [user, assistant] }
+                      content: { type: string }
+      responses:
+        "200":
+          description: source gemini with a reply when GEMINI_API_KEY is set and consent was sent. Otherwise source saved with reply null, and the page shows its saved answer.
+        "403":
+          description: A key is set but the consent header is missing. Nothing was sent to Google.
   /api/braille:
     post:
       summary: Points at the browser braille exporter

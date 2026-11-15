@@ -43,35 +43,14 @@ Build both the site and the bundle with `npm run build`. The plug-in files are `
 
 Copy-paste snippets for HTML, React, WordPress, and an iframe fallback are on `/integrate`.
 
-## New Features
+## Support chat
 
-### 🤟 Pocket Sign (v0.3.0) - AI-Powered Accessibility Platform
-
-**Pocket Sign** transforms LearnAble into an advanced platform for deaf and blind users:
-
-#### Core Features:
-- **🤟 Smart ASL Interpreter**: Real-time translation to ASL gloss, synchronized with video playback
-- **🎤 Humanized Voice**: Natural Habesha accent for Amharic, smooth English synthesis
-- **🤖 AI Summaries**: Context-aware video content summaries
-- **⚡ FastAPI Backend**: RESTful API with Supabase database
-- **💾 Intelligent Caching**: Client and server-side caching for instant responses
-- **📱 Material UI**: Modern, responsive design with accessibility built-in
-
-#### ASL Interpreter:
-- Fixed position at bottom-right of video player
-- Only appears when video is playing
-- Resizable with drag handle
-- AI-generated summaries overlay
-- Fullscreen mode support
-
-#### Technical Stack:
-- **Frontend**: React + TypeScript + Material UI
-- **Backend**: FastAPI + Python
-- **Database**: Supabase (PostgreSQL)
-- **AI**: Google Gemini for embeddings, translations, and chat
-- **Caching**: In-memory + Service Worker
-
-See [docs/POCKET-SIGN.md](docs/POCKET-SIGN.md) for complete documentation.
+A chat button sits in the corner of the demo site. It answers questions about the lesson, the player, and the
+accessibility controls. With no key, every answer is saved text written by hand, and each one says so. When
+`GEMINI_API_KEY` is set on the transcript service, a question is sent to Google Gemini only after the consent box
+in the chat is ticked. The key never reaches the browser. Voice input uses the browser's own speech recognition.
+The ASL panel in the chat shows the same gloss as the sign window: ASL, not Ethiopian Sign Language, from the
+shipped file, or from the model when it is opted in on the service. The browser never downloads a model.
 
 ## Install in an hour
 
@@ -80,7 +59,6 @@ Prerequisites: Node.js 22, npm, Python 3.12, and a current browser. Docker is op
 ```bash
 git clone https://github.com/mersy11dan/LearnAble.git
 cd LearnAble
-git checkout cursor/learnable-track2-82be
 npm install
 npm test
 npm run lint
@@ -185,6 +163,8 @@ Copy `.env.example` to `.env`. Leave the secrets blank to use the fallbacks.
 | `HF_ASR_MODEL` | Default `waxal-benchmarking/whisper-small-waxal-amh` | Amharic speech recognition, CC-BY-4.0 |
 | `HF_MT_MODEL` | Empty. Set `facebook/nllb-200-distilled-600M` only to opt in | NLLB weights are CC-BY-NC-4.0 and stay off by default |
 | `HF_CAPTION_MODEL` | Default `Salesforce/blip-image-captioning-base` | English image captions to review before they become alt text. BSD-3-Clause |
+| `GEMINI_API_KEY` | Google Gemini for the support chat. Server-only, behind the consent header | https://aistudio.google.com/app/apikey |
+| `GEMINI_MODEL` | Defaults to `gemini-2.5-flash` | Only change it to another current Gemini model id |
 | `VITE_API_BASE` | Public URL of the transcript service | Empty in dev, because Vite proxies `/api`. Never put a key in a `VITE_` variable |
 
 Leyu is datasets and a Hugging Face model (`gheero-Leyu/amharic-omnivoice-tts`), not an inference API, so it is not called.

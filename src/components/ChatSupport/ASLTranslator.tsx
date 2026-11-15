@@ -1,10 +1,10 @@
 import { useState } from "react";
-import { translateToASL } from "../../utils/aslTranslation";
+import { translateToASL, type AslGloss } from "../../utils/aslTranslation";
 
 export function ASLTranslator() {
   const [isOpen, setIsOpen] = useState(false);
   const [inputText, setInputText] = useState("");
-  const [aslGloss, setAslGloss] = useState("");
+  const [result, setResult] = useState<AslGloss | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
   const handleTranslate = async () => {
@@ -12,11 +12,10 @@ export function ASLTranslator() {
 
     setIsLoading(true);
     try {
-      const gloss = await translateToASL(inputText);
-      setAslGloss(gloss);
+      setResult(await translateToASL(inputText));
     } catch (error) {
-      console.error("ASL translation error:", error);
-      setAslGloss("Translation unavailable. Please try again.");
+      console.error("ASL gloss error:", error);
+      setResult(null);
     } finally {
       setIsLoading(false);
     }
@@ -41,11 +40,13 @@ export function ASLTranslator() {
 
       {isOpen && (
         <div className="asl-translator-panel" role="region" aria-label="ASL translator">
-          <h3 className="asl-translator-title">ASL Gloss Translator</h3>
+          <h3 className="asl-translator-title">ASL gloss</h3>
           <p className="asl-translator-desc">
-            Translate English text to American Sign Language gloss notation.
+            English to American Sign Language gloss. This is ASL, not Ethiopian Sign Language, and not a recorded signer.
+            The six lesson captions are corrected by hand. Other text is only glossed when the transcript service has the
+            model switched on.
           </p>
-          
+
           <textarea
             value={inputText}
             onChange={(e) => setInputText(e.target.value)}
@@ -54,7 +55,7 @@ export function ASLTranslator() {
             rows={3}
             aria-label="Text to translate to ASL"
           />
-          
+
           <button
             onClick={handleTranslate}
             disabled={!inputText.trim() || isLoading}
@@ -63,10 +64,13 @@ export function ASLTranslator() {
             {isLoading ? "Translating..." : "Translate to ASL"}
           </button>
 
-          {aslGloss && (
+          {result && (
             <div className="asl-output" role="region" aria-live="polite">
-              <h4>ASL Gloss:</h4>
-              <p className="asl-gloss-text">{aslGloss}</p>
+              <h4>{result.label}</h4>
+              <p className="asl-gloss-text" lang="en">
+                {result.gloss}
+              </p>
+              <p className="asl-note">{result.note}</p>
             </div>
           )}
         </div>

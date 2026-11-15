@@ -621,3 +621,41 @@ html[data-motion="reduce"] .chat-support-dot {
     display: none;
   }
 }
+
+/* Where an answer came from */
+.chat-message-source {
+  margin: var(--space-1) 0 0;
+  font-size: 0.8rem;
+  line-height: 1.35;
+  color: var(--color-ink);
+  opacity: 0.85;
+}
+
+.chat-message-user .chat-message-source {
+  color: var(--color-paper);
+}
+
+/* Consent before a question leaves the site */
+.chat-consent {
+  display: flex;
+  gap: var(--space-2);
+  align-items: flex-start;
+  margin: 0 0 var(--space-2);
+  font-size: 0.85rem;
+  line-height: 1.4;
+  color: var(--color-ink);
+}
+
+.chat-consent input {
+  flex: 0 0 auto;
+  width: 1.25rem;
+  height: 1.25rem;
+  margin-top: 0.1rem;
+}
+
+.asl-note {
+  margin: var(--space-2) 0 0;
+  font-size: 0.8rem;
+  line-height: 1.4;
+  color: var(--color-ink);
+}

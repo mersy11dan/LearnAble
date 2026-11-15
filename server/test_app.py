@@ -15,6 +15,8 @@ def clear_keys(monkeypatch):
     monkeypatch.delenv("HF_TOKEN", raising=False)
     monkeypatch.delenv("LEARNABLE_GLOSS_LOCAL", raising=False)
     monkeypatch.delenv("HF_GLOSS_REMOTE", raising=False)
+    monkeypatch.delenv("GEMINI_API_KEY", raising=False)
+    monkeypatch.delenv("GEMINI_MODEL", raising=False)
 
 
 @pytest.fixture
@@ -26,6 +28,8 @@ def test_health_hides_secrets(client):
     body = client.get("/api/health").get_json()
     assert body["hasab"] is False
     assert body["huggingface"] is False
+    assert body["gemini"] is False
+    assert body["chatModel"] == "gemini-2.5-flash"
     assert body["asrModel"] == "waxal-benchmarking/whisper-small-waxal-amh"
     dumped = json.dumps(body).lower()
     assert "bearer" not in dumped
@@ -191,3 +195,60 @@ def test_missing_upload_returns_the_demo_transcript(client):
     body = client.post("/api/transcribe").get_json()
     assert body["source"] == "sample"
     assert "Addis Ababa" in body["text"]
+
+
+def test_chat_without_a_key_is_a_saved_answer(client, monkeypatch):
+    def refuse(*_args, **_kwargs):
+        raise AssertionError("provider was called")
+
+    monkeypatch.setattr("app.requests.post", refuse)
+    body = client.post("/api/chat", json={"message": "How do I turn on captions?"}).get_json()
+    assert body["source"] == "saved"
+    assert body["reply"] is None
+    assert "No model is running" in body["message"]
+    empty = client.post("/api/chat", json={"message": ""})
+    assert empty.status_code == 400
+
+
+def test_chat_needs_consent_then_calls_gemini(client, monkeypatch):
+    monkeypatch.setenv("GEMINI_API_KEY", "test-key")
+    monkeypatch.setenv("GEMINI_MODEL", "gemini-test")
+
+    def refuse(*_args, **_kwargs):
+        raise AssertionError("provider was called")
+
+    monkeypatch.setattr("app.requests.post", refuse)
+    blocked = client.post("/api/chat", json={"message": "hello"})
+    assert blocked.status_code == 403
+    assert blocked.get_json()["source"] == "saved"
+
+    captured = {}
+
+    class Reply:
+        def raise_for_status(self):
+            return None
+
+        def json(self):
+            return {"candidates": [{"content": {"parts": [{"text": "Press C to cycle captions."}]}}]}
+
+    def fake_post(url, headers=None, json=None, **_kwargs):
+        captured["url"] = url
+        captured["headers"] = headers
+        captured["json"] = json
+        return Reply()
+
+    monkeypatch.setattr("app.requests.post", fake_post)
+    allowed = client.post(
+        "/api/chat",
+        json={"message": "How do I turn on captions?", "context": "Captions: press C.", "history": [{"role": "user", "content": "hi"}, {"role": "assistant", "content": "hello"}]},
+        headers={"X-LearnAble-Consent": "yes"},
+    ).get_json()
+    assert allowed["source"] == "gemini"
+    assert allowed["reply"] == "Press C to cycle captions."
+    assert allowed["model"] == "gemini-test"
+    assert "models/gemini-test:generateContent" in captured["url"]
+    assert captured["headers"]["x-goog-api-key"] == "test-key"
+    assert "key=" not in captured["url"]
+    roles = [turn["role"] for turn in captured["json"]["contents"]]
+    assert roles == ["user", "model", "user"]
+    assert "Captions: press C." in captured["json"]["contents"][-1]["parts"][0]["text"]

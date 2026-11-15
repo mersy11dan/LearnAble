@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import * as matchers from "@testing-library/jest-dom/matchers";
 
@@ -8,11 +8,21 @@ import { ChatSupport } from "../components/ChatSupport";
 Element.prototype.scrollIntoView = vi.fn();
 
 vi.mock("../utils/gemini", () => ({
-  generateResponse: vi.fn().mockResolvedValue("This is a test response"),
+  generateResponse: vi.fn().mockResolvedValue({
+    text: "This is a test response",
+    source: "saved",
+    note: "The transcript service is not running. This is a saved answer. No model is running.",
+  }),
 }));
 
 vi.mock("../utils/aslTranslation", () => ({
-  translateToASL: vi.fn().mockResolvedValue("TEST RESPONSE"),
+  translateToASL: vi.fn().mockResolvedValue({
+    gloss: "TEST RESPONSE",
+    source: "offline",
+    label: "English words in capitals. No model is running.",
+    note: "",
+    model: "",
+  }),
 }));
 
 vi.mock("../utils/speechRecognition", () => ({
@@ -84,6 +94,36 @@ describe("ChatSupport", () => {
     await waitFor(() => {
       expect(screen.getByText("How do I use captions?")).toBeInTheDocument();
     });
+    await waitFor(() => {
+      expect(screen.getByText("This is a test response")).toBeInTheDocument();
+    });
+    expect(screen.getAllByText("Saved answer. No model is running.").length).toBeGreaterThanOrEqual(2);
+  });
+
+  it("asks for consent before a question can leave the site", () => {
+    sessionStorage.removeItem("learnable-consent");
+    render(<ChatSupport />);
+    fireEvent.click(screen.getByLabelText("Open support chat"));
+
+    const consent = screen.getByLabelText(/Send my questions to Google Gemini/);
+    expect(consent).not.toBeChecked();
+    fireEvent.click(consent);
+    expect(sessionStorage.getItem("learnable-consent")).toBe("yes");
+    fireEvent.click(consent);
+    expect(sessionStorage.getItem("learnable-consent")).toBeNull();
+  });
+
+  it("labels ASL output as gloss that is not Ethiopian Sign Language", async () => {
+    render(<ChatSupport />);
+    fireEvent.click(screen.getByLabelText("Open support chat"));
+    fireEvent.click(screen.getByLabelText("Toggle ASL translator"));
+    expect(screen.getByText(/not Ethiopian Sign Language/)).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText("Text to translate to ASL"), { target: { value: "test response" } });
+    fireEvent.click(screen.getByRole("button", { name: "Translate to ASL" }));
+    await waitFor(() => {
+      expect(screen.getByText("TEST RESPONSE")).toBeInTheDocument();
+    });
+    expect(screen.getByText("English words in capitals. No model is running.")).toBeInTheDocument();
   });
 
   it("closes when clicking the close button", () => {
@@ -140,7 +180,7 @@ describe("ChatSupport", () => {
     
     const dialog = screen.getByRole("dialog");
     expect(dialog).toHaveAttribute("aria-label", "Support chat");
-    expect(dialog).toHaveAttribute("aria-modal", "true");
+    expect(dialog).not.toHaveAttribute("aria-modal");
     
     const messagesArea = screen.getByRole("log");
     expect(messagesArea).toHaveAttribute("aria-live", "polite");

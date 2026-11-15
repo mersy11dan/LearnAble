@@ -1,48 +1,25 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { chat, type ChatTurn } from "../lib/api";
 
-const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY || "";
+export type ChatAnswer = {
+  text: string;
+  /** "gemini" when a model answered through the transcript service. "saved" is a fixed answer written by hand. */
+  source: "gemini" | "saved";
+  model?: string;
+  note: string;
+};
 
-let genAI: GoogleGenerativeAI | null = null;
+const OFFLINE_NOTE = "The transcript service is not running. This is a saved answer. No model is running.";
 
-if (GEMINI_API_KEY) {
-  genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
-}
-
-export async function generateResponse(
-  userMessage: string,
-  context: string
-): Promise<string> {
-  if (!genAI) {
-    return getFallbackResponse(userMessage);
+/**
+ * The key for Gemini lives on the transcript service, never in this bundle.
+ * The service only calls Google after the consent box is ticked.
+ */
+export async function generateResponse(userMessage: string, context: string, history: ChatTurn[] = []): Promise<ChatAnswer> {
+  const result = await chat(userMessage, context, history);
+  if (result?.source === "gemini" && result.reply) {
+    return { text: result.reply, source: "gemini", model: result.model, note: result.message };
   }
-
-  try {
-    const model = genAI.getGenerativeModel({ model: "gemini-pro" });
-
-    const prompt = `You are a helpful assistant for the LearnAble educational platform. LearnAble is an accessible learning platform with features like:
-- Multi-language support (English and Amharic)
-- Video lessons with captions and audio descriptions
-- Sign language interpretation
-- Offline packs for 3G connections
-- Braille and tagged PDF support
-- Accessibility toolbar with larger text, high contrast, and reduced motion
-- Certificate verification
-- Transcript pipeline
-
-Context about LearnAble:
-${context}
-
-User question: ${userMessage}
-
-Provide a helpful, concise response (2-3 paragraphs maximum). Focus on being clear and actionable. If you're not sure about something specific to LearnAble, acknowledge that and provide general guidance.`;
-
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    return response.text();
-  } catch (error) {
-    console.error("Gemini API error:", error);
-    return getFallbackResponse(userMessage);
-  }
+  return { text: getFallbackResponse(userMessage), source: "saved", note: result?.message ?? OFFLINE_NOTE };
 }
 
 function getFallbackResponse(userMessage: string): string {

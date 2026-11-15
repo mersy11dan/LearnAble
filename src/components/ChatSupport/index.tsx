@@ -6,10 +6,15 @@ import { ASLTranslator } from "./ASLTranslator";
 import { useChatSupport } from "./useChatSupport";
 import "./styles.css";
 
+function storedConsent(): boolean {
+  return typeof sessionStorage !== "undefined" && sessionStorage.getItem("learnable-consent") === "yes";
+}
+
 export function ChatSupport() {
   const [isOpen, setIsOpen] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
   const { messages, sendMessage, isLoading } = useChatSupport();
+  const [consent, setConsent] = useState(storedConsent);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -52,7 +57,6 @@ export function ChatSupport() {
       className={`chat-support-container ${isMinimized ? "minimized" : ""}`}
       role="dialog"
       aria-label="Support chat"
-      aria-modal="true"
     >
       <div className="chat-support-header">
         <h2 className="chat-support-title">LearnAble Support</h2>
@@ -102,6 +106,19 @@ export function ChatSupport() {
           </div>
 
           <div className="chat-support-input-area">
+            <label className="chat-consent">
+              <input
+                type="checkbox"
+                checked={consent}
+                onChange={(event) => {
+                  setConsent(event.target.checked);
+                  if (event.target.checked) sessionStorage.setItem("learnable-consent", "yes");
+                  else sessionStorage.removeItem("learnable-consent");
+                }}
+              />
+              Send my questions to Google Gemini when the transcript service has a key. Until this is ticked, answers are
+              saved text and nothing leaves this site.
+            </label>
             <ASLTranslator />
             <ChatInput onSend={sendMessage} disabled={isLoading} />
             <VoiceControl onVoiceInput={handleVoiceInput} disabled={isLoading} />
