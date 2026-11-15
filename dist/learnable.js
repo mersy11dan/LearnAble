@@ -855,7 +855,7 @@ section {
   align-items: center;
   padding: 0 0.75rem;
   font-weight: 700;
-  color: var(--color-navy);
+  color: var(--color-ink);
 }
 .group-body {
   display: flex;

@@ -32,7 +32,7 @@ export class LearnAbleToolbar extends HTMLElement {
       <button type="button" class="launcher" data-act="launcher" aria-expanded="false" aria-controls="learnable-panel">LearnAble</button>
       <div class="dock">
       <div class="bar" id="learnable-panel" role="region" aria-label="LearnAble tools">
-        <details class="group" open>
+        <details class="group">
           <summary>See</summary>
           <div class="group-body">
             <button type="button" data-key="largeText" aria-pressed="false">Larger text</button>
@@ -65,7 +65,7 @@ export class LearnAbleToolbar extends HTMLElement {
             </label>
           </div>
         </details>
-        <details class="group" open>
+        <details class="group">
           <summary>Hear</summary>
           <div class="group-body">
             <button type="button" data-act="voice" aria-pressed="true" aria-keyshortcuts="Alt+Shift+S">LearnAble voice</button>
@@ -82,13 +82,13 @@ export class LearnAbleToolbar extends HTMLElement {
             <label class="check"><input type="checkbox" data-key="haptics" /> Vibration on Android, off until checked</label>
           </div>
         </details>
-        <details class="group" open>
+        <details class="group">
           <summary>Sign</summary>
           <div class="group-body">
             <button type="button" data-act="sign-selection">Sign selection</button>
           </div>
         </details>
-        <details class="group" open>
+        <details class="group">
           <summary>Read</summary>
           <div class="group-body">
             <button type="button" data-act="read-play">Play reading</button>
@@ -102,14 +102,14 @@ export class LearnAbleToolbar extends HTMLElement {
             <p class="status" data-note></p>
           </div>
         </details>
-        <details class="group" open>
+        <details class="group">
           <summary>Navigate</summary>
           <div class="group-body">
             <button type="button" data-act="keys" aria-pressed="true">Keyboard shortcuts</button>
             <button type="button" data-act="help">Keyboard help</button>
           </div>
         </details>
-        <details class="group" data-group="position" open>
+        <details class="group" data-group="position">
           <summary>Position</summary>
           <div class="group-body">
             <button type="button" class="handle" data-act="move" aria-label="Move LearnAble. Arrow keys move it. The corner buttons place it without dragging.">Move</button>
@@ -240,6 +240,7 @@ export class LearnAbleToolbar extends HTMLElement {
   private setOpen(open: boolean): void {
     this.open = open;
     updateSettings({ toolbarCollapsed: !open, toolbarVisited: true });
+    if (open) this.root.querySelector("[data-group=position]")?.setAttribute("open", "");
     this.paint();
     if (open) this.clearLogo();
     const focus = open ? this.root.querySelector<HTMLElement>("[data-act=move]") : this.root.querySelector<HTMLElement>("[data-act=launcher]");
