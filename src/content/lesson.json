@@ -14,7 +14,8 @@
   "captions": {
     "en": "/media/captions-en.vtt",
     "am": "/media/captions-am.vtt",
-    "descriptions": "/media/descriptions.vtt"
+    "descriptions": "/media/descriptions.vtt",
+    "descriptionsAm": "/media/descriptions-am.vtt"
   },
   "signVideo": "/media/esl-placeholder.mp4",
   "signPoster": "/media/esl-placeholder.png",

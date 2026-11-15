@@ -4,7 +4,7 @@ import { verifyOpenBadge } from "../lib/badge";
 import { toBrf } from "../lib/braille";
 import { commandForKey } from "../lib/commands";
 import { buildClientPack, saveFile } from "../lib/pack";
-import { needsExtendedDescription } from "../lib/describe";
+import { cueToDeliver, needsExtendedDescription, scheduleDescriptions, spokenSeconds } from "../lib/describe";
 import { speak, stopSpeaking, whenVoice } from "../lib/speech";
 import { buildTaggedPdf } from "../lib/taggedPdf";
 import { formatTime } from "../lib/time";
@@ -29,7 +29,7 @@ import {
 import { presentSign, type SignLoad } from "../lib/signLabel";
 import { attachSignSync } from "../lib/signSync";
 import { ASL_GLOSS_LABEL, GLOSS_MODEL, signPanel, signSummary, visualsFor, type SignVisual } from "./signs";
-import { getFeatures, getSettings, getTheme, optedIn, PRESETS, updateSettings, type CaptionPreset } from "./settings";
+import { getFeatures, getSettings, getTheme, optedIn, PRESETS, updateSettings, type CaptionPreset, type DescriptionMode } from "./settings";
 import { widgetCss } from "./styles";
 
 function emit(element: HTMLElement, name: string, detail: unknown): void {
@@ -45,11 +45,12 @@ export class LearnAblePlayer extends HTMLElement {
   private en: Cue[] = [];
   private am: Cue[] = [];
   private ad: Cue[] = [];
+  private adAm: Cue[] = [];
   private mode: "off" | "en" | "am" = "en";
-  private adOn = false;
   private signOn = true;
-  private lastAd = "";
   private held = false;
+  private adLock: { text: string; start: number; holdUntil: number } | null = null;
+  private adTimer = 0;
   private built = false;
   private handKey = "";
   private signLoad: SignLoad = "idle";
@@ -89,6 +90,7 @@ export class LearnAblePlayer extends HTMLElement {
     window.removeEventListener("resize", this.onHostResize);
     this.stopSignSync?.();
     window.clearTimeout(this.moveTimer);
+    window.clearTimeout(this.adTimer);
     stopSpeaking();
   }
 
@@ -188,10 +190,17 @@ export class LearnAblePlayer extends HTMLElement {
         }
         </div>
         <p class="status" aria-live="polite">Paused.</p>
+        <p class="time" data-time>0:00 of 0:00.</p>
+        <p class="ad-live" aria-live="polite" data-ad-live></p>
         <div class="row">
           <button type="button" data-act="play">Play</button>
           <button type="button" data-act="captions">Captions: English</button>
-          ${describe ? `<button type="button" data-act="ad" aria-pressed="${getSettings().audioDescription}">Audio description</button>` : ""}
+          ${describe ? `<fieldset data-ad-choice>
+            <legend>Audio description</legend>
+            <label><input type="radio" name="ad-mode" value="off" data-ad-mode="off"${getSettings().descriptionMode === "off" ? " checked" : ""}> Off</label>
+            <label><input type="radio" name="ad-mode" value="spoken" data-ad-mode="spoken"${getSettings().descriptionMode === "spoken" ? " checked" : ""}> Spoken</label>
+            <label><input type="radio" name="ad-mode" value="text" data-ad-mode="text"${getSettings().descriptionMode === "text" ? " checked" : ""}> Text for my screen reader</label>
+          </fieldset>` : ""}
           ${sign ? `<button type="button" data-act="sign" aria-pressed="true">Sign window</button>` : ""}
           <label>Caption size <input data-act="size" type="range" min="1" max="2.2" step="0.1" value="1.15" /></label>
           <label>Caption colours
@@ -260,6 +269,13 @@ export class LearnAblePlayer extends HTMLElement {
     this.root.querySelectorAll<HTMLButtonElement>("button[data-act]").forEach((button) => {
       button.addEventListener("click", () => this.onAction(button.dataset.act || ""));
     });
+    this.root.querySelectorAll<HTMLInputElement>("[data-ad-mode]").forEach((input) => {
+      input.addEventListener("change", () => {
+        if (!input.checked) return;
+        const mode: DescriptionMode = input.value === "text" || input.value === "spoken" ? input.value : "off";
+        this.applyDescriptionMode(mode);
+      });
+    });
     this.root.querySelector<HTMLInputElement>("[data-act=size]")?.addEventListener("input", (event) => {
       const value = Number((event.target as HTMLInputElement).value);
       updateSettings({ captionScale: value });
@@ -271,14 +287,21 @@ export class LearnAblePlayer extends HTMLElement {
       this.styleCaption(getSettings().captionScale, preset);
     });
     this.video?.addEventListener("timeupdate", () => this.sync());
+    this.video?.addEventListener("seeking", () => {
+      this.adLock = null;
+      window.clearTimeout(this.adTimer);
+      stopSpeaking();
+    });
     this.video?.addEventListener("error", () => this.showMediaError());
     this.video?.addEventListener("play", () => {
       this.clearMediaError();
       this.setPlayLabel(true);
+      this.setStatus("Playing.");
       emit(this, "learnable-play", { playing: true });
     });
     this.video?.addEventListener("pause", () => {
       this.setPlayLabel(false);
+      if (!this.held) this.setStatus("Paused.");
       emit(this, "learnable-play", { playing: false });
     });
   }
@@ -332,6 +355,8 @@ export class LearnAblePlayer extends HTMLElement {
     this.en = await this.fetchCues(this.getAttribute("captions-en"));
     this.am = await this.fetchCues(this.getAttribute("captions-am"));
     this.ad = await this.fetchCues(this.getAttribute("describe"));
+    const amDescription = this.getAttribute("descriptions-am") || (this.getAttribute("describe") && this.getAttribute("describe") !== "false" ? "/media/descriptions-am.vtt" : null);
+    this.adAm = await this.fetchCues(amDescription);
     const sign = this.root.querySelector<HTMLElement>("[data-sign]");
     if (sign) sign.hidden = !this.signOn;
     this.renderTranscript();
@@ -379,9 +404,9 @@ export class LearnAblePlayer extends HTMLElement {
     if (preset) preset.value = settings.captionPreset;
     if (size) size.value = String(settings.captionScale);
     this.styleCaption(settings.captionScale, settings.captionPreset);
-    this.adOn = settings.audioDescription;
-    const ad = this.root.querySelector<HTMLButtonElement>("[data-act=ad]");
-    if (ad) ad.setAttribute("aria-pressed", String(this.adOn));
+    this.root.querySelectorAll<HTMLInputElement>("[data-ad-mode]").forEach((input) => {
+      input.checked = input.value === settings.descriptionMode;
+    });
     this.sync();
   }
 
@@ -399,6 +424,18 @@ export class LearnAblePlayer extends HTMLElement {
       this.video.append(track);
     }
     if (track.getAttribute("src") !== url) track.src = url;
+    const amSrc = this.getAttribute("descriptions-am") || "/media/descriptions-am.vtt";
+    let amTrack = this.video.querySelector<HTMLTrackElement>("track[data-descriptions-am]");
+    if (!amTrack) {
+      amTrack = document.createElement("track");
+      amTrack.kind = "descriptions";
+      amTrack.label = "Amharic audio description";
+      amTrack.srclang = "am";
+      amTrack.dataset.descriptionsAm = "true";
+      this.video.append(amTrack);
+    }
+    const amUrl = resolveUrl(amSrc);
+    if (amTrack.getAttribute("src") !== amUrl) amTrack.src = amUrl;
   }
 
   private resumeHeld(): void {
@@ -419,11 +456,8 @@ export class LearnAblePlayer extends HTMLElement {
   private setPlayLabel(playing: boolean): void {
     const button = this.root.querySelector<HTMLButtonElement>("[data-act=play]");
     if (button) button.textContent = playing ? "Pause" : "Play";
-    const status = this.root.querySelector(".status");
-    const current = status?.textContent || "";
-    if (status && this.video && (current.startsWith("Playing") || current.startsWith("Paused"))) {
-      status.textContent = `${playing ? "Playing" : "Paused"}. ${formatTime(this.video.currentTime)} of ${formatTime(this.video.duration || 0)}.`;
-    }
+    const clock = this.root.querySelector("[data-time]");
+    if (clock && this.video) clock.textContent = `${formatTime(this.video.currentTime)} of ${formatTime(this.video.duration || 0)}.`;
   }
 
   private paintHands(frames: SignVisual[], cue?: Cue): void {
@@ -513,25 +547,7 @@ export class LearnAblePlayer extends HTMLElement {
         glossClip.hidden = true;
       }
     }
-    if (this.adOn) {
-      const description = cueAt(this.ad, time);
-      if (!description) this.lastAd = "";
-      else if (description.text !== this.lastAd) {
-        this.lastAd = description.text;
-        const settings = getSettings();
-        const gap = description.end - description.start;
-        const extended = needsExtendedDescription(description.text, gap, settings.readRate);
-        if (extended && !this.video.paused) {
-          this.video.pause();
-          this.held = true;
-        }
-        speak(description.text, "en", settings.readRate, {
-          pitch: settings.readPitch,
-          onend: () => this.resumeHeld(),
-          oncancel: () => this.resumeHeld(),
-        });
-      }
-    }
+    this.deliverDescription();
     const button = this.root.querySelector<HTMLButtonElement>("[data-act=captions]");
     if (button) button.textContent = this.mode === "off" ? "Captions: off" : this.mode === "am" ? "Captions: Amharic" : "Captions: English";
     this.setPlayLabel(!this.video.paused);
@@ -606,16 +622,70 @@ export class LearnAblePlayer extends HTMLElement {
   private cycleCaptions(): void {
     this.mode = this.mode === "off" ? "en" : this.mode === "en" ? "am" : "off";
     this.sync();
+    this.setStatus(this.mode === "off" ? "Captions off." : this.mode === "am" ? "Amharic captions on." : "English captions on.");
     emit(this, "learnable-captions", { lang: this.mode });
   }
 
+  private applyDescriptionMode(mode: DescriptionMode): void {
+    updateSettings({ descriptionMode: mode, audioDescription: mode !== "off" });
+    this.adLock = null;
+    window.clearTimeout(this.adTimer);
+    if (mode !== "spoken") stopSpeaking();
+    if (mode === "off") this.resumeHeld();
+    const live = this.root.querySelector<HTMLElement>("[data-ad-live]");
+    if (live && mode !== "text") live.textContent = "";
+    this.setStatus(mode === "off" ? "Audio description off." : mode === "text" ? "Audio description as text." : "Audio description on.");
+    this.sync();
+  }
+
   private toggleAd(): void {
-    const on = !getSettings().audioDescription;
-    updateSettings({ audioDescription: on });
-    if (!on) {
-      stopSpeaking();
-      this.resumeHeld();
+    const current = getSettings().descriptionMode;
+    const next: DescriptionMode = current === "off" ? "spoken" : current === "spoken" ? "text" : "off";
+    this.applyDescriptionMode(next);
+  }
+
+  private descriptionCues(): Cue[] {
+    return getSettings().lang === "am" && this.adAm.length ? this.adAm : this.ad;
+  }
+
+  private deliverDescription(): void {
+    if (!this.video) return;
+    const settings = getSettings();
+    const live = this.root.querySelector<HTMLElement>("[data-ad-live]");
+    if (settings.descriptionMode === "off") {
+      this.adLock = null;
+      if (live) live.textContent = "";
+      return;
     }
+    if (this.video.paused && !this.held) return;
+    const planned = scheduleDescriptions(this.descriptionCues(), settings.readRate);
+    const cue = cueToDeliver(planned, this.video.currentTime, this.adLock);
+    if (!cue) return;
+    this.adLock = { text: cue.text, start: cue.start, holdUntil: cue.holdUntil };
+    const extended = needsExtendedDescription(cue.text, Math.max(0, cue.end - cue.start), settings.readRate);
+    const lang = settings.lang === "am" && this.adAm.length ? "am" : "en";
+    if (extended && !this.video.paused) {
+      this.held = true;
+      this.video.pause();
+    }
+    if (settings.descriptionMode === "text") {
+      stopSpeaking();
+      if (live) {
+        live.lang = lang;
+        live.textContent = cue.text;
+      }
+      if (extended) {
+        window.clearTimeout(this.adTimer);
+        this.adTimer = window.setTimeout(() => this.resumeHeld(), spokenSeconds(cue.text, settings.readRate) * 1000);
+      }
+      return;
+    }
+    if (live) live.textContent = "";
+    speak(cue.text, lang, settings.readRate, {
+      pitch: settings.readPitch,
+      onend: () => this.resumeHeld(),
+      oncancel: () => this.resumeHeld(),
+    });
   }
 
   private nudge(direction: string): void {
@@ -837,6 +907,7 @@ export class LearnAblePlayer extends HTMLElement {
     if (sign) sign.hidden = !this.signOn;
     const button = this.root.querySelector<HTMLButtonElement>("[data-act=sign]");
     if (button) button.setAttribute("aria-pressed", String(this.signOn));
+    this.setStatus(this.signOn ? "Sign window opened." : "Sign window closed.");
   }
 
   private setStatus(message: string): void {

@@ -43,7 +43,7 @@ export function setVoice(on: boolean, source: "prompt" | "toggle"): void {
   updateSettings({
     voice: on,
     voiceChosen: true,
-    ...(source === "prompt" ? { audioDescription: on } : {}),
+    ...(source === "prompt" ? { audioDescription: on, descriptionMode: on ? "spoken" as const : "off" as const } : {}),
   });
   document.getElementById(PROMPT_ID)?.remove();
   announce(on ? "LearnAble voice on." : "LearnAble voice off.");

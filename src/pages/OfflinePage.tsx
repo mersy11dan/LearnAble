@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Breadcrumbs } from "../components/Breadcrumbs";
 import { demoLesson, transcript } from "../content/lesson";
+import { formatPackSize, packBytes } from "../content/packSize";
 import { buildOfflinePack, saveFile } from "../lib/pack";
 
 export function OfflinePage() {
@@ -28,7 +29,9 @@ export function OfflinePage() {
       <h1>A pack for a 3G phone</h1>
       <p className="measure">
         The video stays on this site. The pack keeps the lesson as sound, captions, braille, and one light page. Open
-        the page from the phone’s files when the signal drops.
+        the page from the phone’s files when the signal drops. This pack is {formatPackSize(packBytes)}. Each narration
+        used to be a 1.9 MB WAV, about 158 MB an hour. It is now mono Opus at 32 kbps (137 KB in English, 158 KB in
+        Amharic for this 43 second lesson), with an AAC file beside it for browsers that cannot play Opus.
       </p>
       <p className={busy ? "notice notice-wait" : "notice"} role="status">{message}</p>
       <div className="actions">
@@ -36,8 +39,8 @@ export function OfflinePage() {
           {busy ? "Preparing…" : "Download the pack"}
         </button>
         <a href="/packs/demo/index.html">Open the light page</a>
-        <a href={demoLesson.audio.en}>English sound</a>
-        <a href={demoLesson.audio.am}>Amharic sound</a>
+        <a href="/packs/demo/lesson-en.opus">English sound</a>
+        <a href="/packs/demo/lesson-am.opus">Amharic sound</a>
       </div>
       <h2>What is inside</h2>
       <ul>

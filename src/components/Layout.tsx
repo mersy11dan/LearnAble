@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { NavLink, Outlet } from "react-router-dom";
+import { NavLink, Outlet, useLocation } from "react-router-dom";
 import { useLocale } from "../a11y/locale";
 import { usePreferences } from "../a11y/preferences";
 import { Wordmark } from "./Wordmark";
@@ -17,6 +17,19 @@ export function Layout() {
     };
   }, []);
   const { chrome, lang, setLang } = useLocale();
+  const location = useLocation();
+  useEffect(() => {
+    const frame = window.requestAnimationFrame(() => {
+      const main = document.getElementById("main");
+      const heading = main?.querySelector("h1");
+      const name = heading?.textContent?.trim() || "LearnAble";
+      document.title = name === "LearnAble" ? "LearnAble" : `${name} – LearnAble`;
+      if (heading instanceof HTMLElement) heading.tabIndex = -1;
+      const target = heading instanceof HTMLElement ? heading : main;
+      target?.focus();
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [location.pathname]);
   const { largeText, highContrast, stopMotion, setLargeText, setHighContrast, setStopMotion } = usePreferences();
   const links = [
     ["/lesson/slow-connection", chrome.lesson],
@@ -84,7 +97,7 @@ export function Layout() {
           </div>
         </div>
       </header>
-      <main id="main">
+      <main id="main" tabIndex={-1}>
         <Outlet />
       </main>
       <footer className="site-footer">

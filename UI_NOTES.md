@@ -3,11 +3,14 @@
 ## Amharic that needs native-speaker review
 
 - `summaryAm` on each job in `src/content/jobs.ts`.
+- Every cue in `public/media/descriptions-am.vtt` and the copy in `public/packs/demo/descriptions-am.vtt`.
+- The Amharic description strings in `scripts/build_media.py` (`EXTENDED_AM` and `AM_ADS`).
 
 ## Needs a human
 
-- Confirm the Amharic job summaries with a native speaker before anyone treats them as public copy.
+- Confirm the Amharic job summaries and the Amharic audio-description cues with a native speaker before anyone treats them as public copy.
 - A real Ethiopian Sign Language recording is not in the repo. Add one with `sign` and `sign-lang="ethiopian"` only after a Deaf ESL signer approves it. See `docs/SIGN-LANGUAGE.md`.
+- The site player remembers audio description in `learnable-ad-mode` (default off). The embed remembers it in `learnable-widget` (default spoken). Say if those should be one choice.
 
 Visual and UX observations that require functional changes (not addressed in the styling polish).
 

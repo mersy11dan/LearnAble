@@ -2,6 +2,7 @@ import type { ContrastMode } from "../lib/contrast";
 
 export type CaptionPreset = "white" | "yellow" | "black" | "cyan";
 export type Lang = "en" | "am";
+export type DescriptionMode = "off" | "spoken" | "text";
 
 export type EnhanceFlag = boolean | {
   toolbar?: boolean;
@@ -37,6 +38,7 @@ export type WidgetSettings = {
   voice: boolean;
   voiceChosen: boolean;
   audioDescription: boolean;
+  descriptionMode: DescriptionMode;
   keyboard: boolean;
   keys: ShortcutMap;
   toolbarCorner: "tl" | "tr" | "bl" | "br";
@@ -98,6 +100,7 @@ export const defaultSettings = (): WidgetSettings => ({
   voice: true,
   voiceChosen: false,
   audioDescription: true,
+  descriptionMode: "spoken",
   keyboard: true,
   keys: { heading: "h", landmark: "l", help: "?", voice: "Alt+Shift+S" },
   toolbarCorner: "bl",
@@ -147,6 +150,14 @@ export function loadSettings(): WidgetSettings {
     const contrastMode = parsed.contrastMode === "bw" || parsed.contrastMode === "yb" ? parsed.contrastMode : "off";
     const contrastLevel = Math.min(10, Math.max(1, Number(parsed.contrastLevel) || base.contrastLevel));
     const keys = { ...base.keys, ...(parsed.keys || {}) };
+    const descriptionMode: DescriptionMode =
+      parsed.descriptionMode === "off" || parsed.descriptionMode === "spoken" || parsed.descriptionMode === "text"
+        ? parsed.descriptionMode
+        : typeof parsed.audioDescription === "boolean"
+          ? parsed.audioDescription
+            ? "spoken"
+            : "off"
+          : base.descriptionMode;
     return {
       ...base,
       ...parsed,
@@ -156,7 +167,8 @@ export function loadSettings(): WidgetSettings {
       contrastLevel,
       voice: typeof parsed.voice === "boolean" ? parsed.voice : base.voice,
       voiceChosen: parsed.voiceChosen === true,
-      audioDescription: typeof parsed.audioDescription === "boolean" ? parsed.audioDescription : base.audioDescription,
+      audioDescription: descriptionMode !== "off",
+      descriptionMode,
       keyboard: parsed.keyboard !== false,
       keys: {
         heading: cleanShortcut(keys.heading, base.keys.heading),
@@ -209,7 +221,10 @@ export function configure(config: LearnAbleConfig = {}): void {
   };
   if (stored.voiceChosen !== true && config.voice) {
     settings.voice = config.voice === "on";
-    if (config.voice === "off") settings.audioDescription = false;
+    if (config.voice === "off") {
+      settings.audioDescription = false;
+      settings.descriptionMode = "off";
+    }
   }
   saveSettings(settings);
 }

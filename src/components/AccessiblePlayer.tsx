@@ -2,15 +2,29 @@ import { useEffect, useId, useRef, useState } from "react";
 import { usePreferences } from "../a11y/preferences";
 import type { LessonSegment } from "../content/lesson";
 import { commandForKey, type PlayerCommand } from "../lib/commands";
+import { cueToDeliver, needsExtendedDescription, scheduleDescriptions, spokenSeconds } from "../lib/describe";
 import { speak, stopSpeaking } from "../lib/speech";
 import { formatTime } from "../lib/time";
-import { cueAt } from "../lib/vtt";
+import { cueAt, parseVtt, type Cue } from "../lib/vtt";
 import { signPanel } from "../embed/signs";
 import { SignWindow } from "./SignWindow";
 
 type CaptionMode = "off" | "en" | "am";
 type Narration = "en" | "am";
 type Engine = "video" | "clock";
+type AdMode = "off" | "spoken" | "text";
+
+const AD_KEY = "learnable-ad-mode";
+
+function storedAdMode(): AdMode {
+  try {
+    const value = localStorage.getItem(AD_KEY);
+    if (value === "spoken" || value === "text" || value === "off") return value;
+  } catch {
+    /* Storage can be blocked. The choice still works for this visit. */
+  }
+  return "off";
+}
 
 const PRESETS = {
   white: { label: "White on black", fg: "#ffffff", bg: "#000000" },
@@ -25,7 +39,7 @@ type AccessiblePlayerProps = {
   title: string;
   video: { en: string; am: string; poster: string };
   segments: LessonSegment[];
-  tracks: { en: string; am: string; descriptions: string };
+  tracks: { en: string; am: string; descriptions: string; descriptionsAm?: string };
   signVideo: string;
   signPoster: string;
   signLang?: string;
@@ -55,8 +69,11 @@ export function AccessiblePlayer({
   const helpRef = useRef<HTMLDialogElement>(null);
   const pendingSeek = useRef<number | null>(null);
   const timeRef = useRef(0);
-  const lastAd = useRef("");
   const completed = useRef(false);
+  const heldForAd = useRef(false);
+  const adLock = useRef<{ text: string; start: number; holdUntil: number } | null>(null);
+  const textTimer = useRef(0);
+  const seenAdMode = useRef<AdMode>(storedAdMode());
   const [clockEpoch, setClockEpoch] = useState(0);
   const captionGroup = useId();
   const [engine, setEngine] = useState<Engine>(engineProp);
@@ -68,10 +85,13 @@ export function AccessiblePlayer({
   const [captions, setCaptions] = useState<CaptionMode>("en");
   const [captionScale, setCaptionScale] = useState(1.15);
   const [preset, setPreset] = useState<PresetName | null>(null);
-  const [adOn, setAdOn] = useState(false);
+  const [adMode, setAdMode] = useState<AdMode>(storedAdMode);
+  const [adText, setAdText] = useState("");
+  const [adCues, setAdCues] = useState<Cue[]>([]);
+  const [adAm, setAdAm] = useState<Cue[]>([]);
   const [signOn, setSignOn] = useState(true);
   const [narration, setNarration] = useState<Narration>("en");
-  const [status, setStatus] = useState("Paused. English captions on.");
+  const [status, setStatus] = useState("Paused.");
 
   const resolvedPreset = preset ?? (highContrast ? "yellow" : "white");
   const colors = PRESETS[resolvedPreset];
@@ -109,22 +129,87 @@ export function AccessiblePlayer({
   }, [clockEpoch, duration, engine, playing]);
 
   useEffect(() => {
-    if (!adOn) {
+    try {
+      localStorage.setItem(AD_KEY, adMode);
+    } catch {
+      /* The choice still applies for this visit. */
+    }
+  }, [adMode]);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function load(url: string | undefined, apply: (cues: Cue[]) => void) {
+      if (!url) return;
+      try {
+        const response = await fetch(url);
+        if (!response.ok) return;
+        const cues = parseVtt(await response.text());
+        if (!cancelled) apply(cues);
+      } catch {
+        /* Segment text stays available when the description file cannot be fetched. */
+      }
+    }
+    void load(tracks.descriptions, setAdCues);
+    void load(tracks.descriptionsAm, setAdAm);
+    return () => {
+      cancelled = true;
+    };
+  }, [tracks.descriptions, tracks.descriptionsAm]);
+
+  useEffect(() => {
+    if (seenAdMode.current !== adMode) {
+      seenAdMode.current = adMode;
+      adLock.current = null;
       stopSpeaking();
-      lastAd.current = "";
+      setAdText("");
+      window.clearTimeout(textTimer.current);
+    }
+    if (adMode === "off") return;
+    if (!playing && !heldForAd.current) return;
+    const amharic = narration === "am" && adAm.length > 0;
+    const source = amharic
+      ? adAm
+      : adCues.length
+        ? adCues
+        : segments.map((segment) => ({ start: segment.start, end: segment.end, text: segment.ad }));
+    const planned = scheduleDescriptions(source, 1);
+    const cue = cueToDeliver(planned, time, adLock.current);
+    if (!cue) return;
+    adLock.current = { text: cue.text, start: cue.start, holdUntil: cue.holdUntil };
+    const extended = needsExtendedDescription(cue.text, Math.max(0, cue.end - cue.start), 1);
+    const release = () => {
+      if (!heldForAd.current) return;
+      heldForAd.current = false;
+      if (engine === "clock") setPlaying(true);
+      else void videoRef.current?.play().catch(() => undefined);
+    };
+    if (extended && playing) {
+      heldForAd.current = true;
+      if (engine === "video") videoRef.current?.pause();
+      else setPlaying(false);
+    }
+    if (adMode === "text") {
+      stopSpeaking();
+      setAdText(cue.text);
+      if (extended) {
+        window.clearTimeout(textTimer.current);
+        textTimer.current = window.setTimeout(release, spokenSeconds(cue.text, 1) * 1000);
+      }
       return;
     }
-    if (current && current.ad !== lastAd.current) {
-      lastAd.current = current.ad;
-      speak(current.ad, "en", stopMotion ? 1 : 1);
-    }
-  }, [adOn, current, stopMotion]);
+    setAdText("");
+    speak(cue.text, amharic ? "am" : "en", stopMotion ? 1 : 1, { onend: release, oncancel: release });
+  }, [adAm, adCues, adMode, engine, narration, playing, segments, stopMotion, time]);
 
   function announce(message: string) {
     setStatus(message);
   }
 
   function seek(next: number) {
+    adLock.current = null;
+    heldForAd.current = false;
+    window.clearTimeout(textTimer.current);
+    stopSpeaking();
     const bounded = Math.min(duration, Math.max(0, next));
     timeRef.current = bounded;
     setTime(bounded);
@@ -163,17 +248,16 @@ export function AccessiblePlayer({
     if (command.type === "cycle-captions") {
       const next = NEXT_CAPTION[captions];
       setCaptions(next);
-      announce(next === "off" ? "Captions off." : next === "en" ? "English captions." : "Amharic captions.");
+      announce(next === "off" ? "Captions off." : next === "en" ? "English captions on." : "Amharic captions on.");
     }
     if (command.type === "toggle-ad") {
-      setAdOn((value) => {
-        announce(value ? "Audio description off." : "Audio description on.");
-        return !value;
-      });
+      const next: AdMode = adMode === "off" ? "spoken" : adMode === "spoken" ? "text" : "off";
+      setAdMode(next);
+      announce(next === "off" ? "Audio description off." : next === "text" ? "Audio description as text." : "Audio description on.");
     }
     if (command.type === "toggle-sign") {
       setSignOn((value) => {
-        announce(value ? "Sign window closed." : "Sign window open.");
+        announce(value ? "Sign window closed." : "Sign window opened.");
         return !value;
       });
     }
@@ -267,6 +351,7 @@ export function AccessiblePlayer({
           <track kind="captions" srcLang="en" label="English" src={tracks.en} />
           <track kind="captions" srcLang="am" label="Amharic" src={tracks.am} />
           <track kind="descriptions" srcLang="en" label="Audio description" src={tracks.descriptions} />
+          {tracks.descriptionsAm ? <track kind="descriptions" srcLang="am" label="Amharic audio description" src={tracks.descriptionsAm} /> : null}
         </video>
         {captionText ? (
           <p
@@ -280,7 +365,10 @@ export function AccessiblePlayer({
         ) : null}
       </div>
       <p className="status" aria-live="polite">
-        {status} {formatTime(time)} of {formatTime(duration)}.
+        {status}
+      </p>
+      <p className="ad-live" aria-live="polite" lang={narration === "am" ? "am" : "en"}>
+        {adMode === "text" ? adText : ""}
       </p>
       {engine === "clock" ? (
         <p className="note">The picture file is not playing. Caption timing is still running, and the transcript below is complete.</p>
@@ -303,8 +391,8 @@ export function AccessiblePlayer({
               onChange={(event) => seek(Number(event.target.value))}
             />
           </label>
-          <span className="time-display" aria-hidden="true">
-            {formatTime(time)} / {formatTime(duration)}
+          <span className="time-display">
+            {formatTime(time)} of {formatTime(duration)}
           </span>
         </div>
         <div className="volume-group">
@@ -372,7 +460,7 @@ export function AccessiblePlayer({
                 checked={captions === mode}
                 onChange={() => {
                   setCaptions(mode);
-                  announce(mode === "off" ? "Captions off." : mode === "en" ? "English captions." : "Amharic captions.");
+                  announce(mode === "off" ? "Captions off." : mode === "en" ? "English captions on." : "Amharic captions on.");
                 }}
               />
               {mode === "off" ? "Off" : mode === "en" ? "English" : "አማርኛ"}
@@ -409,10 +497,30 @@ export function AccessiblePlayer({
           ))}
         </fieldset>
         <fieldset>
+          <legend>Audio description</legend>
+          {(
+            [
+              ["off", "Off"],
+              ["spoken", "Spoken"],
+              ["text", "Text for my screen reader"],
+            ] as const
+          ).map(([value, label]) => (
+            <label key={value}>
+              <input
+                type="radio"
+                name="audio-description"
+                checked={adMode === value}
+                onChange={() => {
+                  setAdMode(value);
+                  announce(value === "off" ? "Audio description off." : value === "text" ? "Audio description as text." : "Audio description on.");
+                }}
+              />
+              {label}
+            </label>
+          ))}
+        </fieldset>
+        <fieldset>
           <legend>More access</legend>
-          <button type="button" aria-pressed={adOn} onClick={() => apply({ type: "toggle-ad" })}>
-            {adOn ? "Audio description on" : "Audio description off"}
-          </button>
           <button type="button" aria-pressed={signOn} onClick={() => apply({ type: "toggle-sign" })}>
             {signOn ? "Sign window open" : "Sign window closed"}
           </button>
@@ -440,12 +548,13 @@ export function AccessiblePlayer({
         <div>
           <h2>Audio description</h2>
           <ol className="transcript">
-            {segments.map((segment) => (
-              <li key={`ad-${segment.start}`}>
-                <button type="button" onClick={() => seek(segment.start)}>
-                  <span className="stamp">{formatTime(segment.start)}</span>
-                  {segment.ad}
+            {(adCues.length ? adCues : segments.map((segment) => ({ start: segment.start, end: segment.end, text: segment.ad }))).map((cue, index) => (
+              <li key={`ad-${cue.start}`}>
+                <button type="button" onClick={() => seek(cue.start)}>
+                  <span className="stamp">{formatTime(cue.start)}</span>
+                  {cue.text}
                 </button>
+                {adAm[index] ? <p lang="am">{adAm[index].text}</p> : null}
               </li>
             ))}
           </ol>
@@ -472,7 +581,7 @@ export function AccessiblePlayer({
         <ul>
           <li>Space or K, play or pause</li>
           <li>C, cycle captions off, English, Amharic</li>
-          <li>D, audio description</li>
+          <li>D, audio description: off, spoken, or text</li>
           <li>S, sign window</li>
           <li>Left and right, move 5 seconds. J and L move 10 seconds</li>
           <li>Up and down, volume. M, mute</li>

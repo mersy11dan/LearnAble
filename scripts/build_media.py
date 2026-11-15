@@ -134,6 +134,62 @@ def vtt_time(seconds: float) -> str:
     return f"{hours:02d}:{minutes:02d}:{secs:02d}.{millis:03d}"
 
 
+# The first cue is short on purpose so a long description pauses the picture. Needs native-speaker review for the Amharic lines. See UI_NOTES.md.
+EXTENDED_EN = (
+    "A paper-coloured screen holds a simple line drawing of a phone. "
+    "A short caption sits under the phone in a dark bar. "
+    "This extended description stays with the picture until the words finish, "
+    "then the lesson continues with the phone still on screen."
+)
+EXTENDED_AM = (
+    "በወረቀት ቀለም ላይ የስልክ መስመር ሥዕል አለ። ከስልኩ ስር አጭር መግለጫ በጨለማ ማስቀመጫ ላይ ይታያል። "
+    "ይህ የተራዘመ መግለጫ ቃላቱ እስኪያልቁ ድረስ ከሥዕሉ ጋር ይቆያል፣ ከዚያ ትምህርቱ ስልኩ በመስኮቱ ላይ ሳለ ይቀጥላል።"
+)
+AM_ADS = [
+    "ስልኩ በወረቀት ቀለም ላይ ይቆያል፣ አጭር መግለጫውም ከሥሩ አለ።",
+    "የመግለጫው ማስቀመጫ ይረዝማል። ፊደሎቹ በጥቁር ላይ ቢጫ ናቸው።",
+    "ሁለተኛ መስኮት ከስልኩ ይነሳል። የእጅ ቅርጽ ሥዕሎች እና አጭር ግሎስ ያሳያል። ይህ የምልክት ቋንቋ ቀረጻ አይደለም።",
+    "ክብ ድምጽ ማጉያ ምልክት ከስልኩ አጠገብ ይታያል።",
+    "ስልኩ በአጭር የገጽ ስብስብ እና በድምጽ ፋይል ይተካል።",
+    "የገጽ ስብስቡ በመስኮቱ መሃል ይቆያል።",
+]
+
+
+def description_cues(timeline: list[dict], language: str) -> list[tuple[float, float, str]]:
+    cues: list[tuple[float, float, str]] = [(0.0, 1.2, EXTENDED_EN if language == "en" else EXTENDED_AM)]
+    for index, segment in enumerate(timeline):
+        begin = 1.2 if index == 0 else float(segment["start"])
+        end = float(segment["end"])
+        if begin >= end:
+            continue
+        if language == "en" and index == 2:
+            text = "A second window lifts off the phone. It shows handshape drawings and a short gloss. It is not a sign language recording."
+        elif language == "en":
+            text = str(segment["ad"])
+        else:
+            text = AM_ADS[index]
+        cues.append((begin, end, text))
+    return cues
+
+
+def encode_speech(wav: Path) -> None:
+    stem = wav.with_suffix("")
+    run(
+        [
+            "ffmpeg", "-y", "-i", str(wav),
+            "-ac", "1", "-c:a", "libopus", "-b:a", "32k", "-application", "voip",
+            str(stem.with_suffix(".opus")),
+        ]
+    )
+    run(
+        [
+            "ffmpeg", "-y", "-i", str(wav),
+            "-ac", "1", "-c:a", "aac", "-b:a", "32k",
+            str(stem.with_suffix(".m4a")),
+        ]
+    )
+
+
 def write_vtt(path: Path, cues: list[tuple[float, float, str]], language: str) -> None:
     lines = ["WEBVTT", f"Language: {language}", ""]
     for index, (start, end, text) in enumerate(cues, start=1):
@@ -286,16 +342,20 @@ def write_light_html(lesson: dict) -> None:
       <figcaption>{FIGURE_LONG}</figcaption>
     </figure>
     <h2>English narration</h2>
-    <audio controls src="lesson-en.wav">
-      <a href="lesson-en.wav">Download the English narration</a>
+    <audio controls>
+      <source src="lesson-en.opus" type="audio/ogg; codecs=opus">
+      <source src="lesson-en.m4a" type="audio/mp4">
+      <a href="lesson-en.opus">Download the English narration</a>
     </audio>
     <h2 lang="am">የአማርኛ ንግግር</h2>
-    <audio controls src="lesson-am.wav">
-      <a href="lesson-am.wav">የአማርኛውን ንግግር አውርድ</a>
+    <audio controls>
+      <source src="lesson-am.opus" type="audio/ogg; codecs=opus">
+      <source src="lesson-am.m4a" type="audio/mp4">
+      <a href="lesson-am.opus">የአማርኛውን ንግግር አውርድ</a>
     </audio>
     <p>The voice is a device voice, eSpeak, so the pack works with no API key. Captions below are the text to trust.</p>
     {''.join(rows)}
-    <p><a href="captions-en.vtt">English captions</a> · <a href="captions-am.vtt">Amharic captions</a> · <a href="descriptions.vtt">Audio description cues</a></p>
+    <p><a href="captions-en.vtt">English captions</a> · <a href="captions-am.vtt">Amharic captions</a> · <a href="descriptions.vtt">Audio description cues</a> · <a href="descriptions-am.vtt" lang="am">የአማርኛ መግለጫ</a></p>
   </main>
 </body>
 </html>
@@ -375,7 +435,10 @@ def main() -> None:
 
     write_vtt(MEDIA / "captions-en.vtt", [(s["start"], s["end"], s["en"]) for s in timeline], "en")
     write_vtt(MEDIA / "captions-am.vtt", [(s["start"], s["end"], s["am"]) for s in timeline], "am")
-    write_vtt(MEDIA / "descriptions.vtt", [(s["start"], s["end"], s["ad"]) for s in timeline], "en")
+    write_vtt(MEDIA / "descriptions.vtt", description_cues(timeline, "en"), "en")
+    write_vtt(MEDIA / "descriptions-am.vtt", description_cues(timeline, "am"), "am")
+    encode_speech(en_wav)
+    encode_speech(am_wav)
 
     lesson = {
         "id": "slow-connection",
@@ -391,6 +454,7 @@ def main() -> None:
             "en": "/media/captions-en.vtt",
             "am": "/media/captions-am.vtt",
             "descriptions": "/media/descriptions.vtt",
+            "descriptionsAm": "/media/descriptions-am.vtt",
         },
         "signVideo": "/media/esl-placeholder.mp4",
         "signPoster": "/media/esl-placeholder.png",
@@ -417,8 +481,21 @@ def main() -> None:
     }
     (CONTENT / "lesson.json").write_text(json.dumps(lesson, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
-    for name in ("lesson-en.wav", "lesson-am.wav", "captions-en.vtt", "captions-am.vtt", "descriptions.vtt"):
+    for name in (
+        "lesson-en.opus",
+        "lesson-en.m4a",
+        "lesson-am.opus",
+        "lesson-am.m4a",
+        "captions-en.vtt",
+        "captions-am.vtt",
+        "descriptions.vtt",
+        "descriptions-am.vtt",
+    ):
         shutil.copy(MEDIA / name, PACK / name)
+    for stale in ("lesson-en.wav", "lesson-am.wav"):
+        leftover = PACK / stale
+        if leftover.exists():
+            leftover.unlink()
     write_figure_svg()
     write_light_html(lesson)
     print(f"Lesson duration {clock:.1f}s, {len(timeline)} cues.")

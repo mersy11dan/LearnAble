@@ -16,6 +16,7 @@ English and Amharic captions, a sign window, audio description, and optional 3G 
   sign-lang=""
   sign-offset="0.0"
   describe="/media/descriptions.vtt"
+  descriptions-am="/media/descriptions-am.vtt"
   offline
   braille
   docs>
@@ -35,7 +36,9 @@ The lesson videos are H.264 Constrained Baseline, `yuv420p`, AAC, with the index
 | `sign-lang` | empty | Set `ethiopian` only when the file is an Ethiopian Sign Language recording. Any other value keeps the ASL gloss label |
 | `sign-offset` | `0` | Seconds added to the lesson time to line up the sign recording. `0.0` when both files start together |
 | `features.signWindow` | on | Sign window. Turn off with `sign="false"` |
-| `features.audioDescription` | on | Spoken description. Turn off with `describe="false"` |
+| `describe` | `/media/descriptions.vtt` when the feature is on | English audio-description cues |
+| `descriptions-am` | `/media/descriptions-am.vtt` when `describe` is set | Amharic audio-description cues. The lines need native-speaker review |
+| `features.audioDescription` | on | Description. The player offers Off, Spoken, or Text for a screen reader. Turn the control off with `describe="false"` |
 | `features.offlinePack` | off | 3G zip. Also on when the element has `offline` |
 | `features.braille` | off | `.brf` download. Also on when the element has `braille` |
 | `features.taggedDocs` | off | Tagged PDF. Also on when the element has `docs` |
@@ -44,7 +47,7 @@ The lesson videos are H.264 Constrained Baseline, `yuv420p`, AAC, with the index
 
 Events, on the element and on `window`: `learnable-ready`, `learnable-play`, `learnable-captions`, `learnable-settings`.
 
-Build both the site and the bundle with `npm run build`. The plug-in files are `dist/learnable.js` (IIFE, for the script tag) and `dist/learnable.es.js`, each with a sourcemap. The IIFE is about 44 KB, about 16 KB gzipped.
+Build both the site and the bundle with `npm run build`. The plug-in files are `dist/learnable.js` (IIFE, for the script tag) and `dist/learnable.es.js`, each with a sourcemap. The IIFE is about 143 KB, about 47 KB gzipped. The older “44 KB” figure was from before the sign window and description controls.
 
 Copy-paste snippets for HTML, React, WordPress, and an iframe fallback are on `/integrate`.
 
@@ -111,7 +114,7 @@ About four minutes. Leave the sound off for the first minute.
 
 `npm run preview` serves the production build on http://127.0.0.1:4173. The service worker is registered only in that build, so the app shell can be reopened after one online visit. With `.env` empty, known lesson sentences return the bundled caption and are marked `sample`. Other text is not invented.
 
-Rebuild the demo media (needs `espeak-ng` and `ffmpeg`) with `npm run media`.
+Rebuild the demo media (needs `espeak-ng` and `ffmpeg`) with `npm run media`. The 3G pack narration was 1,904,228 bytes of WAV per language (about 158 MB an hour). It is now mono Opus at 32 kbps, 137,270 bytes in English and 158,136 bytes in Amharic for the 43 second lesson, plus AAC fallbacks of 178,016 and 202,162 bytes. The downloadable pack is 703,942 bytes, about 704 KB.
 
 ## Design system
 

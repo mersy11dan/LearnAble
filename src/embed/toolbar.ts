@@ -146,9 +146,10 @@ export class LearnAbleToolbar extends HTMLElement {
       setVoice(!getSettings().voice, "toggle");
     });
     this.root.querySelector<HTMLButtonElement>("[data-act=describe]")?.addEventListener("click", () => {
-      const on = !getSettings().audioDescription;
-      updateSettings({ audioDescription: on });
-      announce(on ? "Audio description on." : "Audio description off.");
+      const current = getSettings().descriptionMode;
+      const next = current === "off" ? "spoken" : current === "spoken" ? "text" : "off";
+      updateSettings({ descriptionMode: next, audioDescription: next !== "off" });
+      announce(next === "off" ? "Audio description off." : next === "text" ? "Audio description as text." : "Audio description on.");
     });
     this.root.querySelector<HTMLButtonElement>("[data-act=keys]")?.addEventListener("click", () => {
       const on = !getSettings().keyboard;
