@@ -29,6 +29,7 @@ let speed = 1;
 let source: "lesson" | "selection" = "lesson";
 let returnFocus: HTMLElement | null = null;
 let word = "";
+let userPlaced = false;
 
 function windowNode(): HTMLElement | null {
   return document.getElementById("learnable-sign-window");
@@ -45,9 +46,9 @@ function ensureWindow(): HTMLElement {
   node.innerHTML = `
     <style>
       #learnable-sign-window {
-        position: fixed; z-index: 2147483002; width: 220px; max-width: calc(100vw - 1rem);
+        position: fixed; z-index: 2147483002; width: 232px; max-width: calc(100vw - 1rem);
         background: #f2f0ea; color: #172033; border: 2px solid #1b3048; border-radius: 0.5rem;
-        box-shadow: none; font: 16px/1.4 "Atkinson Hyperlegible", "Noto Sans Ethiopic", sans-serif;
+        box-shadow: none; font: 16px/1.35 "Atkinson Hyperlegible", "Noto Sans Ethiopic", sans-serif;
       }
       #learnable-sign-window * { box-sizing: border-box; }
       #learnable-sign-window .head { display: flex; gap: 0.35rem; padding: 0.35rem; }
@@ -56,11 +57,12 @@ function ensureWindow(): HTMLElement {
         background: #f2f0ea; color: #172033; border: 2px solid #1b3048; border-radius: 0.35rem; cursor: pointer;
       }
       #learnable-sign-window .signer-label, #learnable-sign-window .signer-now, #learnable-sign-window .signer-note {
-        margin: 0 0.5rem 0.35rem; font-size: 0.85rem; overflow-wrap: anywhere;
+        margin: 0 0.5rem 0.3rem; font-size: 0.75rem; line-height: 1.25; overflow-wrap: anywhere;
       }
+      #learnable-sign-window .signer-now { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
       #learnable-sign-window .signer-label { font-weight: 700; }
       #learnable-sign-window .stage {
-        width: calc(100% - 1rem); height: 200px; margin: 0 0.5rem; background: #f7f4ee;
+        width: calc(100% - 1rem); height: 132px; margin: 0 0.5rem 0.3rem; background: #f7f4ee;
         border: 2px solid #172033; display: grid; place-items: center; overflow: hidden;
       }
       #learnable-sign-window img { width: 100%; height: 100%; object-fit: contain; }
@@ -156,7 +158,11 @@ async function paint(): Promise<void> {
     }
     img.style.opacity = "1";
   }
-  if (now) now.textContent = `${frame.caption}${word ? ` · ${word}` : ""}`;
+  if (now) {
+    const line = `${frame.caption}${word ? ` · ${word}` : ""}`;
+    now.textContent = line;
+    now.setAttribute("title", line);
+  }
 }
 
 function schedule(): void {
@@ -201,30 +207,58 @@ function clamp(left: number, top: number, node: HTMLElement): { left: number; to
   };
 }
 
-function place(node: HTMLElement, anchor?: HTMLElement | null): void {
-  const stage = anchor?.shadowRoot?.querySelector(".stage") || anchor?.querySelector(".stage") || document.querySelector("learnable-player")?.shadowRoot?.querySelector(".stage");
-  const video = stage?.getBoundingClientRect();
-  const caption = anchor?.shadowRoot?.querySelector(".caption")?.getBoundingClientRect();
-  let left = window.innerWidth - 236;
-  let top = 16;
-  if (video && video.width > 0) {
-    left = video.right + 12;
-    top = video.top;
-    if (left + 228 > window.innerWidth) {
-      left = Math.max(8, video.left);
-      top = video.bottom + 12;
+function blocks(): DOMRect[] {
+  const found: DOMRect[] = [];
+  const add = (node: Element | null | undefined) => {
+    if (!(node instanceof HTMLElement)) return;
+    const rect = node.getBoundingClientRect();
+    if (rect.width > 8 && rect.height > 8) found.push(rect);
+  };
+  document.querySelectorAll("learnable-player").forEach((player) => {
+    add(player.shadowRoot?.querySelector(".stage"));
+    add(player.shadowRoot?.querySelector(".caption"));
+    add(player.shadowRoot?.querySelector("video"));
+  });
+  document.querySelectorAll("nav a, aside a, [class*=sidebar] a, [class*=nav] a").forEach((link) => add(link));
+  return found;
+}
+
+function overlap(left: number, top: number, width: number, height: number, rect: DOMRect): number {
+  const x = Math.max(0, Math.min(left + width, rect.right) - Math.max(left, rect.left));
+  const y = Math.max(0, Math.min(top + height, rect.bottom) - Math.max(top, rect.top));
+  return x * y;
+}
+
+function place(node: HTMLElement): void {
+  if (userPlaced) return;
+  const width = node.offsetWidth || 232;
+  const height = node.offsetHeight || 280;
+  const spots = [
+    { left: window.innerWidth - width - 12, top: 12 },
+    { left: 12, top: 12 },
+    { left: window.innerWidth - width - 12, top: window.innerHeight - height - 12 },
+    { left: 12, top: window.innerHeight - height - 12 },
+  ];
+  const obstacles = blocks();
+  let best = spots[2];
+  let bestScore = Number.POSITIVE_INFINITY;
+  spots.forEach((spot) => {
+    const score = obstacles.reduce((sum, rect) => sum + overlap(spot.left, spot.top, width, height, rect), 0);
+    if (score < bestScore) {
+      bestScore = score;
+      best = spot;
     }
-  }
-  if (window.innerWidth < 520) {
-    left = window.innerWidth - 228;
-    top = 8;
-  }
-  const placed = clamp(left, top, node);
-  if (caption && placed.top < caption.bottom && placed.top + 200 > caption.top && placed.left < caption.right && placed.left + 220 > caption.left) {
-    placed.top = clamp(placed.left, caption.bottom + 8, node).top;
-  }
+  });
+  const placed = clamp(best.left, best.top, node);
   node.style.left = `${placed.left}px`;
   node.style.top = `${placed.top}px`;
+}
+
+if (typeof window !== "undefined") {
+  window.addEventListener("resize", () => {
+    const node = windowNode();
+    if (node) place(node);
+  });
 }
 
 function drag(event: PointerEvent): void {
@@ -232,6 +266,7 @@ function drag(event: PointerEvent): void {
   const node = windowNode();
   const handle = event.currentTarget;
   if (!node || !(handle instanceof HTMLElement)) return;
+  userPlaced = true;
   const origin = node.getBoundingClientRect();
   const startX = event.clientX;
   const startY = event.clientY;
@@ -259,6 +294,7 @@ function moveByKey(event: KeyboardEvent): void {
   const stepPx = event.shiftKey ? 40 : 16;
   const dx = event.key === "ArrowLeft" ? -stepPx : event.key === "ArrowRight" ? stepPx : 0;
   const dy = event.key === "ArrowUp" ? -stepPx : event.key === "ArrowDown" ? stepPx : 0;
+  userPlaced = true;
   const placed = clamp(rect.left + dx, rect.top + dy, node);
   node.style.left = `${placed.left}px`;
   node.style.top = `${placed.top}px`;
@@ -299,7 +335,7 @@ export function presentHands(next: SignVisual[], options: HandsOptions = {}): vo
     note.hidden = !options.note;
     note.textContent = options.note || "";
   }
-  place(node, options.anchor);
+  place(node);
   void paint();
   schedule();
 }
@@ -312,8 +348,8 @@ export function showSignerFrame(host: HTMLElement | null, next: SignVisual[], fr
   }
   frames = next;
   index = Math.max(0, Math.min(next.length - 1, frameIndex));
+  void host;
   const node = ensureWindow();
-  const player = host?.closest("learnable-player");
-  if (player instanceof HTMLElement) place(node, player);
+  place(node);
   void paint();
 }

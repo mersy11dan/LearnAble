@@ -165,8 +165,13 @@ await dockPage.locator("learnable-toolbar").locator("summary", { hasText: "Posit
 await dockPage.locator("learnable-toolbar").locator("[data-act=collapse]").click();
 await dockPage.locator("learnable-toolbar").locator("[data-act=launcher]").screenshot({ path: "/opt/cursor/artifacts/toolbar-collapsed.png" });
 await dockPage.locator("learnable-toolbar").locator("[data-act=launcher]").click();
-await dockPage.locator("learnable-toolbar").locator("summary", { hasText: "Position" }).click();
-await dockPage.locator("learnable-toolbar").locator("[data-corner=tr]").click();
+const topRight = dockPage.locator("learnable-toolbar").locator("[data-corner=tr]");
+await topRight.evaluate((node) => {
+  const details = node.closest("details");
+  if (details) details.open = true;
+  node.scrollIntoView({ block: "center", inline: "nearest" });
+});
+await topRight.click();
 const corner = await dockPage.locator("learnable-toolbar").getAttribute("data-corner");
 if (corner !== "tr") throw new Error(`corner ${corner}`);
 await dockPage.screenshot({ path: "/opt/cursor/artifacts/toolbar-moved.png" });
