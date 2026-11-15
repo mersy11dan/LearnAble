@@ -30,14 +30,13 @@ const SIGNER_STYLE = `
 }
 .signer-skin { fill: #e4cbb8; }
 .signer-cloth { fill: var(--color-navy, #1b3048); }
-.signer-limb { fill: none; stroke: #e4cbb8; stroke-width: 18; stroke-linecap: round; }
-.signer-joint { fill: var(--color-navy, #1b3048); }
+.signer-limb { fill: #e4cbb8; }
 .signer-shoulder, .signer-elbow, .signer-wrist { transition: transform 320ms ease-in-out; }
-.signer-arm .signer-shoulder { transform-origin: 156px 150px; }
-.signer-arm .signer-elbow { transform-origin: 92px 228px; }
-.signer-arm .signer-wrist { transform-origin: 78px 156px; }
-.signer-rest .signer-shoulder { transform-origin: 268px 150px; }
-.signer-rest .signer-elbow { transform-origin: 312px 228px; }
+.signer-arm .signer-shoulder { transform-origin: 156px 148px; }
+.signer-arm .signer-elbow { transform-origin: 100px 224px; }
+.signer-arm .signer-wrist { transform-origin: 82px 152px; }
+.signer-rest .signer-shoulder { transform-origin: 272px 150px; }
+.signer-rest .signer-elbow { transform-origin: 308px 220px; }
 .signer-arm[data-pose="0"] .signer-shoulder { transform: rotate(-6deg); }
 .signer-arm[data-pose="0"] .signer-elbow { transform: rotate(4deg); }
 .signer-arm[data-pose="1"] .signer-shoulder { transform: rotate(12deg); }
@@ -56,9 +55,7 @@ const SIGNER_STYLE = `
 :host([contrast="high"]) .signer-cloth,
 .signer[data-contrast="on"] .signer-cloth { fill: #121212; }
 :host([contrast="high"]) .signer-limb,
-.signer[data-contrast="on"] .signer-limb { stroke: #121212; }
-:host([contrast="high"]) .signer-joint,
-.signer[data-contrast="on"] .signer-joint { fill: #121212; }
+.signer[data-contrast="on"] .signer-limb { fill: #121212; }
 @media (prefers-reduced-motion: no-preference) {
   .signer:not([data-motion="reduced"]) .signer-arm { animation: signer-idle 2.8s ease-in-out infinite; }
   .signer:not([data-motion="reduced"]) .signer-rest { animation: signer-idle 3.6s ease-in-out infinite reverse; }
@@ -96,43 +93,36 @@ export function ensureSigner(host: HTMLElement): void {
   stage.innerHTML = `
     <g class="signer-rest" data-rest>
       <g class="signer-shoulder">
-        <path class="signer-limb" d="M268 150 L312 228"/>
-        <circle class="signer-joint" cx="268" cy="150" r="7"/>
+        <path class="signer-limb" d="M262 142 L282 158 L318 224 L298 214 Z"/>
         <g class="signer-elbow">
-          <path class="signer-limb" d="M312 228 L286 308"/>
-          <circle class="signer-joint" cx="312" cy="228" r="7"/>
+          <path class="signer-limb" d="M298 214 L318 224 L292 312 L274 300 Z"/>
           <g class="signer-wrist">
-            <ellipse class="signer-skin" cx="286" cy="324" rx="13" ry="15"/>
-            <circle class="signer-joint" cx="286" cy="308" r="6"/>
+            <ellipse class="signer-skin" cx="284" cy="322" rx="14" ry="16"/>
           </g>
         </g>
       </g>
     </g>
     <g class="signer-body">
-      <ellipse class="signer-skin" cx="210" cy="64" rx="32" ry="36"/>
-      <rect class="signer-skin" x="196" y="96" width="28" height="20" rx="8"/>
-      <path class="signer-cloth" d="M150 146 C178 122 246 122 274 146 L258 300 Q212 322 166 300 Z"/>
+      <ellipse class="signer-skin" cx="214" cy="62" rx="32" ry="36"/>
+      <rect class="signer-skin" x="200" y="94" width="28" height="22" rx="8"/>
+      <path class="signer-cloth" d="M136 152 C172 116 260 116 292 152 L270 304 Q214 328 158 304 Z"/>
     </g>
     <g class="signer-arm" data-arm>
       <g class="signer-shoulder">
-        <path class="signer-limb" d="M156 150 L92 228"/>
-        <circle class="signer-joint" cx="156" cy="150" r="7"/>
+        <path class="signer-limb" d="M148 140 L170 156 L112 232 L90 216 Z"/>
         <g class="signer-elbow">
-          <path class="signer-limb" d="M92 228 L78 156"/>
-          <circle class="signer-joint" cx="92" cy="228" r="7"/>
-          <g class="signer-wrist" data-wrist>
-            <circle class="signer-joint" cx="78" cy="156" r="6"/>
-          </g>
+          <path class="signer-limb" d="M90 216 L112 232 L92 156 L74 148 Z"/>
+          <g class="signer-wrist" data-wrist></g>
         </g>
       </g>
     </g>
   `;
   const hand = document.createElementNS("http://www.w3.org/2000/svg", "image");
   hand.setAttribute("data-hand", "true");
-  hand.setAttribute("x", "18");
-  hand.setAttribute("y", "48");
-  hand.setAttribute("width", "118");
-  hand.setAttribute("height", "148");
+  hand.setAttribute("x", "28");
+  hand.setAttribute("y", "86");
+  hand.setAttribute("width", "96");
+  hand.setAttribute("height", "120");
   hand.setAttribute("preserveAspectRatio", "xMidYMid meet");
   stage.querySelector("[data-wrist]")?.append(hand);
   const now = document.createElement("p");
