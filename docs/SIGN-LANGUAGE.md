@@ -18,13 +18,27 @@ What did turn up, and why none of it is called from this app:
 
 No How2Sign or SignWriting checkpoint on the Hub was small enough, openly licensed for this public repo, and able to render EthSL from a caption cue without a paid GPU API.
 
+## What you see
+
+The pictures are the panel. Each letter is a public-domain ASL fingerspelling drawing (`public/signs/fingerspell/`). The corrected gloss sits under the pictures in smaller type. The long explanation, the raw model line, and the attribution are inside “About this ASL”.
+
+No lexical sign picture is shipped. ASL-LEX is CC BY-NC 4.0. Lifeprint and Handspeak are not openly licensed. A word that is not a fingerspelling drawing is still shown letter by letter, and the panel says the pictures are fingerspelling, not recorded signs.
+
+The player sits in normal flow beside its video, about 38 percent of the player and at least 16rem wide. It stacks under the video when the player is narrower than 46rem, which includes a phone and a 200 percent zoom of a laptop. It is not a fixed layer over the host page.
+
+## Video file
+
+`public/media/lesson-en.mp4` and `lesson-am.mp4` are H.264 Constrained Baseline, yuv420p, AAC, with the `moov` atom at the front. A static host must send `Content-Type: video/mp4`, `Accept-Ranges: bytes`, and a `206` response for a `Range` request. Nginx does this by default. A host that only returns `200` for the whole file can still play these short files, because the index is at the start, but range requests are what browsers use when seeking.
+
 ## What the panel does
 
-English caption cues use gloss precomputed by [Suyash2205/signbridge-t5-base-asl-gloss](https://huggingface.co/Suyash2205/signbridge-t5-base-asl-gloss). The lines live in `src/content/asl-gloss.json`. The panel heading is “ASL gloss (English → ASL), not Ethiopian Sign Language”. Amharic captions are not glossed, and the panel says so.
+English caption cues show two lines. “Model output (Suyash2205/signbridge-t5-base-asl-gloss)” is the raw string from [Suyash2205/signbridge-t5-base-asl-gloss](https://huggingface.co/Suyash2205/signbridge-t5-base-asl-gloss). “Corrected by hand” is an edit of that string for the six sample captions: names and broken words are repaired, copulas such as BE are dropped, and `X-` and `DESC-` prefixes are removed. The lines live in `src/content/asl-gloss.json`. The panel heading is “ASL gloss (English → ASL), not Ethiopian Sign Language”. Amharic captions are not glossed, and the panel says so.
+
+A Deaf ASL signer should review the corrections before anyone treats them as a translation. They are still American Sign Language gloss, not Ethiopian Sign Language. Clip lookup and fingerspelling use the corrected line when one exists.
 
 The model card says Apache-2.0. The training set `achrafothman/aslg_pc12` is CC-BY-NC-4.0, so running the weights is opt-in (`LEARNABLE_GLOSS_LOCAL` on the Flask machine, or `HF_GLOSS_REMOTE` with consent). The browser never downloads the 892 MB fp32 file. There is no ONNX export in the model repo.
 
-Each gloss token is then looked up in `src/content/signs.json` (the same list is at `public/signs/dictionary.json`). `X-` and `DESC-` prefixes are removed first, so `DESC-OPEN` looks up `OPEN`. If that entry has a `clip`, the panel plays it. If `clip` is null, that token is fingerspelled. Swap the JSON, or call `LearnAble.setSignDictionary(entries)`, to plug in another dictionary. Do not label an ASL clip as Ethiopian Sign Language.
+Each token of the corrected line is then looked up in `src/content/signs.json` (the same list is at `public/signs/dictionary.json`). A token marked `fs-` is fingerspelled. `IX-3` is a point, not fingerspelled. Other tokens are matched after punctuation is removed. If that entry has a `clip`, the panel plays it. If `clip` is null, that token is fingerspelled. Swap the JSON, or call `LearnAble.setSignDictionary(entries)`, to plug in another dictionary. Do not label an ASL clip as Ethiopian Sign Language.
 
 ```json
 { "gloss": "OPEN", "clip": "/media/signs/open.mp4" }

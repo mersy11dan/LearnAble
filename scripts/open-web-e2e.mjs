@@ -14,6 +14,7 @@ const types = {
   ".png": "image/png",
   ".svg": "image/svg+xml",
   ".woff2": "font/woff2",
+  ".ttf": "font/ttf",
 };
 
 const dock = `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Dock</title></head>
@@ -22,6 +23,7 @@ const dock = `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>
 
 function fileFor(urlPath) {
   if (urlPath === "/learnable/learnable.js") return join(root, "dist/learnable.js");
+  if (urlPath.startsWith("/fonts/") || urlPath.startsWith("/signs/")) return join(root, "public", urlPath);
   if (urlPath === "/dock.html") return null;
   const fixtures = {
     "/fixtures/wai.html": "test/fixtures/wai-bad-before.html",
