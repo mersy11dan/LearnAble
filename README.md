@@ -43,16 +43,33 @@ Copy-paste snippets for HTML, React, WordPress, and an iframe fallback are on `/
 
 ## New Features
 
-### 💬 Chat Support (v0.2.0)
+### 🤟 Pocket Sign (v0.3.0) - AI-Powered Accessibility Platform
 
-LearnAble now includes an intelligent support chat with:
-- **AI-powered assistance** using Google Gemini (optional)
-- **Voice input** for hands-free questions
-- **ASL translation** for American Sign Language support
-- **Mobile optimized** responsive design
-- **Full accessibility** with keyboard navigation and screen reader support
+**Pocket Sign** transforms LearnAble into an advanced platform for deaf and blind users:
 
-See [docs/CHAT-SUPPORT.md](docs/CHAT-SUPPORT.md) for detailed documentation.
+#### Core Features:
+- **🤟 Smart ASL Interpreter**: Real-time translation to ASL gloss, synchronized with video playback
+- **🎤 Humanized Voice**: Natural Habesha accent for Amharic, smooth English synthesis
+- **🤖 AI Summaries**: Context-aware video content summaries
+- **⚡ FastAPI Backend**: RESTful API with Supabase database
+- **💾 Intelligent Caching**: Client and server-side caching for instant responses
+- **📱 Material UI**: Modern, responsive design with accessibility built-in
+
+#### ASL Interpreter:
+- Fixed position at bottom-right of video player
+- Only appears when video is playing
+- Resizable with drag handle
+- AI-generated summaries overlay
+- Fullscreen mode support
+
+#### Technical Stack:
+- **Frontend**: React + TypeScript + Material UI
+- **Backend**: FastAPI + Python
+- **Database**: Supabase (PostgreSQL)
+- **AI**: Google Gemini for embeddings, translations, and chat
+- **Caching**: In-memory + Service Worker
+
+See [docs/POCKET-SIGN.md](docs/POCKET-SIGN.md) for complete documentation.
 
 ## Install in an hour
 

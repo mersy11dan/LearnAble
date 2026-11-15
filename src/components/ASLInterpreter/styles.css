@@ -1,0 +1,64 @@
+/* ASL Interpreter Styles */
+
+.react-resizable {
+  position: relative;
+}
+
+.react-resizable-handle {
+  position: absolute;
+  width: 20px;
+  height: 20px;
+}
+
+.react-resizable-handle-se {
+  bottom: 0;
+  right: 0;
+  cursor: se-resize;
+}
+
+/* Smooth animations */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.asl-interpreter-container {
+  animation: fadeIn 0.3s ease-out;
+}
+
+/* Ensure visibility */
+.asl-interpreter-container * {
+  pointer-events: auto;
+}
+
+/* High contrast mode adjustments */
+html[data-contrast="high"] .asl-interpreter-container {
+  border-color: #ffffff;
+}
+
+/* Reduced motion */
+html[data-motion="reduce"] .asl-interpreter-container {
+  animation: none;
+  transition: none;
+}
+
+/* Mobile adjustments */
+@media (max-width: 640px) {
+  .react-resizable {
+    min-width: 150px !important;
+    min-height: 120px !important;
+  }
+}
+
+/* Print - hide interpreter */
+@media print {
+  .asl-interpreter-container {
+    display: none;
+  }
+}
