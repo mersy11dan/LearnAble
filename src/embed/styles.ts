@@ -288,7 +288,7 @@ section {
   gap: 0.5rem;
   width: min(20rem, calc(100vw - 1rem));
   max-width: min(20rem, calc(100vw - 1rem));
-  max-height: min(70vh, calc(100vh - 4rem));
+  max-height: min(24rem, calc(100vh - 4rem));
   overflow: auto;
 }
 .group {
