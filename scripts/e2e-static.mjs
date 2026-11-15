@@ -210,6 +210,7 @@ const html = page.waitForEvent("download");
 await player.locator("[data-act=html]").evaluate((node) => node.click());
 await html;
 await page.screenshot({ path: "/opt/cursor/artifacts/sign-panel-desktop.png" });
+await page.locator("learnable-toolbar").locator("summary", { hasText: "See" }).click();
 await page.locator("learnable-toolbar").locator("[data-key=contrastMode]").selectOption("bw");
 await page.locator("learnable-toolbar").locator("[data-key=contrastLevel]").fill("10");
 await page.reload({ waitUntil: "domcontentloaded" });

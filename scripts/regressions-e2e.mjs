@@ -249,6 +249,7 @@ if (separated.stageBottom > separated.signBottom + 2) throw new Error("signer is
 await layout.locator("learnable-player").locator(".sign").screenshot({ path: "/opt/cursor/artifacts/sign-panel-desktop.png" });
 const launcher = layout.locator("learnable-toolbar").locator("[data-act=launcher]");
 if (await launcher.isVisible()) await launcher.click();
+await layout.locator("learnable-toolbar").locator("summary", { hasText: "See" }).click();
 await layout.locator("learnable-toolbar").locator("[data-key=contrastMode]").selectOption("bw");
 const contrastPlaced = await layout.evaluate(() => {
   const sign = document.querySelector("learnable-player")?.shadowRoot?.querySelector(".sign");

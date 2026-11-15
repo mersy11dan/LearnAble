@@ -145,6 +145,7 @@ async function keyboardPass(page, path) {
   if (!(await page.locator("learnable-toolbar").locator(".bar").isVisible())) {
     await page.locator("learnable-toolbar").locator("[data-act=launcher]").click();
   }
+  await page.locator("learnable-toolbar").locator("summary", { hasText: "See" }).click();
   await field.focus();
   await page.keyboard.press("h");
   const stayed = await page.evaluate(() => document.querySelector("learnable-toolbar")?.shadowRoot?.activeElement?.getAttribute("data-key"));
@@ -198,6 +199,8 @@ await page.evaluate(() => {
   if (dock) dock.hidden = false;
   if (launcher) launcher.hidden = true;
   const button = root?.querySelector("[data-act=voice]");
+  const group = button?.closest("details");
+  if (group) group.open = true;
   button?.getBoundingClientRect();
   document.dispatchEvent(new KeyboardEvent("keydown", { key: "Tab", bubbles: true, cancelable: true }));
   button?.focus();
