@@ -27,7 +27,7 @@ import {
 } from "../lib/signFrame";
 import { presentSign, type SignLoad } from "../lib/signLabel";
 import { attachSignSync } from "../lib/signSync";
-import { ensureSigner, motionReduced, showSignerFrame } from "./signer";
+import { motionReduced, showSignerFrame } from "./signer";
 import { ASL_GLOSS_LABEL, GLOSS_MODEL, signPanel, signSummary, visualsFor, type SignVisual } from "./signs";
 import { getFeatures, getSettings, getTheme, optedIn, PRESETS, updateSettings, type CaptionPreset, type DescriptionMode } from "./settings";
 import { widgetCss } from "./styles";
