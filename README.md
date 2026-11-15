@@ -47,17 +47,20 @@ Copy-paste snippets for HTML, React, WordPress, and an iframe fallback are on `/
 
 ### 🤟 ASL Video-to-Text Recognition (Latest)
 
-**Revolutionary sign language recognition** with multilingual support:
+**Revolutionary sign language recognition** with multilingual support and AI-powered accessibility:
 
 #### Core Capabilities:
 - **🎥 Video Input**: Process ASL videos (MP4, AVI, MOV)
 - **🤲 MediaPipe Extraction**: 54 hand & body landmarks per frame
 - **🌐 Dual Backend**: 
-  - **Local**: Ollama (llava, llama3.2-vision) for offline processing
+  - **Local**: Ollama (llava, llama3.2-vision, qwen3.5:4b) for offline processing
   - **Online**: Hugging Face models for cloud inference
 - **🌍 Multilingual Output**: 
   - English translation
   - Amharic (አማርኛ) translation
+- **🎤 Humanized Voice**: Natural speech with emotions (excited, calm, neutral)
+- **💬 LLM Chat**: AI assistant powered by qwen3.5:4b for ASL learning
+- **♿ Blind User Support**: Detailed audio descriptions for accessibility
 - **🎨 Humanized Text**: Natural, readable translations
 - **⚡ Real-time Processing**: ~30 FPS keypoint extraction
 - **💾 Smart Caching**: <100ms for repeated queries
@@ -65,7 +68,9 @@ Copy-paste snippets for HTML, React, WordPress, and an iframe fallback are on `/
 
 **Quick Start**: See [`QUICKSTART_ASL.md`](QUICKSTART_ASL.md) for 5-minute setup!
 
-**Full Docs**: [`docs/ASL-VIDEO-TO-TEXT.md`](docs/ASL-VIDEO-TO-TEXT.md)
+**Full Docs**: 
+- ASL Translation: [`docs/ASL-VIDEO-TO-TEXT.md`](docs/ASL-VIDEO-TO-TEXT.md)
+- Voice & Chat: [`docs/VOICE-AND-CHAT.md`](docs/VOICE-AND-CHAT.md)
 
 ### 🤟 Pocket Sign (v0.3.0) - AI-Powered Accessibility Platform
 
