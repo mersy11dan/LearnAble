@@ -59,8 +59,10 @@ await page.goto(`http://127.0.0.1:${port}/pages/concept-with-learnable.html`, { 
 const keep = page.getByRole("button", { name: "Keep LearnAble voice" });
 if (await keep.count()) await keep.click();
 await page.keyboard.press("Alt+Shift+L");
-const first = await page.evaluate(() => document.querySelector("learnable-toolbar")?.shadowRoot?.activeElement?.getAttribute("data-act") || "");
-if (first !== "move") throw new Error(`shortcut focus ${first}`);
+const first = await page.evaluate(() => document.querySelector("learnable-toolbar")?.shadowRoot?.activeElement?.getAttribute("data-key") || "");
+if (first !== "largeText") throw new Error(`shortcut focus ${first}`);
+const positionOpen = await page.evaluate(() => document.querySelector("learnable-toolbar")?.shadowRoot?.querySelector("[data-group=position]")?.hasAttribute("open"));
+if (positionOpen) throw new Error("Position opened with the toolbar");
 await page.keyboard.press("Escape");
 const dockHidden = await page.locator("learnable-toolbar").locator(".dock").evaluate((node) => node.hidden);
 if (!dockHidden) throw new Error("escape did not collapse the toolbar");
@@ -92,9 +94,11 @@ await signSelection.evaluate((node) => {
   node.scrollIntoView({ block: "center", inline: "nearest" });
 });
 await signSelection.click();
-await plain.locator("#learnable-text-sign .signer-label").waitFor();
-const textLabel = await plain.locator("#learnable-text-sign .signer-label").innerText();
-if (!textLabel.includes("Computer-generated signing")) throw new Error(textLabel);
+await plain.locator("#learnable-sign-window .signer-label").waitFor();
+const textLabel = await plain.locator("#learnable-sign-window .signer-label").innerText();
+if (!textLabel.includes("not Ethiopian Sign Language")) throw new Error(textLabel);
+await plain.keyboard.press("Escape");
+if (await plain.locator("#learnable-sign-window").count()) throw new Error("sign window stayed open");
 console.log("plain text lesson signed");
 await browser.close();
 server.close();

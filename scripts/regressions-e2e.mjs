@@ -106,6 +106,7 @@ async function collapseFlow(page, label) {
   await launcher.click();
   const open = await dockBox(page);
   if (open.hidden || open.display === "none" || open.height < 80) throw new Error(`${label} dock did not return ${JSON.stringify(open)}`);
+  await toolbar.locator("summary", { hasText: "Position" }).click();
   await toolbar.locator("[data-act=collapse]").click();
   await assertCollapsed(page);
   await launcher.click();
@@ -206,6 +207,14 @@ const layoutContext = await browser.newContext({ viewport: { width: 1280, height
 const layout = await layoutContext.newPage();
 await layout.goto(`${base}/pages/concept-with-learnable.html`, { waitUntil: "domcontentloaded" });
 await dismissVoice(layout);
+const profile = await layout.getByText("My Profile").boundingBox();
+const launch = await layout.locator("learnable-toolbar").locator("[data-act=launcher]").boundingBox();
+const coversProfile = Boolean(
+  profile && launch &&
+  launch.left < profile.x + profile.width && launch.left + launch.width > profile.x &&
+  launch.top < profile.y + profile.height && launch.top + launch.height > profile.y
+);
+if (coversProfile) throw new Error("launcher covers My Profile");
 await layout.locator("[data-signer-now]").waitFor({ timeout: 8000 });
 const placed = await layout.evaluate(() => {
   const player = document.querySelector("learnable-player");
@@ -230,8 +239,8 @@ if (placed.signWidth < placed.rem * 16 - 1) throw new Error(`sign width ${placed
 const separated = await layout.evaluate(() => {
   const root = document.querySelector("learnable-player")?.shadowRoot;
   const caption = root?.querySelector(".caption")?.getBoundingClientRect();
-  const stage = root?.querySelector(".signer-stage")?.getBoundingClientRect();
-  const sign = root?.querySelector(".sign")?.getBoundingClientRect();
+  const stage = document.querySelector("#learnable-sign-window .stage")?.getBoundingClientRect();
+  const sign = document.querySelector("#learnable-sign-window")?.getBoundingClientRect();
   const overlaps = Boolean(
     caption && stage && caption.width > 2 && caption.height > 2 && stage.width > 2 &&
     caption.left < stage.right - 1 && caption.right > stage.left + 1 && caption.top < stage.bottom - 1 && caption.bottom > stage.top + 1
