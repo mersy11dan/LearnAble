@@ -55,7 +55,7 @@ await client.send("Network.emulateNetworkConditions", {
 await page.goto(`http://127.0.0.1:${port}/pages/concept-with-navigation.html`, { waitUntil: "domcontentloaded", timeout: 90000 });
 const keep = page.getByRole("button", { name: "Keep LearnAble voice" });
 if (await keep.count()) await keep.click();
-await page.locator("#learnable-sign-window [data-hand]").waitFor({ timeout: 15000 });
+await page.locator("#learnable-sign-window [data-signer-now]").filter({ hasText: /\S/ }).waitFor({ timeout: 20000 });
 const letter = await page.locator("#learnable-sign-window [data-signer-now]").innerText();
 if (!letter.trim()) throw new Error("slow network did not show a letter");
 await client.send("Network.emulateNetworkConditions", {

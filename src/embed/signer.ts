@@ -147,6 +147,11 @@ async function paint(): Promise<void> {
     if (now) now.textContent = "";
     return;
   }
+  if (now) {
+    const line = `${frame.caption}${word ? ` · ${word}` : ""}`;
+    now.textContent = line;
+    now.setAttribute("title", line);
+  }
   if (img) {
     img.classList.toggle("fade", !reduced);
     img.style.opacity = "0.2";
@@ -162,11 +167,6 @@ async function paint(): Promise<void> {
       img.alt = frame.alt;
     }
     img.style.opacity = "1";
-  }
-  if (now) {
-    const line = `${frame.caption}${word ? ` · ${word}` : ""}`;
-    now.textContent = line;
-    now.setAttribute("title", line);
   }
 }
 
