@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { Breadcrumbs } from "../components/Breadcrumbs";
 
-const htmlSnippet = `<script src="https://your-host/learnable/learnable.js?v=0.4.0" integrity="sha384-pg0CwpICGgogFTOh4ce/q5esxEqK9Lu8WwOzxpFazgNKGZkfnFlNnKALSivKTCq3" crossorigin="anonymous" defer data-learnable-voice="on"></script>
+const htmlSnippet = `<script src="https://your-host/learnable/learnable.js?v=0.4.0" integrity="sha384-5OTCImZOUuJ++twKzqgoS9BDYGha3gUp7t90FIizyQym5G5vQ2lBk2+eSTfbu197" crossorigin="anonymous" defer data-learnable-voice="on"></script>
 <learnable-player
   src="/media/lesson-en.mp4"
   captions-en="/media/captions-en.vtt"
@@ -76,7 +76,7 @@ export function IntegratePage() {
         One script on a Savanna page turns on enhance mode. The toolbar sits on that page, and a plain video in the lesson is upgraded in place. Captions, the sign window, the pack, braille, and the text file are built in the browser when no API is running.
       </p>
       <h2>Whole page</h2>
-      <pre className="snippet">{`<script src="/learnable/learnable.js?v=0.4.0" integrity="sha384-pg0CwpICGgogFTOh4ce/q5esxEqK9Lu8WwOzxpFazgNKGZkfnFlNnKALSivKTCq3" crossorigin="anonymous" defer data-learnable-enhance="true" data-learnable-voice="on"></script>
+      <pre className="snippet">{`<script src="/learnable/learnable.js?v=0.4.0" integrity="sha384-5OTCImZOUuJ++twKzqgoS9BDYGha3gUp7t90FIizyQym5G5vQ2lBk2+eSTfbu197" crossorigin="anonymous" defer data-learnable-enhance="true" data-learnable-voice="on"></script>
 <video controls playsinline src="/media/lesson-en.mp4"
   data-learnable-captions-en="/media/captions-en.vtt"
   data-learnable-captions-am="/media/captions-am.vtt"

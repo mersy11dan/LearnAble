@@ -142,6 +142,9 @@ async function keyboardPass(page, path) {
   const returned = await page.evaluate(() => document.activeElement === window.__helpFrom);
   if (!returned) throw new Error(`${path} focus did not return from help`);
   const field = page.locator("learnable-toolbar").locator("[data-key=contrastMode]");
+  if (!(await page.locator("learnable-toolbar").locator(".bar").isVisible())) {
+    await page.locator("learnable-toolbar").locator("[data-act=launcher]").click();
+  }
   await field.focus();
   await page.keyboard.press("h");
   const stayed = await page.evaluate(() => document.querySelector("learnable-toolbar")?.shadowRoot?.activeElement?.getAttribute("data-key"));

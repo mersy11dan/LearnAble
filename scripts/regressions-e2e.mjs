@@ -193,7 +193,7 @@ const layoutContext = await browser.newContext({ viewport: { width: 1280, height
 const layout = await layoutContext.newPage();
 await layout.goto(`${base}/pages/concept-with-learnable.html`, { waitUntil: "domcontentloaded" });
 await dismissVoice(layout);
-await layout.locator("[data-hands] img").first().waitFor({ timeout: 8000 });
+await layout.locator("[data-signer-now]").waitFor({ timeout: 8000 });
 const placed = await layout.evaluate(() => {
   const player = document.querySelector("learnable-player");
   const sign = player?.shadowRoot?.querySelector(".sign");

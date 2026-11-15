@@ -61,11 +61,24 @@ if (await keep.count()) await keep.click();
 await page.keyboard.press("Alt+Shift+L");
 const first = await page.evaluate(() => document.querySelector("learnable-toolbar")?.shadowRoot?.activeElement?.getAttribute("data-act") || "");
 if (first !== "move") throw new Error(`shortcut focus ${first}`);
-const missing = await unnamed(page);
-if (missing.length) throw new Error(`unnamed controls ${missing.join(",")}`);
 await page.keyboard.press("Escape");
 const dockHidden = await page.locator("learnable-toolbar").locator(".dock").evaluate((node) => node.hidden);
 if (!dockHidden) throw new Error("escape did not collapse the toolbar");
+await page.keyboard.press("Alt+Shift+L");
+const missing = await unnamed(page);
+if (missing.length) throw new Error(`unnamed controls ${missing.join(",")}`);
+for (let step = 0; step < 20; step += 1) {
+  await page.keyboard.press("Tab");
+  const nameless = await page.evaluate(() => {
+    const host = document.activeElement;
+    const node = host?.shadowRoot?.activeElement || host;
+    if (!node || node === document.body) return "";
+    if (!/^(BUTTON|A|INPUT|SELECT|TEXTAREA)$/.test(node.tagName)) return "";
+    const name = node.getAttribute("aria-label") || node.getAttribute("aria-labelledby") || node.labels?.[0]?.textContent || node.textContent || "";
+    return String(name).trim() ? "" : node.tagName;
+  });
+  if (nameless) throw new Error(`tab ${step} landed on an unnamed ${nameless}`);
+}
 console.log("savanna names and shortcut ok");
 const plain = await browser.newPage({ viewport: { width: 1280, height: 900 } });
 await plain.goto(`http://127.0.0.1:${port}/plain.html`, { waitUntil: "domcontentloaded" });
