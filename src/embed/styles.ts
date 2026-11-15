@@ -402,6 +402,25 @@ section {
   color: var(--color-navy-ink);
 }
 .bar button[aria-pressed="true"]::after { content: " On"; }
+:host([contrast="high"]) button,
+:host([contrast="high"]) a,
+:host([contrast="high"]) summary,
+:host([contrast="high"]) .sign-grip,
+:host([contrast="high"]) .sign .row button,
+:host([contrast="high"]) .bar button,
+:host([contrast="high"]) .bar a {
+  transition: none;
+  background-color: var(--la-hc-bg, #121212);
+  color: var(--la-hc-fg, #f2f2f2);
+  border-color: var(--la-hc-fg, #f2f2f2);
+  box-shadow: none;
+}
+:host([contrast="high"]) button[aria-pressed="true"],
+:host([contrast="high"]) .bar button[aria-pressed="true"] {
+  background-color: var(--la-hc-fg, #f2f2f2);
+  color: var(--la-hc-bg, #121212);
+  border-color: var(--la-hc-bg, #121212);
+}
 [hidden] { display: none !important; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
