@@ -113,6 +113,11 @@ function ensureWindow(): HTMLElement {
     closeHands(true);
   });
   document.body.append(node);
+  if (typeof ResizeObserver !== "undefined") {
+    new ResizeObserver(() => {
+      if (!userPlaced) place(node);
+    }).observe(node);
+  }
   return node;
 }
 
@@ -207,20 +212,33 @@ function clamp(left: number, top: number, node: HTMLElement): { left: number; to
   };
 }
 
-function blocks(): DOMRect[] {
+function rects(nodes: Array<Element | null | undefined>): DOMRect[] {
   const found: DOMRect[] = [];
-  const add = (node: Element | null | undefined) => {
+  nodes.forEach((node) => {
     if (!(node instanceof HTMLElement)) return;
     const rect = node.getBoundingClientRect();
     if (rect.width > 8 && rect.height > 8) found.push(rect);
-  };
-  document.querySelectorAll("learnable-player").forEach((player) => {
-    add(player.shadowRoot?.querySelector(".stage"));
-    add(player.shadowRoot?.querySelector(".caption"));
-    add(player.shadowRoot?.querySelector("video"));
   });
-  document.querySelectorAll("nav a, aside a, [class*=sidebar] a, [class*=nav] a").forEach((link) => add(link));
   return found;
+}
+
+function mediaRects(): DOMRect[] {
+  const nodes: Array<Element | null> = [];
+  document.querySelectorAll("learnable-player").forEach((player) => {
+    nodes.push(player.shadowRoot?.querySelector(".stage") || null);
+    nodes.push(player.shadowRoot?.querySelector(".caption") || null);
+    nodes.push(player.shadowRoot?.querySelector("video") || null);
+  });
+  return rects(nodes);
+}
+
+function launcherRect(): DOMRect | null {
+  const launcher = document.querySelector("learnable-toolbar")?.shadowRoot?.querySelector("[data-act=launcher]");
+  return launcher instanceof HTMLElement ? rects([launcher])[0] || null : null;
+}
+
+function navRects(): DOMRect[] {
+  return rects([...document.querySelectorAll("nav a, aside a, [class*=sidebar] a")]);
 }
 
 function overlap(left: number, top: number, width: number, height: number, rect: DOMRect): number {
@@ -229,27 +247,39 @@ function overlap(left: number, top: number, width: number, height: number, rect:
   return x * y;
 }
 
+function cover(left: number, top: number, width: number, height: number, list: DOMRect[]): number {
+  return list.reduce((sum, rect) => sum + overlap(left, top, width, height, rect), 0);
+}
+
 function place(node: HTMLElement): void {
   if (userPlaced) return;
   const width = node.offsetWidth || 232;
   const height = node.offsetHeight || 280;
+  const launcher = launcherRect();
+  const media = mediaRects();
+  const nav = navRects();
   const spots = [
-    { left: window.innerWidth - width - 12, top: 12 },
-    { left: 12, top: 12 },
-    { left: window.innerWidth - width - 12, top: window.innerHeight - height - 12 },
-    { left: 12, top: window.innerHeight - height - 12 },
+    clamp(window.innerWidth - width - 12, 12, node),
+    clamp(12, 12, node),
+    clamp(window.innerWidth - width - 12, window.innerHeight - height - 12, node),
+    clamp(12, window.innerHeight - height - 12, node),
   ];
-  const obstacles = blocks();
-  let best = spots[2];
-  let bestScore = Number.POSITIVE_INFINITY;
+  let best = spots[0];
+  let bestKey = "9";
   spots.forEach((spot) => {
-    const score = obstacles.reduce((sum, rect) => sum + overlap(spot.left, spot.top, width, height, rect), 0);
-    if (score < bestScore) {
-      bestScore = score;
+    const onLauncher = launcher ? overlap(spot.left, spot.top, width, height, launcher) : 0;
+    const onMedia = cover(spot.left, spot.top, width, height, media);
+    const onNav = cover(spot.left, spot.top, width, height, nav);
+    const key = `${onLauncher > 0 ? 1 : 0}${onNav > 0 ? 1 : 0}${onMedia > 0 ? 1 : 0}-${String(onLauncher + onNav + onMedia).padStart(9, "0")}`;
+    if (key < bestKey) {
+      bestKey = key;
       best = spot;
     }
   });
-  const placed = clamp(best.left, best.top, node);
+  let placed = best;
+  if (launcher && overlap(placed.left, placed.top, width, height, launcher) > 0) {
+    placed = clamp(placed.left, launcher.top - height - 8, node);
+  }
   node.style.left = `${placed.left}px`;
   node.style.top = `${placed.top}px`;
 }
@@ -336,7 +366,9 @@ export function presentHands(next: SignVisual[], options: HandsOptions = {}): vo
     note.textContent = options.note || "";
   }
   place(node);
-  void paint();
+  void paint().then(() => {
+    if (!userPlaced) place(node);
+  });
   schedule();
 }
 
