@@ -253,8 +253,28 @@ const separated = await layout.evaluate(() => {
   };
 });
 if (separated.overlaps) throw new Error("caption overlaps the signer");
-if (separated.stageHeight < 120) throw new Error(`signer stage too short ${separated.stageHeight}`);
+if (separated.stageHeight < 72) throw new Error(`signer stage too short ${separated.stageHeight}`);
 if (separated.stageBottom > separated.signBottom + 2) throw new Error("signer is cut off by the sign panel");
+async function clearOfPlayer(page, label) {
+  const hit = await page.evaluate(() => {
+    const sign = document.querySelector("#learnable-sign-window")?.getBoundingClientRect();
+    const root = document.querySelector("learnable-player")?.shadowRoot;
+    if (!sign || !root) return "missing";
+    const targets = ["video", "[data-act=play]", "[data-act=captions]", "[data-act=ad]"]
+      .map((sel) => root.querySelector(sel)?.getBoundingClientRect())
+      .filter((rect) => rect && rect.width > 2 && rect.height > 2);
+    const overlap = targets.some((rect) =>
+      sign.left < rect.right - 1 && sign.right > rect.left + 1 && sign.top < rect.bottom - 1 && sign.bottom > rect.top + 1
+    );
+    return overlap ? "overlap" : "";
+  });
+  if (hit) throw new Error(`${label} sign window ${hit} video or player controls`);
+}
+await clearOfPlayer(layout, "desktop");
+await layout.setViewportSize({ width: 360, height: 800 });
+await layout.waitForTimeout(200);
+await clearOfPlayer(layout, "360");
+await layout.setViewportSize({ width: 1280, height: 900 });
 await layout.locator("learnable-player").locator(".sign").screenshot({ path: "/opt/cursor/artifacts/sign-panel-desktop.png" });
 const launcher = layout.locator("learnable-toolbar").locator("[data-act=launcher]");
 if (await launcher.isVisible()) await launcher.click();

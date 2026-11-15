@@ -533,7 +533,7 @@ export class LearnAblePlayer extends HTMLElement {
     const englishCue = this.mode === "am" ? cueAt(this.en, time) : cue;
     const glossSource = this.mode === "am" ? signPanel(englishCue?.text || "", "en") : panel;
     const frames = glossSource.gloss ? visualsFor(glossSource.gloss) : [];
-    const amharicNote = this.mode === "am" ? "Fingerspelling is the English letters. Amharic is not fingerspelled." : "";
+    const amharicNote = this.mode === "am" ? "English letters only. Amharic is not fingerspelled." : "";
     this.paintHands(frames, amharicNote, glossSource.gloss);
     const corrected = this.root.querySelector("[data-gloss-corrected]");
     const model = this.root.querySelector("[data-gloss-model]");

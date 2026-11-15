@@ -16,7 +16,6 @@ export function signCurrentText(): void {
   const opener = document.activeElement instanceof HTMLElement ? document.activeElement : null;
   presentHands(frames, {
     word: text.slice(0, 48),
-    note: "Computer-generated. ASL fingerspelling, not Ethiopian Sign Language.",
     returnFocus: opener,
     source: "selection",
   });

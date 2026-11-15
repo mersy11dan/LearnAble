@@ -17,7 +17,7 @@ Where there is no video, the toolbar button “Sign selection” signs the selec
 
 ## Layout and the model gloss
 
-The hands sit in one square window, about 232 pixels wide. It starts in a corner that does not cover the video, the captions, or the site navigation. It can be dragged, or moved with the arrow keys while Move is focused. Escape closes it. Amharic captions stay on screen, and the hands keep spelling the English letters, with a note that Amharic is not fingerspelled.
+The hands sit in one 220 pixel square. The whole handshape is on a light plate, and the current letter is large under it. On a narrow screen the square sits below the player so it does not cover the video or the player controls. It can be dragged, or moved with the arrow keys while Move is focused. Escape closes it. Amharic captions stay on screen, and the hands keep spelling the English letters, with a note that Amharic is not fingerspelled.
 
 ## What is realistic
 

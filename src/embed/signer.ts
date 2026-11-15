@@ -2,7 +2,8 @@ import { resolveUrl } from "./assets";
 import { getSettings } from "./settings";
 import type { SignVisual } from "./signs";
 
-const cache = new Map<string, string>();
+type HandArt = { viewBox: string; d: string; stroke: string };
+const cache = new Map<string, HandArt>();
 
 export function motionReduced(): boolean {
   if (getSettings().stopMotion) return true;
@@ -46,45 +47,57 @@ function ensureWindow(): HTMLElement {
   node.innerHTML = `
     <style>
       #learnable-sign-window {
-        position: fixed; z-index: 2147483002; width: 232px; max-width: calc(100vw - 1rem);
+        position: fixed; z-index: 2147483002; width: 232px; height: 232px; max-width: calc(100vw - 1rem);
+        display: flex; flex-direction: column; overflow: hidden;
         background: #f2f0ea; color: #172033; border: 2px solid #1b3048; border-radius: 0.5rem;
-        box-shadow: none; font: 16px/1.35 "Atkinson Hyperlegible", "Noto Sans Ethiopic", sans-serif;
+        box-shadow: none; font: 16px/1.2 "Atkinson Hyperlegible", "Noto Sans Ethiopic", sans-serif;
       }
       #learnable-sign-window * { box-sizing: border-box; }
-      #learnable-sign-window .head { display: flex; gap: 0.35rem; padding: 0.35rem; }
-      #learnable-sign-window button, #learnable-sign-window input { font: inherit; min-height: 2.25rem; }
+      #learnable-sign-window [hidden] { display: none !important; }
+      #learnable-sign-window .head { display: flex; gap: 0.25rem; padding: 0.25rem; }
       #learnable-sign-window button {
-        background: #f2f0ea; color: #172033; border: 2px solid #1b3048; border-radius: 0.35rem; cursor: pointer;
+        font: inherit; min-height: 1.5rem; padding: 0 0.4rem; font-size: 0.75rem;
+        background: #f2f0ea; color: #172033; border: 2px solid #1b3048; border-radius: 0.3rem; cursor: pointer;
       }
-      #learnable-sign-window .signer-label, #learnable-sign-window .signer-now, #learnable-sign-window .signer-note {
-        margin: 0 0.5rem 0.3rem; font-size: 0.75rem; line-height: 1.25; overflow-wrap: anywhere;
+      #learnable-sign-window .signer-label {
+        margin: 0 0.4rem; font-size: 0.62rem; line-height: 1.15; font-weight: 700;
       }
-      #learnable-sign-window .signer-now { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-      #learnable-sign-window .signer-label { font-weight: 700; }
       #learnable-sign-window .stage {
-        width: calc(100% - 1rem); height: 132px; margin: 0 0.5rem 0.3rem; background: #f7f4ee;
-        border: 2px solid #172033; display: grid; place-items: center; overflow: hidden;
+        flex: 1 1 auto; min-height: 0; margin: 0.15rem 0.4rem; padding: 0.35rem; overflow: hidden;
+        background: #f7f4ee; color: #172033; border: 2px solid #172033;
+        display: grid; place-items: center;
       }
-      #learnable-sign-window img { width: 100%; height: 100%; object-fit: contain; }
-      #learnable-sign-window img.fade { transition: opacity 180ms ease-in-out; }
-      #learnable-sign-window .controls { display: flex; flex-wrap: wrap; gap: 0.35rem; padding: 0.35rem 0.5rem 0.5rem; align-items: center; }
-      #learnable-sign-window label { display: flex; align-items: center; gap: 0.35rem; font-size: 0.85rem; }
-      @media (prefers-reduced-motion: reduce) { #learnable-sign-window img.fade { transition: none; } }
+      #learnable-sign-window .stage svg { width: 100%; height: 100%; display: block; }
+      #learnable-sign-window .stage { transition: opacity 180ms ease-in-out; }
+      @media (prefers-reduced-motion: reduce) { #learnable-sign-window .stage { transition: none; } }
+      #learnable-sign-window .signer-letter {
+        margin: 0; text-align: center; font-size: 1.35rem; font-weight: 700; line-height: 1;
+      }
+      #learnable-sign-window .signer-note {
+        flex: 0 0 auto; margin: 0 0.4rem; font-size: 0.62rem; line-height: 1.15;
+        white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      }
+      #learnable-sign-window .controls {
+        display: flex; flex-wrap: nowrap; gap: 0.2rem; align-items: center; padding: 0.2rem 0.3rem 0.3rem;
+      }
+      #learnable-sign-window label { display: flex; align-items: center; gap: 0.15rem; font-size: 0.7rem; }
+      #learnable-sign-window input[type="range"] { width: 2.8rem; min-height: 0; margin: 0; }
+      html[data-learnable-contrast="on"] #learnable-sign-window .stage { background: var(--la-hc-bg, #121212); color: var(--la-hc-fg, #f2f2f2); }
     </style>
     <div class="head">
       <button type="button" data-act="move" aria-label="Move the sign window. Arrow keys move it.">Move</button>
       <button type="button" data-act="close" aria-label="Close sign window">Close</button>
     </div>
     <p class="signer-label">Computer-generated. ASL fingerspelling, not Ethiopian Sign Language.</p>
-    <div class="stage"><img alt="" data-hand /></div>
-    <p class="signer-now" data-signer-now></p>
+    <div class="stage" data-hand-stage></div>
+    <p class="signer-letter" data-signer-now></p>
     <p class="signer-note" data-signer-note hidden></p>
     <div class="controls">
       <button type="button" data-act="pause">Pause</button>
       <button type="button" data-act="replay">Replay</button>
       <label>Speed <input data-act="speed" type="range" min="0.5" max="2" step="0.25" value="1" aria-valuemin="0.5" aria-valuemax="2" aria-valuenow="1" /></label>
-      <button type="button" data-act="sign-prev" hidden>Previous handshape</button>
-      <button type="button" data-act="sign-next" hidden>Next handshape</button>
+      <button type="button" data-act="sign-prev" hidden aria-label="Previous handshape">Previous</button>
+      <button type="button" data-act="sign-next" hidden aria-label="Next handshape">Next</button>
     </div>
     <p class="sr" data-sign-live aria-live="polite" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)"></p>
   `;
@@ -121,53 +134,71 @@ function ensureWindow(): HTMLElement {
   return node;
 }
 
-async function loadHand(src: string): Promise<string> {
+async function loadHand(src: string): Promise<HandArt> {
   const url = resolveUrl(src);
   const cached = cache.get(url);
   if (cached) return cached;
   const response = await fetch(url);
   if (!response.ok) throw new Error(String(response.status));
-  const blob = await response.blob();
-  const objectUrl = URL.createObjectURL(blob);
-  cache.set(url, objectUrl);
-  return objectUrl;
+  const text = await response.text();
+  const viewBox = text.match(/viewBox="([^"]+)"/)?.[1] || "0 0 100 100";
+  const d = text.match(/<path\b[^>]*\sd="([^"]+)"/)?.[1] || "";
+  const stroke = text.match(/stroke-width="([^"]+)"/)?.[1] || "8";
+  const art = { viewBox, d, stroke };
+  cache.set(url, art);
+  return art;
+}
+
+function drawHand(stage: HTMLElement, art: HandArt, alt: string): void {
+  const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  svg.setAttribute("viewBox", art.viewBox);
+  svg.setAttribute("preserveAspectRatio", "xMidYMid meet");
+  svg.setAttribute("role", "img");
+  svg.setAttribute("aria-label", alt);
+  const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+  path.setAttribute("d", art.d);
+  path.setAttribute("fill", "none");
+  path.setAttribute("stroke", "currentColor");
+  path.setAttribute("stroke-width", art.stroke);
+  path.setAttribute("stroke-linejoin", "round");
+  path.setAttribute("stroke-linecap", "round");
+  svg.append(path);
+  stage.replaceChildren(svg);
 }
 
 async function paint(): Promise<void> {
   const node = windowNode();
   if (!node) return;
   const frame = frames[index];
-  const img = node.querySelector<HTMLImageElement>("[data-hand]");
+  const stage = node.querySelector<HTMLElement>("[data-hand-stage]");
   const now = node.querySelector("[data-signer-now]");
   const reduced = motionReduced();
   node.querySelectorAll<HTMLButtonElement>("[data-act=sign-prev], [data-act=sign-next]").forEach((button) => {
     button.hidden = !reduced;
   });
+  const speedLabel = node.querySelector<HTMLElement>(".controls label");
+  if (speedLabel) speedLabel.hidden = reduced;
   if (!frame) {
     if (now) now.textContent = "";
+    stage?.replaceChildren();
     return;
   }
   if (now) {
-    const line = `${frame.caption}${word ? ` · ${word}` : ""}`;
-    now.textContent = line;
-    now.setAttribute("title", line);
+    now.textContent = frame.caption;
+    now.setAttribute("title", word ? `${frame.caption}. ${word}` : frame.caption);
   }
-  if (img) {
-    img.classList.toggle("fade", !reduced);
-    img.style.opacity = "0.2";
-    if (frame.src) {
-      try {
-        img.src = await loadHand(frame.src);
-      } catch {
-        img.removeAttribute("src");
-      }
-      img.alt = frame.alt;
-    } else {
-      img.removeAttribute("src");
-      img.alt = frame.alt;
-    }
-    img.style.opacity = "1";
+  if (!stage) return;
+  if (!frame.src) {
+    stage.replaceChildren();
+    return;
   }
+  if (!reduced) stage.style.opacity = "0.35";
+  try {
+    drawHand(stage, await loadHand(frame.src), frame.alt);
+  } catch {
+    stage.replaceChildren();
+  }
+  stage.style.opacity = "1";
 }
 
 function schedule(): void {
@@ -228,6 +259,7 @@ function mediaRects(): DOMRect[] {
     nodes.push(player.shadowRoot?.querySelector(".stage") || null);
     nodes.push(player.shadowRoot?.querySelector(".caption") || null);
     nodes.push(player.shadowRoot?.querySelector("video") || null);
+    player.shadowRoot?.querySelectorAll("[data-act=play], [data-act=captions], [data-act=ad], [data-act=sign]").forEach((control) => nodes.push(control));
   });
   return rects(nodes);
 }
@@ -251,28 +283,55 @@ function cover(left: number, top: number, width: number, height: number, list: D
   return list.reduce((sum, rect) => sum + overlap(left, top, width, height, rect), 0);
 }
 
+function dockBelowPlayer(node: HTMLElement): boolean {
+  if (window.innerWidth >= 520) {
+    node.style.position = "fixed";
+    node.style.margin = "0";
+    return false;
+  }
+  const player = document.querySelector("learnable-player");
+  node.style.position = "relative";
+  node.style.left = "auto";
+  node.style.top = "auto";
+  node.style.margin = "0.5rem auto";
+  if (player && player.nextElementSibling !== node) player.insertAdjacentElement("afterend", node);
+  return true;
+}
+
+function playerRect(): DOMRect | null {
+  const player = document.querySelector("learnable-player");
+  return player instanceof HTMLElement ? rects([player])[0] || null : null;
+}
+
 function place(node: HTMLElement): void {
   if (userPlaced) return;
+  if (dockBelowPlayer(node)) return;
   const width = node.offsetWidth || 232;
-  const height = node.offsetHeight || 280;
+  const height = node.offsetHeight || 232;
   const launcher = launcherRect();
   const media = mediaRects();
   const nav = navRects();
+  const player = playerRect();
   const spots = [
     clamp(window.innerWidth - width - 12, 12, node),
     clamp(12, 12, node),
     clamp(window.innerWidth - width - 12, window.innerHeight - height - 12, node),
     clamp(12, window.innerHeight - height - 12, node),
   ];
+  if (player) {
+    spots.push(clamp(player.left - width - 8, Math.max(12, player.top), node));
+    spots.push(clamp(player.right + 8, Math.max(12, player.top), node));
+  }
   let best = spots[0];
-  let bestKey = "9";
+  let bestScore = Number.POSITIVE_INFINITY;
   spots.forEach((spot) => {
     const onLauncher = launcher ? overlap(spot.left, spot.top, width, height, launcher) : 0;
     const onMedia = cover(spot.left, spot.top, width, height, media);
+    const onPlayer = player ? overlap(spot.left, spot.top, width, height, player) : 0;
     const onNav = cover(spot.left, spot.top, width, height, nav);
-    const key = `${onLauncher > 0 ? 1 : 0}${onNav > 0 ? 1 : 0}${onMedia > 0 ? 1 : 0}-${String(onLauncher + onNav + onMedia).padStart(9, "0")}`;
-    if (key < bestKey) {
-      bestKey = key;
+    const score = (onLauncher > 0 ? 1e15 : 0) + (onMedia > 0 ? 1e12 : 0) + (onPlayer > 0 ? 1e9 : 0) + (onNav > 0 ? 1e6 : 0) + onLauncher + onMedia + onPlayer + onNav;
+    if (score < bestScore) {
+      bestScore = score;
       best = spot;
     }
   });
@@ -296,8 +355,12 @@ function drag(event: PointerEvent): void {
   const node = windowNode();
   const handle = event.currentTarget;
   if (!node || !(handle instanceof HTMLElement)) return;
-  userPlaced = true;
   const origin = node.getBoundingClientRect();
+  userPlaced = true;
+  node.style.position = "fixed";
+  node.style.margin = "0";
+  node.style.left = `${origin.left}px`;
+  node.style.top = `${origin.top}px`;
   const startX = event.clientX;
   const startY = event.clientY;
   const move = (next: PointerEvent) => {
@@ -325,6 +388,8 @@ function moveByKey(event: KeyboardEvent): void {
   const dx = event.key === "ArrowLeft" ? -stepPx : event.key === "ArrowRight" ? stepPx : 0;
   const dy = event.key === "ArrowUp" ? -stepPx : event.key === "ArrowDown" ? stepPx : 0;
   userPlaced = true;
+  node.style.position = "fixed";
+  node.style.margin = "0";
   const placed = clamp(rect.left + dx, rect.top + dy, node);
   node.style.left = `${placed.left}px`;
   node.style.top = `${placed.top}px`;
