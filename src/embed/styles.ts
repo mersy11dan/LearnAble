@@ -97,6 +97,8 @@ button[aria-pressed="true"] {
 }
 .media-row { display: grid; grid-template-columns: minmax(0, 1fr) 0.5rem minmax(0, var(--sign-col, 16rem)); gap: 0.5rem; align-items: start; min-width: 0; }
 .sign-grip {
+  position: relative;
+  z-index: 6;
   cursor: col-resize;
   background: var(--color-moss);
   color: var(--color-paper);
@@ -195,7 +197,7 @@ video { width: 100%; height: 100%; display: block; background: var(--color-stage
 }
 video[data-fallback][hidden] { display: none; }
 .chat { margin: 0.5rem 0; padding-left: 1.2rem; }
-.bar .status, .bar .consent { color: inherit; }
+.bar .status, .bar .consent, .bar label { color: var(--color-navy-ink); }
 .bar select, .bar a { min-height: 2.75rem; color: var(--color-ink); background: var(--color-paper); border-radius: var(--radius-sm); }
 .bar a { display: inline-flex; align-items: center; padding: 0 0.75rem; text-decoration: underline; }
 .sign p { margin: var(--space-3) var(--space-4); }

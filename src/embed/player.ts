@@ -195,7 +195,8 @@ export class LearnAblePlayer extends HTMLElement {
         <div class="row">
           <button type="button" data-act="play">Play</button>
           <button type="button" data-act="captions">Captions: English</button>
-          ${describe ? `<fieldset data-ad-choice>
+          ${describe ? `<button type="button" data-act="ad" aria-pressed="${getSettings().audioDescription}">Audio description</button>
+          <fieldset data-ad-choice>
             <legend>Audio description</legend>
             <label><input type="radio" name="ad-mode" value="off" data-ad-mode="off"${getSettings().descriptionMode === "off" ? " checked" : ""}> Off</label>
             <label><input type="radio" name="ad-mode" value="spoken" data-ad-mode="spoken"${getSettings().descriptionMode === "spoken" ? " checked" : ""}> Spoken</label>
@@ -407,6 +408,8 @@ export class LearnAblePlayer extends HTMLElement {
     this.root.querySelectorAll<HTMLInputElement>("[data-ad-mode]").forEach((input) => {
       input.checked = input.value === settings.descriptionMode;
     });
+    const adButton = this.root.querySelector<HTMLButtonElement>("[data-act=ad]");
+    if (adButton) adButton.setAttribute("aria-pressed", String(settings.descriptionMode !== "off"));
     this.sync();
   }
 
@@ -634,6 +637,8 @@ export class LearnAblePlayer extends HTMLElement {
     if (mode === "off") this.resumeHeld();
     const live = this.root.querySelector<HTMLElement>("[data-ad-live]");
     if (live && mode !== "text") live.textContent = "";
+    const button = this.root.querySelector<HTMLButtonElement>("[data-act=ad]");
+    if (button) button.setAttribute("aria-pressed", String(mode !== "off"));
     this.setStatus(mode === "off" ? "Audio description off." : mode === "text" ? "Audio description as text." : "Audio description on.");
     this.sync();
   }
@@ -922,7 +927,7 @@ export class LearnAblePlayer extends HTMLElement {
   private async onAction(action: string): Promise<void> {
     if (action === "play") void this.toggle();
     if (action === "captions") this.cycleCaptions();
-    if (action === "ad") this.toggleAd();
+    if (action === "ad") this.applyDescriptionMode(getSettings().descriptionMode === "off" ? "spoken" : "off");
     if (action === "sign") this.toggleSign();
     if (action === "left" || action === "right" || action === "up" || action === "down") this.nudge(action);
     if (action === "shrink" || action === "grow") this.scaleSign(action === "grow" ? 1 : -1);
