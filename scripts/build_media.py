@@ -52,9 +52,9 @@ SEGMENTS = [
         "chat": ("Hana", "Please make the Amharic text larger."),
     },
     {
-        "en": "A sign window can move and grow, so Ethiopian Sign Language sits where she needs it.",
-        "am": "የምልክት መስኮቱን ማንቀሳቀስና ማተለቅ ትችላለች። የኢትዮጵያ የምልክት ቋንቋ የምትፈልገውን ቦታ ይይዛል።",
-        "ad": "A second window lifts off the phone. It is labelled Ethiopian Sign Language.",
+        "en": "A sign window can move and grow, so sign language sits where she needs it.",
+        "am": "የምልክት መስኮቱን ማንቀሳቀስና ማተለቅ ትችላለች። የምልክት ቋንቋ የምትፈልገውን ቦታ ይይዛል።",
+        "ad": "A second window lifts off the phone. It is a sign window.",
         "gloss": "SIGN",
         "scene": "sign",
         "chat": ("Facilitator", "Move the sign window if it covers the caption."),
