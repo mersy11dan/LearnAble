@@ -392,7 +392,12 @@ button:disabled, .button[aria-disabled="true"] {
   font-size: var(--text-lg);
   line-height: var(--leading-ui);
 }
-.preview-captions p + p { margin-top: var(--space-2); color: var(--color-caption); }
+.preview-captions p + p {
+  margin-top: var(--space-2);
+  color: var(--color-ink);
+  background: var(--color-caption);
+  padding: 0 0.25rem;
+}
 
 .frame {
   margin: 0;
