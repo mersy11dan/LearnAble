@@ -32,6 +32,25 @@ License, loaded from the Fontsource packages.
 Noto Sans Ethiopic and Noto Serif Ethiopic are SIL Open Font License.
 Copyright Google. See `public/fonts/Noto-copyright.txt`.
 
+## ASL fingerspelling drawings
+
+`public/signs/fingerspell/A.svg` through `Z.svg` are the Wikimedia Commons files
+`Sign language A.svg` through `Sign language Z.svg`.
+
+The Commons licence field for each file is public domain. The file metadata
+names WPClipart as the publisher and Paul Sherman as the editor, dated
+11 November 2013, with rights marked PD.
+https://commons.wikimedia.org/wiki/Category:ASL_letters
+
+They are handshape drawings for the manual alphabet. They are not video of a
+signer, and they are not Ethiopian Sign Language.
+
+ASL-LEX (https://asl-lex.org/) is CC BY-NC 4.0. It is not downloaded or shipped.
+Lifeprint (https://www.lifeprint.com/) and Handspeak (https://www.handspeak.com/)
+are not open licences. They are not used. No pose or avatar set was bundled,
+because this panel only needed still handshapes and those projects do not
+publish an openly licensed still for the demo gloss words.
+
 ## Sign language models that were not used
 
 Hugging Face sign models found for this project are sign-to-text or still-image classifiers, or they are not Ethiopian Sign Language. `ihsanahakiim/videomae-base-finetuned-signlanguage` and `fhswf/sign-language-avatar-gloss-dgs` are non-commercial. None of them are downloaded or called. See `docs/SIGN-LANGUAGE.md`.

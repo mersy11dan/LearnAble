@@ -10,7 +10,7 @@ import { buildTaggedPdf } from "../lib/taggedPdf";
 import { formatTime } from "../lib/time";
 import { cueAt, cuesToVtt, parseVtt, type Cue } from "../lib/vtt";
 import { resolveUrl } from "./assets";
-import { ASL_GLOSS_LABEL, signPanel } from "./signs";
+import { ASL_GLOSS_LABEL, GLOSS_MODEL, signPanel, signSummary, visualsFor, type SignVisual } from "./signs";
 import { getFeatures, getSettings, getTheme, optedIn, PRESETS, updateSettings, type CaptionPreset } from "./settings";
 import { widgetCss } from "./styles";
 
@@ -33,6 +33,7 @@ export class LearnAblePlayer extends HTMLElement {
   private lastAd = "";
   private held = false;
   private built = false;
+  private handKey = "";
 
   constructor() {
     super();
@@ -77,21 +78,52 @@ export class LearnAblePlayer extends HTMLElement {
     const braille = this.hasAttribute("braille") || features.braille;
     const docs = this.hasAttribute("docs") || features.taggedDocs;
     this.root.innerHTML = `
-      <style>${widgetCss}</style>
+      <style>${widgetCss}
+:host { position: relative; z-index: auto; width: 100%; max-width: none; max-height: none; container-type: inline-size; }
+.media-row { grid-template-columns: minmax(0, 1fr) auto minmax(16rem, 38%); }
+.stage, .stage video, video { min-width: 0; max-width: 100%; }
+@container (max-width: 36rem) {
+  .media-row { grid-template-columns: 1fr; }
+}
+.sign h2 { font-size: 1rem; }
+.hands { display: flex; flex-wrap: wrap; gap: 0.35rem; margin: 0.5rem 0.75rem; }
+.hands figure { margin: 0; width: 3.4rem; }
+.hands img, .hands .point { width: 3.4rem; height: 3.4rem; object-fit: contain; background: #f7f4ee; border: 2px solid var(--color-line); }
+.hands figcaption { font-size: 0.75rem; text-align: center; color: var(--color-ink); }
+.hands figure[data-current] img, .hands figure[data-current] .point { border-color: var(--color-focus); }
+.point { display: grid; place-items: center; font-size: 0.7rem; color: #172033; }
+.gloss-small { font-size: 0.95rem; }
+.sign-info { margin: 0.35rem 0.75rem 0.6rem; }
+.sign-info summary { cursor: pointer; min-height: 2.75rem; display: flex; align-items: center; }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+.media-error { margin: 0.5rem 0.75rem; }
+.media-error a { color: var(--color-focus); }
+</style>
       <section aria-label="LearnAble lesson">
         <div class="media-row">
         <div class="stage" tabindex="0" role="region" aria-label="Lesson picture. Press question mark for keyboard shortcuts.">
           <slot name="media"></slot>
-          <video data-fallback playsinline preload="metadata"></video>
+          <video data-fallback playsinline preload="metadata" poster="${resolveUrl("/media/poster.png")}"></video>
           <p class="caption" aria-hidden="true"></p>
+          <p class="media-error" data-media-error hidden role="alert"></p>
         </div>
         <button type="button" class="sign-grip" aria-label="Resize the sign panel">Resize</button>
         ${
           sign
-            ? `<aside class="sign" data-sign aria-label="${ASL_GLOSS_LABEL}">
-                <h2>${ASL_GLOSS_LABEL}</h2>
-                <p class="sign-note" data-sign-note>English captions use a precomputed ASL gloss. Amharic captions are not glossed. This is not a recorded signer.</p>
-                <p class="gloss" lang="en"></p>
+            ? `<aside class="sign" data-sign aria-label="ASL. ${ASL_GLOSS_LABEL}">
+                <h2>ASL</h2>
+                <p class="sr" aria-live="polite" data-sign-live></p>
+                <div class="hands" data-hands></div>
+                <p class="sign-kind" data-sign-kind></p>
+                <p class="gloss gloss-small" data-gloss-corrected lang="en"></p>
+                <p class="sign-note" data-sign-note></p>
+                <details class="sign-info">
+                  <summary>About this ASL</summary>
+                  <p>${ASL_GLOSS_LABEL}. The pictures are the main content. The corrected gloss is under them. A Deaf ASL signer should review the hand correction. This is not a recorded signer.</p>
+                  <p data-model-term>Model output (${GLOSS_MODEL})</p>
+                  <p class="gloss gloss-small" data-gloss-model lang="en"></p>
+                  <p>Fingerspelling drawings are public domain, from WPClipart (edited by Paul Sherman), the files Sign language A.svg through Z.svg on Wikimedia Commons. ASL-LEX is CC BY-NC, so it is not included. Lifeprint and Handspeak are not open licences, so they are not included. No lexical sign picture is shipped. Every word here is fingerspelled.</p>
+                </details>
                 <p class="spell" data-spell></p>
                 <video data-sign-video muted playsinline preload="metadata" hidden></video>
                 <div class="row">
@@ -168,7 +200,9 @@ export class LearnAblePlayer extends HTMLElement {
       this.styleCaption(getSettings().captionScale, preset);
     });
     this.video?.addEventListener("timeupdate", () => this.sync());
+    this.video?.addEventListener("error", () => this.showMediaError());
     this.video?.addEventListener("play", () => {
+      this.clearMediaError();
       this.setPlayLabel(true);
       emit(this, "learnable-play", { playing: true });
     });
@@ -185,6 +219,7 @@ export class LearnAblePlayer extends HTMLElement {
       this.video = media;
       if (fallback) fallback.hidden = true;
       media.setAttribute("playsinline", "");
+      if (media instanceof HTMLVideoElement && !media.getAttribute("poster")) media.poster = resolveUrl("/media/poster.png");
     } else if (fallback) {
       this.video = fallback;
       const src = this.getAttribute("src");
@@ -323,6 +358,47 @@ export class LearnAblePlayer extends HTMLElement {
     }
   }
 
+  private paintHands(frames: SignVisual[], cue?: Cue): void {
+    const host = this.root.querySelector("[data-hands]");
+    if (!host) return;
+    const key = frames.map((frame) => frame.alt).join("|");
+    if (key !== this.handKey) {
+      this.handKey = key;
+      host.replaceChildren();
+      for (const frame of frames) {
+        const figure = document.createElement("figure");
+        if (frame.src) {
+          const image = document.createElement("img");
+          image.src = resolveUrl(frame.src);
+          image.alt = frame.alt;
+          figure.append(image);
+        } else {
+          const point = document.createElement("div");
+          point.className = "point";
+          point.textContent = frame.caption;
+          point.setAttribute("role", "img");
+          point.setAttribute("aria-label", frame.alt);
+          figure.append(point);
+        }
+        const caption = document.createElement("figcaption");
+        caption.textContent = frame.caption;
+        figure.append(caption);
+        host.append(figure);
+      }
+    }
+    const count = frames.length;
+    let current = -1;
+    if (cue && count && this.video) {
+      const span = Math.max(0.2, cue.end - cue.start);
+      const ratio = Math.min(0.999, Math.max(0, (this.video.currentTime - cue.start) / span));
+      current = Math.floor(ratio * count);
+    }
+    host.querySelectorAll("figure").forEach((figure, index) => {
+      if (index === current) figure.setAttribute("data-current", "true");
+      else figure.removeAttribute("data-current");
+    });
+  }
+
   private sync(): void {
     if (!this.video) return;
     const time = this.video.currentTime;
@@ -334,12 +410,27 @@ export class LearnAblePlayer extends HTMLElement {
       caption.setAttribute("lang", this.mode === "am" ? "am" : "en");
     }
     const panel = signPanel(cue?.text || "", this.mode);
-    const gloss = this.root.querySelector(".gloss");
-    if (gloss) gloss.textContent = panel.gloss;
+    const frames = panel.gloss ? visualsFor(panel.gloss) : [];
+    this.paintHands(frames, cue);
+    const corrected = this.root.querySelector("[data-gloss-corrected]");
+    const model = this.root.querySelector("[data-gloss-model]");
+    const modelTerm = this.root.querySelector<HTMLElement>("[data-model-term]");
+    if (corrected) corrected.textContent = panel.source === "precomputed" ? `Corrected by hand. ${panel.gloss}` : panel.gloss;
+    if (model) model.textContent = panel.model;
+    if (modelTerm) modelTerm.hidden = !panel.model;
+    const kind = this.root.querySelector("[data-sign-kind]");
+    if (kind) {
+      kind.textContent = frames.length
+        ? "Fingerspelled. These drawings are handshapes, not recorded signs."
+        : "";
+    }
     const note = this.root.querySelector("[data-sign-note]");
-    if (note) note.textContent = panel.note;
+    if (note) note.textContent = panel.source === "precomputed" ? "" : panel.note;
+    const live = this.root.querySelector("[data-sign-live]");
+    const summary = panel.source === "amharic" ? panel.note : signSummary(frames);
+    if (live && live.textContent !== summary) live.textContent = summary;
     const spell = this.root.querySelector("[data-spell]");
-    if (spell) spell.textContent = panel.spell;
+    if (spell) spell.textContent = frames.length ? "" : panel.spell;
     if (this.signClip) {
       if (panel.clip) {
         this.signClip.hidden = false;
@@ -398,7 +489,34 @@ export class LearnAblePlayer extends HTMLElement {
         this.signClip?.pause();
       }
     } catch {
-      this.setStatus("The video did not play. Captions are still listed when the file loads.");
+      this.showMediaError("The video did not play. Captions are still listed when the file loads.");
+    }
+  }
+
+  private showMediaError(message?: string): void {
+    const box = this.root.querySelector<HTMLElement>("[data-media-error]");
+    if (!box) return;
+    const code = this.video?.error?.code;
+    const reason = code === 3 ? "The browser could not decode this video." : code === 4 ? "This video format is not supported." : code === 2 ? "The video file did not load." : message || "The video did not play.";
+    const src = this.video?.currentSrc || this.video?.getAttribute("src") || "";
+    box.hidden = false;
+    box.replaceChildren();
+    box.append(document.createTextNode(`${reason} `));
+    if (src) {
+      const link = document.createElement("a");
+      link.href = src;
+      link.download = "";
+      link.textContent = "Download the video";
+      box.append(link);
+    }
+    this.setStatus(reason);
+  }
+
+  private clearMediaError(): void {
+    const box = this.root.querySelector<HTMLElement>("[data-media-error]");
+    if (box) {
+      box.hidden = true;
+      box.replaceChildren();
     }
   }
 

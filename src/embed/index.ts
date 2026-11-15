@@ -1,4 +1,4 @@
-import { rememberScript, setAssetBase } from "./assets";
+import { rememberModule, rememberScript, setAssetBase } from "./assets";
 import { runEnhance } from "./enhance";
 import { applyHost, clearHost } from "./host";
 import { LearnAblePlayer } from "./player";
@@ -18,6 +18,8 @@ import {
 } from "./settings";
 
 rememberScript(document.currentScript instanceof HTMLScriptElement ? document.currentScript : null);
+const moduleUrl = import.meta.url;
+if (moduleUrl && moduleUrl !== new URL("learnable.js", document.baseURI).href) rememberModule(moduleUrl);
 
 export type { LearnAbleConfig, WidgetSettings };
 

@@ -95,7 +95,7 @@ button[aria-pressed="true"] {
   color: var(--color-paper);
   box-shadow: inset 0 -3px 0 var(--color-caption);
 }
-.media-row { display: grid; grid-template-columns: minmax(0, 1fr) 0.5rem var(--sign-col, 16rem); gap: 0.5rem; align-items: start; }
+.media-row { display: grid; grid-template-columns: minmax(0, 1fr) 0.5rem minmax(0, var(--sign-col, 16rem)); gap: 0.5rem; align-items: start; min-width: 0; }
 .sign-grip {
   cursor: col-resize;
   background: var(--color-moss);
@@ -321,6 +321,10 @@ section {
   color: var(--color-navy-ink);
   border-color: var(--color-navy);
 }
+.gloss-lines { margin: 0.5rem 0.75rem; min-width: 0; max-width: 100%; }
+.gloss-lines dt { font-weight: 700; margin: 0.45rem 0 0.15rem; overflow-wrap: anywhere; }
+.gloss-lines dd { margin: 0 0 0.35rem; min-width: 0; }
+.sign, .sign h2, .sign p, .spell { min-width: 0; max-width: 100%; overflow-wrap: anywhere; }
 .bar button {
   background: transparent;
   color: inherit;
@@ -334,6 +338,7 @@ section {
   box-shadow: inset 0 -3px 0 var(--color-caption);
   background: rgba(255, 238, 0, 0.15);
 }
+[hidden] { display: none !important; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 0.01ms !important;
