@@ -13,6 +13,8 @@ English and Amharic captions, a sign window, audio description, and optional 3G 
   captions-en="/media/captions-en.vtt"
   captions-am="/media/captions-am.vtt"
   sign="/media/esl-placeholder.mp4"
+  sign-lang=""
+  sign-offset="0.0"
   describe="/media/descriptions.vtt"
   offline
   braille
@@ -29,6 +31,9 @@ The lesson videos are H.264 Constrained Baseline, `yuv420p`, AAC, with the index
 | `lang` | `"en"` | `"en"` or `"am"` caption language |
 | `theme` | `"paper"` | `"paper"` or `"navy"` |
 | `features.toolbar` | on | Floating larger text, high contrast, stop motion, caption size and colour |
+| `sign` | none | Sign-recording URL, for example `sign="/media/esl/lesson-1.mp4"`. `esl-placeholder.mp4` is not a recording |
+| `sign-lang` | empty | Set `ethiopian` only when the file is an Ethiopian Sign Language recording. Any other value keeps the ASL gloss label |
+| `sign-offset` | `0` | Seconds added to the lesson time to line up the sign recording. `0.0` when both files start together |
 | `features.signWindow` | on | Sign window. Turn off with `sign="false"` |
 | `features.audioDescription` | on | Spoken description. Turn off with `describe="false"` |
 | `features.offlinePack` | off | 3G zip. Also on when the element has `offline` |

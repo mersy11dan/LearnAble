@@ -1165,3 +1165,21 @@ html[data-contrast="high"] .notice {
   border-left-width: 4px;
   background: var(--color-paper);
 }
+
+.sign-drag-handle { touch-action: none; }
+.sign-move-controls { display: contents; }
+.sign-missing,
+.sign-video-label,
+.sign-moved { margin: var(--space-2) var(--space-3); }
+.sign-resize-grip {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: var(--size-target);
+  height: var(--size-target);
+  min-height: var(--size-target);
+  cursor: nwse-resize;
+}
+@media (max-width: 62rem) {
+  .sign-move-controls { display: none; }
+}

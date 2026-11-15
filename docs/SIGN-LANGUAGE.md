@@ -48,6 +48,31 @@ A caption that is not in the shipped file, while the model is off, shows the Eng
 
 The six sample outputs, run on a 4-thread Intel Xeon with no GPU, are usable as a gloss line and not usable as sign. Word order stays English. `Addis Ababa` became `ADDUS ABRAHAM`, and `Amharic captions` became `AMHARAC` and `CAPTEXT`. Cold generate was 0.786 s after a 9.94 s load. Warm cues were 0.699–0.945 s.
 
+## How to add a real ESL recording
+
+The panel does not invent a signer. A recording appears only when you point `sign` at a file you host yourself.
+
+1. Record the lesson in Ethiopian Sign Language. Export H.264 Constrained Baseline, `yuv420p`, with no audio track (AAC-less is fine). Keep it muted. Match the lesson duration. Put the index at the front of the file (`-movflags +faststart`).
+2. Serve the file as `video/mp4` and answer `Range` requests with `206` and `Accept-Ranges: bytes`.
+3. Point both players at it. On the embed:
+
+```html
+<learnable-player
+  src="/media/lesson-en.mp4"
+  sign="/media/esl/lesson-1.mp4"
+  sign-lang="ethiopian"
+  sign-offset="0.0">
+</learnable-player>
+```
+
+`sign-offset` is seconds added to the lesson clock to find the matching frame. Use `0.0` when the recording starts with the lesson. A positive value plays further into the sign file.
+
+Set `sign-lang="ethiopian"` only for an Ethiopian Sign Language recording. If the attribute is empty, or the file is `esl-placeholder.mp4`, the panel says "Placeholder, not a sign language recording" and keeps the ASL gloss and fingerspelling as a labelled fallback. A missing or broken file shows "No Ethiopian Sign Language recording is available for this lesson yet" and does not stop the lesson audio or captions.
+
+The React lesson passes the same values as `signVideo`, `signLang`, and `signOffset` on `AccessiblePlayer`.
+
+The window can be dragged, or moved from the keyboard: Move, then arrow keys (20 pixels, Shift for 80), then Enter or Escape. Smaller, Larger, and Reset change the size. A corner grip resizes it with a pointer. The size stays inside the player, and the choice is stored in `localStorage` when storage works. On a narrow or stacked layout the Move control is hidden, because the panel is in normal flow there.
+
 ## Limits
 
 - The shipped dictionary has no video files.

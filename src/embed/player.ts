@@ -10,6 +10,24 @@ import { buildTaggedPdf } from "../lib/taggedPdf";
 import { formatTime } from "../lib/time";
 import { cueAt, cuesToVtt, parseVtt, type Cue } from "../lib/vtt";
 import { resolveUrl } from "./assets";
+import {
+  DEFAULT_FRAME,
+  EMBED_SIGN_FRAME_KEY,
+  NUDGE_PX,
+  NUDGE_SHIFT_PX,
+  RESIZE_STEP_PX,
+  boundsFromRect,
+  clampFrame,
+  mediaMatches,
+  movedAnnouncement,
+  nudgeFrame,
+  readStoredFrame,
+  resizeFrame,
+  writeStoredFrame,
+  type Frame,
+} from "../lib/signFrame";
+import { presentSign, type SignLoad } from "../lib/signLabel";
+import { attachSignSync } from "../lib/signSync";
 import { ASL_GLOSS_LABEL, GLOSS_MODEL, signPanel, signSummary, visualsFor, type SignVisual } from "./signs";
 import { getFeatures, getSettings, getTheme, optedIn, PRESETS, updateSettings, type CaptionPreset } from "./settings";
 import { widgetCss } from "./styles";
@@ -34,6 +52,15 @@ export class LearnAblePlayer extends HTMLElement {
   private held = false;
   private built = false;
   private handKey = "";
+  private signLoad: SignLoad = "idle";
+  private moving = false;
+  private frame: Frame = { ...DEFAULT_FRAME };
+  private moveTimer = 0;
+  private stopSignSync: (() => void) | undefined;
+  private readonly onHostResize = (): void => {
+    this.frame = clampFrame(this.frame, this.signBounds());
+    this.layoutSign();
+  };
 
   constructor() {
     super();
@@ -46,6 +73,7 @@ export class LearnAblePlayer extends HTMLElement {
     this.applySettings();
     window.addEventListener("learnable-settings", this.onSettings);
     window.addEventListener("learnable-speech-cancel", this.onSpeechCancel);
+    window.addEventListener("resize", this.onHostResize);
   }
 
   refresh(): void {
@@ -58,6 +86,9 @@ export class LearnAblePlayer extends HTMLElement {
   disconnectedCallback(): void {
     window.removeEventListener("learnable-settings", this.onSettings);
     window.removeEventListener("learnable-speech-cancel", this.onSpeechCancel);
+    window.removeEventListener("resize", this.onHostResize);
+    this.stopSignSync?.();
+    window.clearTimeout(this.moveTimer);
     stopSpeaking();
   }
 
@@ -95,6 +126,16 @@ export class LearnAblePlayer extends HTMLElement {
 .gloss-small { font-size: 0.95rem; }
 .sign-info { margin: 0.35rem 0.75rem 0.6rem; }
 .sign-info summary { cursor: pointer; min-height: 2.75rem; display: flex; align-items: center; }
+.sign-float { position: absolute; z-index: 5; margin-top: 0; }
+.sign-stacked.sign-float { position: static; left: auto; top: auto; width: auto; height: auto; }
+.sign-drag-handle { touch-action: none; cursor: grab; }
+.sign-resize-grip { position: absolute; right: 0; bottom: 0; width: 2.75rem; height: 2.75rem; cursor: nwse-resize; }
+.sign-missing, .sign-video-label, .sign-moved { margin: 0.5rem 0.75rem; }
+.sign-move-controls { display: contents; }
+.sign-stacked .sign-move-controls, .sign-move-controls[hidden] { display: none; }
+@media (max-width: 52rem) {
+  .sign-move-controls { display: none; }
+}
 .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
 .media-error { margin: 0.5rem 0.75rem; }
 .media-error a { color: var(--color-focus); }
@@ -110,9 +151,13 @@ export class LearnAblePlayer extends HTMLElement {
         <button type="button" class="sign-grip" aria-label="Resize the sign panel">Resize</button>
         ${
           sign
-            ? `<aside class="sign" data-sign aria-label="ASL. ${ASL_GLOSS_LABEL}">
-                <h2>ASL</h2>
+            ? `<aside class="sign" data-sign aria-label="${ASL_GLOSS_LABEL}">
+                <h2 data-sign-heading class="sign-drag-handle">ASL</h2>
                 <p class="sr" aria-live="polite" data-sign-live></p>
+                <p class="sign-missing" data-sign-notice hidden></p>
+                <p class="sign-video-label" data-sign-label hidden></p>
+                <video data-sign-video muted playsinline preload="metadata" hidden></video>
+                <p class="sign-slot-title">ASL fingerspelling fallback</p>
                 <div class="hands" data-hands></div>
                 <p class="sign-kind" data-sign-kind></p>
                 <p class="gloss gloss-small" data-gloss-corrected lang="en"></p>
@@ -125,12 +170,18 @@ export class LearnAblePlayer extends HTMLElement {
                   <p>Fingerspelling drawings are public domain, from WPClipart (edited by Paul Sherman), the files Sign language A.svg through Z.svg on Wikimedia Commons. ASL-LEX is CC BY-NC, so it is not included. Lifeprint and Handspeak are not open licences, so they are not included. No lexical sign picture is shipped. Every word here is fingerspelled.</p>
                 </details>
                 <p class="spell" data-spell></p>
-                <video data-sign-video muted playsinline preload="metadata" hidden></video>
+                <video data-gloss-clip muted playsinline preload="metadata" hidden></video>
+                <p class="sign-moved" aria-live="polite" data-sign-moved></p>
                 <div class="row">
-                  <button type="button" data-act="left">Narrower</button>
-                  <button type="button" data-act="right">Wider</button>
+                  <span class="sign-move-controls">
+                    <button type="button" data-act="move" aria-pressed="false" aria-keyshortcuts="ArrowUp ArrowDown ArrowLeft ArrowRight">Move</button>
+                  </span>
                   <button type="button" data-act="shrink">Smaller</button>
                   <button type="button" data-act="grow">Larger</button>
+                  <button type="button" data-act="reset">Reset</button>
+                  <button type="button" data-act="left">Narrower</button>
+                  <button type="button" data-act="right">Wider</button>
+                  <button type="button" class="sign-resize-grip" data-sign-resize aria-label="Resize sign window">Resize</button>
                 </div>
               </aside>`
             : ""
@@ -184,6 +235,24 @@ export class LearnAblePlayer extends HTMLElement {
       if (event.key === "Home") this.setSignColumn(12);
       if (event.key === "End") this.setSignColumn(24);
     });
+    this.root.querySelector<HTMLElement>("[data-sign-heading]")?.addEventListener("pointerdown", (event) => this.dragFrame(event));
+    this.root.querySelector<HTMLElement>("[data-sign-resize]")?.addEventListener("pointerdown", (event) => this.resizeFramePointer(event));
+    this.root.querySelector<HTMLButtonElement>("[data-act=move]")?.addEventListener("keydown", (event) => this.onMoveKey(event));
+    this.signClip = this.root.querySelector("[data-sign-video]");
+    this.signClip?.addEventListener("loadeddata", () => {
+      this.signLoad = "ready";
+      this.applySignPresentation();
+      this.bindSignSync();
+    });
+    this.signClip?.addEventListener("error", () => {
+      this.signLoad = "error";
+      if (this.signClip) this.signClip.hidden = true;
+      this.applySignPresentation();
+      this.bindSignSync();
+    });
+    this.frame = readStoredFrame(this.storage(), EMBED_SIGN_FRAME_KEY) ?? { ...DEFAULT_FRAME };
+    this.layoutSign();
+    this.applySignSource();
     const stage = this.root.querySelector<HTMLElement>(".stage");
     stage?.addEventListener("keydown", (event) => this.onKey(event));
     this.root.querySelectorAll<HTMLButtonElement>("button[data-act]").forEach((button) => {
@@ -226,9 +295,6 @@ export class LearnAblePlayer extends HTMLElement {
       if (src) fallback.src = resolveUrl(src);
     }
     this.ensureDescriptionTrack();
-    this.signClip = this.root.querySelector("[data-sign-video]");
-    const signUrl = this.getAttribute("sign");
-    if (this.signClip && signUrl && signUrl !== "false") this.signClip.src = resolveUrl(signUrl);
     const frame = this.querySelector("iframe");
     if (frame && !frame.getAttribute("title")) frame.setAttribute("title", "Embedded lesson video");
   }
@@ -431,14 +497,19 @@ export class LearnAblePlayer extends HTMLElement {
     if (live && live.textContent !== summary) live.textContent = summary;
     const spell = this.root.querySelector("[data-spell]");
     if (spell) spell.textContent = frames.length ? "" : panel.spell;
-    if (this.signClip) {
+    const glossClip = this.root.querySelector<HTMLVideoElement>("[data-gloss-clip]");
+    if (glossClip) {
       if (panel.clip) {
-        this.signClip.hidden = false;
-        if (this.signClip.getAttribute("src") !== resolveUrl(panel.clip)) this.signClip.src = resolveUrl(panel.clip);
-      } else this.signClip.hidden = true;
-    }
-    if (this.signClip?.getAttribute("src") && this.video && Math.abs(this.signClip.currentTime - time) > 0.4) {
-      this.signClip.currentTime = time;
+        glossClip.hidden = false;
+        const next = resolveUrl(panel.clip);
+        if (glossClip.getAttribute("src") !== next) {
+          glossClip.src = next;
+          void glossClip.play().catch(() => undefined);
+        }
+      } else if (!glossClip.hidden) {
+        glossClip.pause();
+        glossClip.hidden = true;
+      }
     }
     if (this.adOn) {
       const description = cueAt(this.ad, time);
@@ -483,10 +554,20 @@ export class LearnAblePlayer extends HTMLElement {
     try {
       if (this.video.paused) {
         await this.video.play();
-        if (this.signClip?.getAttribute("src")) void this.signClip.play().catch(() => undefined);
+        if (this.signClip?.getAttribute("src")) {
+          try {
+            void this.signClip.play().catch(() => undefined);
+          } catch {
+            /* The lesson keeps playing when the sign file cannot. */
+          }
+        }
       } else {
         this.video.pause();
-        this.signClip?.pause();
+        try {
+          this.signClip?.pause();
+        } catch {
+          /* The lesson keeps its own pause state. */
+        }
       }
     } catch {
       this.showMediaError("The video did not play. Captions are still listed when the file loads.");
@@ -541,7 +622,211 @@ export class LearnAblePlayer extends HTMLElement {
   }
 
   private scaleSign(step: number): void {
-    this.setSignColumn(this.signColumn() + step * 2);
+    if (this.signStacked()) {
+      this.setSignColumn(this.signColumn() + step * 2);
+      return;
+    }
+    this.frame = resizeFrame(this.frame, step * RESIZE_STEP_PX, step * RESIZE_STEP_PX, this.signBounds());
+    this.persistFrame();
+    this.layoutSign();
+  }
+
+  private signLang(): string {
+    return (this.getAttribute("sign-lang") || "").trim().toLowerCase();
+  }
+
+  private signOffset(): number {
+    const value = Number(this.getAttribute("sign-offset"));
+    return Number.isFinite(value) ? value : 0;
+  }
+
+  private storage(): Storage | null {
+    try {
+      return window.localStorage;
+    } catch {
+      return null;
+    }
+  }
+
+  private signBounds() {
+    const rect = this.getBoundingClientRect();
+    if (rect.width >= 32 && rect.height >= 32) return { left: 0, top: 0, width: rect.width, height: rect.height };
+    return boundsFromRect(null, { width: window.innerWidth || 0, height: window.innerHeight || 0 });
+  }
+
+  private signStacked(): boolean {
+    if (mediaMatches("(max-width: 52rem)")) return true;
+    const width = this.getBoundingClientRect().width;
+    return width > 0 && width <= 36 * 16;
+  }
+
+  private persistFrame(): void {
+    writeStoredFrame(this.storage(), EMBED_SIGN_FRAME_KEY, this.frame);
+  }
+
+  private layoutSign(): void {
+    const sign = this.root.querySelector<HTMLElement>(".sign");
+    if (!sign) return;
+    const stacked = this.signStacked();
+    sign.classList.toggle("sign-stacked", stacked);
+    sign.classList.toggle("sign-float", !stacked);
+    const move = this.root.querySelector<HTMLElement>(".sign-move-controls");
+    if (move) move.hidden = stacked;
+    if (stacked) {
+      sign.style.left = "";
+      sign.style.top = "";
+      sign.style.width = "";
+      sign.style.height = "";
+      return;
+    }
+    this.frame = clampFrame(this.frame, this.signBounds());
+    sign.style.left = `${this.frame.x}px`;
+    sign.style.top = `${this.frame.y}px`;
+    sign.style.width = `${this.frame.width}px`;
+    sign.style.height = `${this.frame.height}px`;
+  }
+
+  private applySignSource(): void {
+    this.signClip = this.root.querySelector("[data-sign-video]");
+    const src = this.getAttribute("sign");
+    const view = presentSign({ src, signLang: this.signLang(), load: "idle" });
+    this.signLoad = view.showVideo ? "loading" : "idle";
+    if (this.signClip) {
+      this.signClip.muted = true;
+      if (!view.showVideo) {
+        this.signClip.removeAttribute("src");
+        this.signClip.hidden = true;
+      } else if (src) {
+        const url = resolveUrl(src);
+        if (this.signClip.getAttribute("src") !== url) this.signClip.src = url;
+        this.signClip.hidden = false;
+      }
+    }
+    this.applySignPresentation();
+    this.bindSignSync();
+  }
+
+  private applySignPresentation(): void {
+    const view = presentSign({ src: this.getAttribute("sign"), signLang: this.signLang(), load: this.signLoad });
+    const heading = this.root.querySelector("[data-sign-heading]");
+    if (heading) heading.textContent = view.shortHeading;
+    const aside = this.root.querySelector("[data-sign]");
+    if (aside) aside.setAttribute("aria-label", view.heading);
+    const notice = this.root.querySelector<HTMLElement>("[data-sign-notice]");
+    if (notice) {
+      notice.hidden = !view.missingNotice;
+      notice.textContent = view.missingNotice ?? "";
+    }
+    const label = this.root.querySelector<HTMLElement>("[data-sign-label]");
+    if (label) {
+      label.hidden = !view.videoLabel;
+      label.textContent = view.videoLabel ?? "";
+    }
+    if (this.signClip) this.signClip.hidden = !view.showVideo;
+  }
+
+  private bindSignSync(): void {
+    this.stopSignSync?.();
+    this.stopSignSync = undefined;
+    const view = presentSign({ src: this.getAttribute("sign"), signLang: this.signLang(), load: this.signLoad });
+    if (!this.video || !this.signClip || !view.showVideo) return;
+    this.stopSignSync = attachSignSync(this.video, this.signClip, () => this.signOffset());
+  }
+
+  private enterMove(): void {
+    this.moving = true;
+    this.root.querySelector("[data-act=move]")?.setAttribute("aria-pressed", "true");
+  }
+
+  private exitMove(announce = true): void {
+    this.moving = false;
+    window.clearTimeout(this.moveTimer);
+    this.root.querySelector("[data-act=move]")?.setAttribute("aria-pressed", "false");
+    if (!announce) return;
+    const live = this.root.querySelector("[data-sign-moved]");
+    if (live) live.textContent = movedAnnouncement(this.frame);
+  }
+
+  private nudgeFrameBy(dx: number, dy: number): void {
+    this.frame = nudgeFrame(this.frame, dx, dy, this.signBounds());
+    this.persistFrame();
+    this.layoutSign();
+    window.clearTimeout(this.moveTimer);
+    this.moveTimer = window.setTimeout(() => {
+      const live = this.root.querySelector("[data-sign-moved]");
+      if (live) live.textContent = movedAnnouncement(this.frame);
+    }, 800);
+  }
+
+  private onMoveKey(event: KeyboardEvent): void {
+    if (event.key === "Escape") {
+      event.preventDefault();
+      if (this.moving) this.exitMove();
+      return;
+    }
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      if (this.moving) this.exitMove();
+      else this.enterMove();
+      return;
+    }
+    if (!this.moving) return;
+    const step = event.shiftKey ? NUDGE_SHIFT_PX : NUDGE_PX;
+    let dx = 0;
+    let dy = 0;
+    if (event.key === "ArrowLeft") dx = -step;
+    else if (event.key === "ArrowRight") dx = step;
+    else if (event.key === "ArrowUp") dy = -step;
+    else if (event.key === "ArrowDown") dy = step;
+    else return;
+    event.preventDefault();
+    this.nudgeFrameBy(dx, dy);
+  }
+
+  private dragFrame(event: PointerEvent): void {
+    if (this.signStacked() || event.button !== 0) return;
+    const handle = event.currentTarget;
+    if (!(handle instanceof HTMLElement)) return;
+    const startX = event.clientX;
+    const startY = event.clientY;
+    const origin = { ...this.frame };
+    const move = (next: PointerEvent) => {
+      this.frame = nudgeFrame(origin, next.clientX - startX, next.clientY - startY, this.signBounds());
+      this.layoutSign();
+    };
+    const up = () => {
+      handle.removeEventListener("pointermove", move);
+      handle.removeEventListener("pointerup", up);
+      this.persistFrame();
+      const live = this.root.querySelector("[data-sign-moved]");
+      if (live) live.textContent = movedAnnouncement(this.frame);
+    };
+    handle.setPointerCapture(event.pointerId);
+    handle.addEventListener("pointermove", move);
+    handle.addEventListener("pointerup", up);
+  }
+
+  private resizeFramePointer(event: PointerEvent): void {
+    if (event.button !== 0) return;
+    event.preventDefault();
+    event.stopPropagation();
+    const handle = event.currentTarget;
+    if (!(handle instanceof HTMLElement)) return;
+    const startX = event.clientX;
+    const startY = event.clientY;
+    const origin = { ...this.frame };
+    const move = (next: PointerEvent) => {
+      this.frame = resizeFrame(origin, next.clientX - startX, next.clientY - startY, this.signBounds());
+      this.layoutSign();
+    };
+    const up = () => {
+      handle.removeEventListener("pointermove", move);
+      handle.removeEventListener("pointerup", up);
+      this.persistFrame();
+    };
+    handle.setPointerCapture(event.pointerId);
+    handle.addEventListener("pointermove", move);
+    handle.addEventListener("pointerup", up);
   }
 
   private toggleSign(): void {
@@ -568,6 +853,15 @@ export class LearnAblePlayer extends HTMLElement {
     if (action === "sign") this.toggleSign();
     if (action === "left" || action === "right" || action === "up" || action === "down") this.nudge(action);
     if (action === "shrink" || action === "grow") this.scaleSign(action === "grow" ? 1 : -1);
+    if (action === "move") {
+      if (this.moving) this.exitMove();
+      else this.enterMove();
+    }
+    if (action === "reset") {
+      this.frame = { ...DEFAULT_FRAME };
+      this.persistFrame();
+      this.layoutSign();
+    }
     if (action === "pack") {
       try {
         const packed = await buildClientPack({

@@ -28,6 +28,8 @@ type AccessiblePlayerProps = {
   tracks: { en: string; am: string; descriptions: string };
   signVideo: string;
   signPoster: string;
+  signLang?: string;
+  signOffset?: number;
   engine?: Engine;
   onTime?: (time: number) => void;
 };
@@ -41,6 +43,8 @@ export function AccessiblePlayer({
   tracks,
   signVideo,
   signPoster,
+  signLang = "",
+  signOffset = 0,
   engine: engineProp = "video",
   onTime,
 }: AccessiblePlayerProps) {
@@ -444,6 +448,11 @@ export function AccessiblePlayer({
           {...signPanel(captions === "en" ? current?.en ?? "" : "", captions === "am" ? "am" : captions === "en" ? "en" : "off")}
           videoSrc={signVideo}
           poster={signPoster}
+          signLang={signLang}
+          signOffset={signOffset}
+          mainRef={engine === "video" ? videoRef : undefined}
+          playing={playing}
+          mainTime={time}
           onClose={() => setSignOn(false)}
         />
       ) : null}
