@@ -2,6 +2,8 @@ import { resolveUrl } from "./assets";
 import { getSettings } from "./settings";
 import type { SignVisual } from "./signs";
 
+const cache = new Map<string, string>();
+
 export function motionReduced(): boolean {
   if (getSettings().stopMotion) return true;
   try {
@@ -11,173 +13,303 @@ export function motionReduced(): boolean {
   }
 }
 
-function contrastOn(): boolean {
-  const settings = getSettings();
-  return settings.contrastMode !== "off" || settings.highContrast;
+type HandsOptions = {
+  word?: string;
+  note?: string;
+  anchor?: HTMLElement | null;
+  returnFocus?: HTMLElement | null;
+  source?: "lesson" | "selection";
+};
+
+let frames: SignVisual[] = [];
+let index = 0;
+let timer = 0;
+let paused = false;
+let speed = 1;
+let source: "lesson" | "selection" = "lesson";
+let returnFocus: HTMLElement | null = null;
+let word = "";
+
+function windowNode(): HTMLElement | null {
+  return document.getElementById("learnable-sign-window");
 }
 
-const SIGNER_STYLE = `
-.signer { margin: 0.5rem 0.75rem; color: var(--color-ink, #172033); }
-.signer-label { margin: 0 0 0.35rem; font-weight: 700; }
-.signer-stage {
-  display: block;
-  width: 100%;
-  height: auto;
-  aspect-ratio: 360 / 420;
-  background: #f7f4ee;
-  border: 2px solid var(--color-line, #172033);
-  overflow: hidden;
-}
-.signer-skin { fill: #e4cbb8; }
-.signer-cloth { fill: var(--color-navy, #1b3048); }
-.signer-limb { fill: #e4cbb8; }
-.signer-shoulder, .signer-elbow, .signer-wrist { transition: transform 320ms ease-in-out; }
-.signer-arm .signer-shoulder { transform-origin: 156px 148px; }
-.signer-arm .signer-elbow { transform-origin: 100px 224px; }
-.signer-arm .signer-wrist { transform-origin: 82px 152px; }
-.signer-rest .signer-shoulder { transform-origin: 272px 150px; }
-.signer-rest .signer-elbow { transform-origin: 308px 220px; }
-.signer-arm[data-pose="0"] .signer-shoulder { transform: rotate(-6deg); }
-.signer-arm[data-pose="0"] .signer-elbow { transform: rotate(4deg); }
-.signer-arm[data-pose="1"] .signer-shoulder { transform: rotate(12deg); }
-.signer-arm[data-pose="1"] .signer-elbow { transform: rotate(-14deg); }
-.signer-arm[data-pose="1"] .signer-wrist { transform: rotate(8deg); }
-.signer-arm[data-pose="2"] .signer-shoulder { transform: rotate(-14deg); }
-.signer-arm[data-pose="2"] .signer-elbow { transform: rotate(16deg); }
-.signer-arm[data-pose="2"] .signer-wrist { transform: rotate(-10deg); }
-.signer-now { margin: 0.35rem 0 0; }
-.signer-steps { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-top: 0.4rem; }
-.signer-steps button { white-space: nowrap; }
-:host([contrast="high"]) .signer-stage,
-.signer[data-contrast="on"] .signer-stage { background: #f7f4ee; border-color: #121212; }
-:host([contrast="high"]) .signer-skin,
-.signer[data-contrast="on"] .signer-skin { fill: #f7f4ee; stroke: #121212; stroke-width: 2; }
-:host([contrast="high"]) .signer-cloth,
-.signer[data-contrast="on"] .signer-cloth { fill: #121212; }
-:host([contrast="high"]) .signer-limb,
-.signer[data-contrast="on"] .signer-limb { fill: #121212; }
-@media (prefers-reduced-motion: no-preference) {
-  .signer:not([data-motion="reduced"]) .signer-arm { animation: signer-idle 2.8s ease-in-out infinite; }
-  .signer:not([data-motion="reduced"]) .signer-rest { animation: signer-idle 3.6s ease-in-out infinite reverse; }
-}
-@keyframes signer-idle {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-4px); }
-}
-@media (prefers-reduced-motion: reduce) {
-  .signer-arm, .signer-rest, .signer-shoulder, .signer-elbow, .signer-wrist { animation: none; transition: none; }
-}
-.signer[data-motion="reduced"] .signer-arm,
-.signer[data-motion="reduced"] .signer-rest,
-.signer[data-motion="reduced"] .signer-shoulder,
-.signer[data-motion="reduced"] .signer-elbow,
-.signer[data-motion="reduced"] .signer-wrist { animation: none; transition: none; }
-`;
-
-export function ensureSigner(host: HTMLElement): void {
-  if (host.querySelector("[data-signer]")) return;
-  host.replaceChildren();
-  const root = document.createElement("div");
-  root.className = "signer";
-  root.dataset.signer = "true";
-  const style = document.createElement("style");
-  style.textContent = SIGNER_STYLE;
-  const label = document.createElement("p");
-  label.className = "signer-label";
-  label.textContent = "Computer-generated signing. ASL fingerspelling.";
-  const stage = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-  stage.setAttribute("viewBox", "0 0 360 420");
-  stage.setAttribute("class", "signer-stage");
-  stage.setAttribute("role", "img");
-  stage.setAttribute("aria-hidden", "true");
-  stage.innerHTML = `
-    <g class="signer-rest" data-rest>
-      <g class="signer-shoulder">
-        <path class="signer-limb" d="M262 142 L282 158 L318 224 L298 214 Z"/>
-        <g class="signer-elbow">
-          <path class="signer-limb" d="M298 214 L318 224 L292 312 L274 300 Z"/>
-          <g class="signer-wrist">
-            <ellipse class="signer-skin" cx="284" cy="322" rx="14" ry="16"/>
-          </g>
-        </g>
-      </g>
-    </g>
-    <g class="signer-body">
-      <ellipse class="signer-skin" cx="214" cy="62" rx="32" ry="36"/>
-      <rect class="signer-skin" x="200" y="94" width="28" height="22" rx="8"/>
-      <path class="signer-cloth" d="M136 152 C172 116 260 116 292 152 L270 304 Q214 328 158 304 Z"/>
-    </g>
-    <g class="signer-arm" data-arm>
-      <g class="signer-shoulder">
-        <path class="signer-limb" d="M148 140 L170 156 L112 232 L90 216 Z"/>
-        <g class="signer-elbow">
-          <path class="signer-limb" d="M90 216 L112 232 L92 156 L74 148 Z"/>
-          <g class="signer-wrist" data-wrist></g>
-        </g>
-      </g>
-    </g>
+function ensureWindow(): HTMLElement {
+  const existing = windowNode();
+  if (existing) return existing;
+  const node = document.createElement("section");
+  node.id = "learnable-sign-window";
+  node.tabIndex = -1;
+  node.setAttribute("role", "dialog");
+  node.setAttribute("aria-label", "Computer-generated. ASL fingerspelling, not Ethiopian Sign Language.");
+  node.innerHTML = `
+    <style>
+      #learnable-sign-window {
+        position: fixed; z-index: 2147483002; width: 220px; max-width: calc(100vw - 1rem);
+        background: #f2f0ea; color: #172033; border: 2px solid #1b3048; border-radius: 0.5rem;
+        box-shadow: none; font: 16px/1.4 "Atkinson Hyperlegible", "Noto Sans Ethiopic", sans-serif;
+      }
+      #learnable-sign-window * { box-sizing: border-box; }
+      #learnable-sign-window .head { display: flex; gap: 0.35rem; padding: 0.35rem; }
+      #learnable-sign-window button, #learnable-sign-window input { font: inherit; min-height: 2.25rem; }
+      #learnable-sign-window button {
+        background: #f2f0ea; color: #172033; border: 2px solid #1b3048; border-radius: 0.35rem; cursor: pointer;
+      }
+      #learnable-sign-window .signer-label, #learnable-sign-window .signer-now, #learnable-sign-window .signer-note {
+        margin: 0 0.5rem 0.35rem; font-size: 0.85rem; overflow-wrap: anywhere;
+      }
+      #learnable-sign-window .signer-label { font-weight: 700; }
+      #learnable-sign-window .stage {
+        width: calc(100% - 1rem); height: 200px; margin: 0 0.5rem; background: #f7f4ee;
+        border: 2px solid #172033; display: grid; place-items: center; overflow: hidden;
+      }
+      #learnable-sign-window img { width: 100%; height: 100%; object-fit: contain; }
+      #learnable-sign-window img.fade { transition: opacity 180ms ease-in-out; }
+      #learnable-sign-window .controls { display: flex; flex-wrap: wrap; gap: 0.35rem; padding: 0.35rem 0.5rem 0.5rem; align-items: center; }
+      #learnable-sign-window label { display: flex; align-items: center; gap: 0.35rem; font-size: 0.85rem; }
+      @media (prefers-reduced-motion: reduce) { #learnable-sign-window img.fade { transition: none; } }
+    </style>
+    <div class="head">
+      <button type="button" data-act="move" aria-label="Move the sign window. Arrow keys move it.">Move</button>
+      <button type="button" data-act="close" aria-label="Close sign window">Close</button>
+    </div>
+    <p class="signer-label">Computer-generated. ASL fingerspelling, not Ethiopian Sign Language.</p>
+    <div class="stage"><img alt="" data-hand /></div>
+    <p class="signer-now" data-signer-now></p>
+    <p class="signer-note" data-signer-note hidden></p>
+    <div class="controls">
+      <button type="button" data-act="pause">Pause</button>
+      <button type="button" data-act="replay">Replay</button>
+      <label>Speed <input data-act="speed" type="range" min="0.5" max="2" step="0.25" value="1" aria-valuemin="0.5" aria-valuemax="2" aria-valuenow="1" /></label>
+      <button type="button" data-act="sign-prev" hidden>Previous handshape</button>
+      <button type="button" data-act="sign-next" hidden>Next handshape</button>
+    </div>
+    <p class="sr" data-sign-live aria-live="polite" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)"></p>
   `;
-  const hand = document.createElementNS("http://www.w3.org/2000/svg", "image");
-  hand.setAttribute("data-hand", "true");
-  hand.setAttribute("x", "28");
-  hand.setAttribute("y", "86");
-  hand.setAttribute("width", "96");
-  hand.setAttribute("height", "120");
-  hand.setAttribute("preserveAspectRatio", "xMidYMid meet");
-  stage.querySelector("[data-wrist]")?.append(hand);
-  const now = document.createElement("p");
-  now.className = "signer-now";
-  now.dataset.signerNow = "true";
-  const steps = document.createElement("div");
-  steps.className = "signer-steps";
-  steps.dataset.signerSteps = "true";
-  const previous = document.createElement("button");
-  previous.type = "button";
-  previous.dataset.act = "sign-prev";
-  previous.textContent = "Previous handshape";
-  const next = document.createElement("button");
-  next.type = "button";
-  next.dataset.act = "sign-next";
-  next.textContent = "Next handshape";
-  steps.append(previous, next);
-  root.append(style, label, stage, now, steps);
-  host.append(root);
+  node.addEventListener("click", (event) => {
+    const target = event.target;
+    if (!(target instanceof HTMLElement)) return;
+    const act = target.dataset.act;
+    if (act === "close") closeHands(true);
+    if (act === "pause") togglePause();
+    if (act === "replay") replay();
+    if (act === "sign-prev") step(-1);
+    if (act === "sign-next") step(1);
+  });
+  const move = node.querySelector<HTMLButtonElement>("[data-act=move]");
+  move?.addEventListener("pointerdown", (event) => drag(event));
+  move?.addEventListener("keydown", (event) => moveByKey(event));
+  node.querySelector<HTMLInputElement>("[data-act=speed]")?.addEventListener("input", (event) => {
+    const input = event.target as HTMLInputElement;
+    speed = Number(input.value) || 1;
+    input.setAttribute("aria-valuenow", String(speed));
+    if (!paused) schedule();
+  });
+  node.addEventListener("keydown", (event) => {
+    if (event.key !== "Escape") return;
+    event.preventDefault();
+    closeHands(true);
+  });
+  document.body.append(node);
+  return node;
 }
 
-export function showSignerFrame(host: HTMLElement, frames: SignVisual[], index: number): void {
-  ensureSigner(host);
+async function loadHand(src: string): Promise<string> {
+  const url = resolveUrl(src);
+  const cached = cache.get(url);
+  if (cached) return cached;
+  const response = await fetch(url);
+  if (!response.ok) throw new Error(String(response.status));
+  const blob = await response.blob();
+  const objectUrl = URL.createObjectURL(blob);
+  cache.set(url, objectUrl);
+  return objectUrl;
+}
+
+async function paint(): Promise<void> {
+  const node = windowNode();
+  if (!node) return;
+  const frame = frames[index];
+  const img = node.querySelector<HTMLImageElement>("[data-hand]");
+  const now = node.querySelector("[data-signer-now]");
   const reduced = motionReduced();
-  const root = host.querySelector<HTMLElement>("[data-signer]");
-  if (root) {
-    root.dataset.motion = reduced ? "reduced" : "eased";
-    root.dataset.contrast = contrastOn() ? "on" : "off";
-  }
-  const steps = host.querySelector<HTMLElement>("[data-signer-steps]");
-  if (steps) steps.hidden = !reduced || frames.length < 2;
-  const arm = host.querySelector<SVGGElement>("[data-arm]");
-  const hand = host.querySelector<SVGImageElement>("[data-hand]");
-  const now = host.querySelector("[data-signer-now]");
-  if (!frames.length) {
-    if (hand) {
-      hand.removeAttribute("href");
-      hand.setAttribute("hidden", "");
-    }
+  node.querySelectorAll<HTMLButtonElement>("[data-act=sign-prev], [data-act=sign-next]").forEach((button) => {
+    button.hidden = !reduced;
+  });
+  if (!frame) {
     if (now) now.textContent = "";
     return;
   }
-  const frame = frames[Math.max(0, Math.min(frames.length - 1, index))];
-  if (arm) arm.dataset.pose = String(index % 3);
-  if (hand) {
+  if (img) {
+    img.classList.toggle("fade", !reduced);
+    img.style.opacity = "0.2";
     if (frame.src) {
-      const url = resolveUrl(frame.src);
-      hand.setAttribute("href", url);
-      hand.setAttributeNS("http://www.w3.org/1999/xlink", "href", url);
-      hand.removeAttribute("hidden");
-      hand.setAttribute("aria-label", frame.alt);
+      try {
+        img.src = await loadHand(frame.src);
+      } catch {
+        img.removeAttribute("src");
+      }
+      img.alt = frame.alt;
     } else {
-      hand.removeAttribute("href");
-      hand.setAttribute("hidden", "");
+      img.removeAttribute("src");
+      img.alt = frame.alt;
+    }
+    img.style.opacity = "1";
+  }
+  if (now) now.textContent = `${frame.caption}${word ? ` · ${word}` : ""}`;
+}
+
+function schedule(): void {
+  window.clearInterval(timer);
+  timer = 0;
+  if (paused || motionReduced() || frames.length < 2) return;
+  timer = window.setInterval(() => {
+    index = (index + 1) % frames.length;
+    void paint();
+  }, Math.round(700 / speed));
+}
+
+function togglePause(): void {
+  paused = !paused;
+  const button = windowNode()?.querySelector("[data-act=pause]");
+  if (button) button.textContent = paused ? "Play" : "Pause";
+  if (paused) window.clearInterval(timer);
+  else schedule();
+}
+
+function replay(): void {
+  index = 0;
+  paused = false;
+  const button = windowNode()?.querySelector("[data-act=pause]");
+  if (button) button.textContent = "Pause";
+  void paint();
+  schedule();
+}
+
+function step(delta: number): void {
+  if (!frames.length) return;
+  index = (index + delta + frames.length) % frames.length;
+  void paint();
+}
+
+function clamp(left: number, top: number, node: HTMLElement): { left: number; top: number } {
+  const width = node.offsetWidth || 220;
+  const height = node.offsetHeight || 280;
+  return {
+    left: Math.min(window.innerWidth - width - 8, Math.max(8, left)),
+    top: Math.min(window.innerHeight - height - 8, Math.max(8, top)),
+  };
+}
+
+function place(node: HTMLElement, anchor?: HTMLElement | null): void {
+  const stage = anchor?.shadowRoot?.querySelector(".stage") || anchor?.querySelector(".stage") || document.querySelector("learnable-player")?.shadowRoot?.querySelector(".stage");
+  const video = stage?.getBoundingClientRect();
+  const caption = anchor?.shadowRoot?.querySelector(".caption")?.getBoundingClientRect();
+  let left = window.innerWidth - 236;
+  let top = 16;
+  if (video && video.width > 0) {
+    left = video.right + 12;
+    top = video.top;
+    if (left + 228 > window.innerWidth) {
+      left = Math.max(8, video.left);
+      top = video.bottom + 12;
     }
   }
-  if (now) now.textContent = frame.kind === "point" ? `Point. ${frame.caption}` : `Fingerspelling ${frame.caption}`;
+  if (window.innerWidth < 520) {
+    left = window.innerWidth - 228;
+    top = 8;
+  }
+  const placed = clamp(left, top, node);
+  if (caption && placed.top < caption.bottom && placed.top + 200 > caption.top && placed.left < caption.right && placed.left + 220 > caption.left) {
+    placed.top = clamp(placed.left, caption.bottom + 8, node).top;
+  }
+  node.style.left = `${placed.left}px`;
+  node.style.top = `${placed.top}px`;
+}
+
+function drag(event: PointerEvent): void {
+  if (event.button !== 0) return;
+  const node = windowNode();
+  const handle = event.currentTarget;
+  if (!node || !(handle instanceof HTMLElement)) return;
+  const origin = node.getBoundingClientRect();
+  const startX = event.clientX;
+  const startY = event.clientY;
+  const move = (next: PointerEvent) => {
+    const placed = clamp(origin.left + next.clientX - startX, origin.top + next.clientY - startY, node);
+    node.style.left = `${placed.left}px`;
+    node.style.top = `${placed.top}px`;
+  };
+  const up = () => {
+    handle.removeEventListener("pointermove", move);
+    handle.removeEventListener("pointerup", up);
+  };
+  handle.setPointerCapture(event.pointerId);
+  handle.addEventListener("pointermove", move);
+  handle.addEventListener("pointerup", up);
+}
+
+function moveByKey(event: KeyboardEvent): void {
+  if (!event.key.startsWith("Arrow")) return;
+  const node = windowNode();
+  if (!node) return;
+  event.preventDefault();
+  event.stopPropagation();
+  const rect = node.getBoundingClientRect();
+  const stepPx = event.shiftKey ? 40 : 16;
+  const dx = event.key === "ArrowLeft" ? -stepPx : event.key === "ArrowRight" ? stepPx : 0;
+  const dy = event.key === "ArrowUp" ? -stepPx : event.key === "ArrowDown" ? stepPx : 0;
+  const placed = clamp(rect.left + dx, rect.top + dy, node);
+  node.style.left = `${placed.left}px`;
+  node.style.top = `${placed.top}px`;
+  const live = node.querySelector("[data-sign-live]");
+  if (live) live.textContent = `Moved. ${Math.round(placed.left)} pixels from the left, ${Math.round(placed.top)} pixels from the top.`;
+}
+
+export function closeHands(restore = false): void {
+  window.clearInterval(timer);
+  timer = 0;
+  frames = [];
+  const node = windowNode();
+  node?.remove();
+  if (restore && returnFocus && document.contains(returnFocus)) returnFocus.focus();
+  returnFocus = null;
+}
+
+export function closeSelectionHands(): void {
+  if (source === "selection") closeHands(false);
+}
+
+export function presentHands(next: SignVisual[], options: HandsOptions = {}): void {
+  if (!next.length) {
+    if (options.source !== "selection") closeHands(false);
+    return;
+  }
+  frames = next;
+  index = 0;
+  paused = false;
+  source = options.source || "lesson";
+  word = options.word || "";
+  if (options.returnFocus) returnFocus = options.returnFocus;
+  const node = ensureWindow();
+  const note = node.querySelector<HTMLElement>("[data-signer-note]");
+  if (note) {
+    note.hidden = !options.note;
+    note.textContent = options.note || "";
+  }
+  place(node, options.anchor);
+  void paint();
+  schedule();
+}
+
+export function showSignerFrame(host: HTMLElement | null, next: SignVisual[], frameIndex: number): void {
+  if (!next.length) {
+    closeHands(false);
+    return;
+  }
+  frames = next;
+  index = Math.max(0, Math.min(next.length - 1, frameIndex));
+  const node = ensureWindow();
+  if (host) place(node, host.closest("learnable-player") || undefined);
+  void paint();
 }

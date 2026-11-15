@@ -9,7 +9,7 @@ Two outside traditions show up in the history of deaf education that reached Eth
 - Andrew Foster, a Gallaudet graduate, opened schools for Deaf students across Africa and taught an ASL-based variety. That history is summarised on [Andrew Foster (educator)](https://en.wikipedia.org/wiki/Andrew_Foster_(educator)). It is one reason ASL fingerspelling is a familiar international fallback when an EthSL resource is missing. It is not a reason to call ASL fingerspelling EthSL.
 - Nordic deaf associations, especially Finnish partners, later worked with Ethiopian deaf schools and the national association. That contact is why some descriptions of EthSL mention Scandinavian influence as well as American influence. A Nordic sign system would be another candidate, and this project has no open Nordic sign clips or avatar either.
 
-Public EthSL text-to-sign models and openly licensed EthSL video are still too thin to ship. The panel therefore uses computer-generated ASL fingerspelling. The handshapes are the public-domain drawings in `public/signs/fingerspell/`. The arms are drawn by this project. The label on screen is “Computer-generated signing. ASL fingerspelling.” It is not labelled Ethiopian Sign Language.
+Public EthSL text-to-sign models and openly licensed EthSL video are still too thin to ship. The sign window shows one public-domain ASL fingerspelling hand at a time, from `public/signs/fingerspell/`. There is no drawn person. The label on screen is “Computer-generated. ASL fingerspelling, not Ethiopian Sign Language.”
 
 An optional real recording can still be added later. Put an H.264 file at `public/media/signs/<GLOSS>.mp4` and set `clip` on that gloss in `src/content/signs.json`. The demo does not require that file, and it does not invent one.
 
@@ -17,7 +17,7 @@ Where there is no video, the toolbar button “Sign selection” signs the selec
 
 ## Layout and the model gloss
 
-The sign panel sits beside the video and stacks under it when the page is narrow, including a 200 percent zoom of a laptop window. It is not a window dragged over the lesson.
+The hands sit in one square window, about 220 pixels wide. It starts beside the video, not on the captions. It can be dragged, or moved with the arrow keys while Move is focused. Escape closes it. Amharic captions stay on screen, and the hands keep spelling the English letters, with a note that Amharic is not fingerspelled.
 
 ## What is realistic
 

@@ -27,7 +27,7 @@ import {
 } from "../lib/signFrame";
 import { presentSign, type SignLoad } from "../lib/signLabel";
 import { attachSignSync } from "../lib/signSync";
-import { motionReduced, showSignerFrame } from "./signer";
+import { closeHands, presentHands } from "./signer";
 import { ASL_GLOSS_LABEL, GLOSS_MODEL, signPanel, signSummary, visualsFor, type SignVisual } from "./signs";
 import { getFeatures, getSettings, getTheme, optedIn, PRESETS, updateSettings, type CaptionPreset, type DescriptionMode } from "./settings";
 import { widgetCss } from "./styles";
@@ -54,7 +54,6 @@ export class LearnAblePlayer extends HTMLElement {
   private built = false;
   private handKey = "";
   private handFrames: SignVisual[] = [];
-  private handIndex = 0;
   private signLoad: SignLoad = "idle";
   private moving = false;
   private frame: Frame = { ...DEFAULT_FRAME };
@@ -115,8 +114,10 @@ export class LearnAblePlayer extends HTMLElement {
     this.root.innerHTML = `
       <style>${widgetCss}
 :host { position: relative; z-index: auto; width: 100%; max-width: none; max-height: none; container-type: inline-size; }
-.media-row { grid-template-columns: minmax(0, 1fr) auto minmax(16rem, 38%); }
+.media-row { grid-template-columns: minmax(0, 1fr); }
 .stage, .stage video, video { min-width: 0; max-width: 100%; }
+.stage { min-height: 12rem; }
+.caption { position: static; left: auto; bottom: auto; transform: none; max-width: 40rem; margin: 0.5rem 0 0; }
 @container (max-width: 36rem) {
   .media-row { grid-template-columns: 1fr; }
 }
@@ -307,8 +308,7 @@ export class LearnAblePlayer extends HTMLElement {
     this.root.addEventListener("click", (event) => {
       const button = event.target instanceof Element ? event.target.closest("button[data-act]") : null;
       if (!(button instanceof HTMLButtonElement)) return;
-      if (button.dataset.act === "sign-prev") this.stepHand(-1);
-      if (button.dataset.act === "sign-next") this.stepHand(1);
+      if (button.dataset.act === "sign-prev" || button.dataset.act === "sign-next") return;
     });
     this.root.querySelectorAll<HTMLInputElement>("[data-ad-mode]").forEach((input) => {
       input.addEventListener("change", () => {
@@ -506,36 +506,20 @@ export class LearnAblePlayer extends HTMLElement {
     if (clock && this.video) clock.textContent = `${formatTime(this.video.currentTime)} of ${formatTime(this.video.duration || 0)}.`;
   }
 
-  private paintHands(frames: SignVisual[], cue?: Cue): void {
+  private paintHands(frames: SignVisual[], note = "", word = ""): void {
     const host = this.root.querySelector<HTMLElement>("[data-hands]");
-    if (!host) return;
+    if (host) host.replaceChildren();
+    const key = frames.map((frame) => frame.alt).join("|") + note;
     if (!frames.length) {
-      host.replaceChildren();
       this.handKey = "";
       this.handFrames = [];
-      this.handIndex = 0;
+      closeHands(false);
       return;
     }
-    const key = frames.map((frame) => frame.alt).join("|");
-    if (key !== this.handKey) {
-      this.handKey = key;
-      this.handFrames = frames;
-      this.handIndex = 0;
-    }
-    if (!motionReduced() && cue && this.handFrames.length && this.video) {
-      const span = Math.max(0.2, cue.end - cue.start);
-      const ratio = Math.min(0.999, Math.max(0, (this.video.currentTime - cue.start) / span));
-      this.handIndex = Math.floor(ratio * this.handFrames.length);
-    }
-    showSignerFrame(host, this.handFrames, this.handIndex);
-  }
-
-  private stepHand(delta: number): void {
-    if (!this.handFrames.length) return;
-    const count = this.handFrames.length;
-    this.handIndex = (this.handIndex + delta + count) % count;
-    const host = this.root.querySelector<HTMLElement>("[data-hands]");
-    if (host) showSignerFrame(host, this.handFrames, this.handIndex);
+    if (key === this.handKey) return;
+    this.handKey = key;
+    this.handFrames = frames;
+    presentHands(frames, { word, note, anchor: this, source: "lesson" });
   }
 
   private sync(): void {
@@ -549,8 +533,11 @@ export class LearnAblePlayer extends HTMLElement {
       caption.setAttribute("lang", this.mode === "am" ? "am" : "en");
     }
     const panel = signPanel(cue?.text || "", this.mode);
-    const frames = panel.gloss ? visualsFor(panel.gloss) : [];
-    this.paintHands(frames, cue);
+    const englishCue = this.mode === "am" ? cueAt(this.en, time) : cue;
+    const glossSource = this.mode === "am" ? signPanel(englishCue?.text || "", "en") : panel;
+    const frames = glossSource.gloss ? visualsFor(glossSource.gloss) : [];
+    const amharicNote = this.mode === "am" ? "Fingerspelling is the English letters. Amharic is not fingerspelled." : "";
+    this.paintHands(frames, amharicNote, glossSource.gloss);
     const corrected = this.root.querySelector("[data-gloss-corrected]");
     const model = this.root.querySelector("[data-gloss-model]");
     const modelTerm = this.root.querySelector<HTMLElement>("[data-model-term]");

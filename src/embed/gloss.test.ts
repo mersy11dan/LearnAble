@@ -60,11 +60,11 @@ describe("ASL gloss panel", () => {
     expect(player.shadowRoot?.querySelector("[data-gloss-model]")?.textContent).toContain("ADDUS ABRAHAM");
     expect(player.shadowRoot?.querySelector("h2")?.textContent).toBe("ASL");
     expect(player.shadowRoot?.querySelector(".sign-info")?.textContent).toContain(ASL_GLOSS_LABEL);
-    expect(player.shadowRoot?.querySelector(".signer-label")?.textContent).toContain("Computer-generated signing");
-    expect(player.shadowRoot?.querySelector("[data-signer-now]")?.textContent).toContain("Fingerspelling A");
+    expect(document.querySelector("#learnable-sign-window .signer-label")?.textContent).toContain("ASL fingerspelling, not Ethiopian Sign Language");
+    expect(document.querySelector("#learnable-sign-window [data-signer-now]")?.textContent).toContain("A");
     player.shadowRoot?.querySelector<HTMLButtonElement>("[data-act=captions]")?.click();
     expect(player.shadowRoot?.querySelector("[data-gloss-corrected]")?.textContent).toBe("");
-    expect(player.shadowRoot?.querySelector("[data-hands]")?.childElementCount).toBe(0);
+    expect(document.querySelector("#learnable-sign-window [data-signer-note]")?.textContent).toContain("Amharic is not fingerspelled");
     expect(player.shadowRoot?.querySelector("[data-sign-note]")?.textContent).toBe(AMHARIC_GLOSS_NOTE);
   });
 });
