@@ -5,3 +5,14 @@ supabase==2.3.4
 google-generativeai==0.3.2
 pydantic==2.6.1
 python-multipart==0.0.9
+
+# ASL Video Processing
+opencv-python==4.9.0.80
+mediapipe==0.10.9
+torch>=2.0.0
+transformers>=4.36.0
+numpy>=1.24.0
+datasets>=2.16.0
+accelerate>=0.25.0
+sentencepiece>=0.1.99
+protobuf>=3.20.0

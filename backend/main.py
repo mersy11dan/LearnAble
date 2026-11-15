@@ -3,7 +3,7 @@ Pocket Sign Backend API
 FastAPI backend for AI-powered ASL translation and video analysis
 """
 
-from fastapi import FastAPI, HTTPException, Depends
+from fastapi import FastAPI, HTTPException, Depends, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
@@ -12,11 +12,16 @@ import os
 from datetime import datetime
 import hashlib
 import json
+import tempfile
+from pathlib import Path
 
 # Supabase
 from supabase import create_client, Client
 import google.generativeai as genai
 from dotenv import load_dotenv
+
+# ASL Video Processing
+from asl_video_model import ASLTranslator, process_asl_video
 
 load_dotenv()
 
@@ -75,6 +80,10 @@ class ChatRequest(BaseModel):
 class CacheResponse(BaseModel):
     cached: bool
     data: Optional[Dict] = None
+
+class ASLVideoRequest(BaseModel):
+    mode: str = "dual"  # "hf", "ollama", or "dual"
+    target_lang: str = "both"  # "en", "am", or "both"
 
 # Helper functions
 def generate_cache_key(prefix: str, data: str) -> str:
@@ -311,6 +320,190 @@ async def clear_cache():
     """Clear all cache"""
     cache.clear()
     return {"message": "Cache cleared successfully"}
+
+@app.post("/api/asl/translate-video")
+async def translate_asl_video(
+    file: UploadFile = File(...),
+    mode: str = "dual",
+    target_lang: str = "both"
+):
+    """
+    Upload and translate ASL video to text
+    
+    Supports:
+    - mode: "hf" (Hugging Face), "ollama" (local), or "dual" (both)
+    - target_lang: "en", "am", or "both"
+    
+    Returns translations in English and/or Amharic with humanized output
+    """
+    # Validate file type
+    if not file.content_type or not file.content_type.startswith("video/"):
+        raise HTTPException(
+            status_code=400,
+            detail="File must be a video (mp4, avi, mov, etc.)"
+        )
+    
+    # Save uploaded file temporarily
+    temp_dir = tempfile.mkdtemp()
+    temp_path = Path(temp_dir) / file.filename
+    
+    try:
+        # Write uploaded file
+        contents = await file.read()
+        with open(temp_path, "wb") as f:
+            f.write(contents)
+        
+        # Check cache
+        file_hash = hashlib.md5(contents).hexdigest()
+        cache_key = f"asl_video:{file_hash}:{mode}:{target_lang}"
+        
+        cached = get_from_cache(cache_key)
+        if cached:
+            return JSONResponse({
+                **cached,
+                "cached": True,
+                "filename": file.filename
+            })
+        
+        # Process video
+        hf_token = os.getenv("HF_TOKEN")
+        ollama_url = os.getenv("OLLAMA_URL", "http://localhost:11434")
+        
+        result = process_asl_video(
+            video_path=str(temp_path),
+            mode=mode,
+            target_lang=target_lang,
+            hf_token=hf_token,
+            ollama_url=ollama_url
+        )
+        
+        # Add metadata
+        result["cached"] = False
+        result["filename"] = file.filename
+        result["mode"] = mode
+        result["target_lang"] = target_lang
+        
+        # Cache result
+        set_cache(cache_key, result)
+        
+        # Save to Supabase if available
+        if supabase:
+            try:
+                supabase.table("asl_translations").insert({
+                    "filename": file.filename,
+                    "mode": mode,
+                    "target_lang": target_lang,
+                    "result": json.dumps(result),
+                    "created_at": datetime.now().isoformat()
+                }).execute()
+            except Exception as e:
+                print(f"Supabase insert error: {e}")
+        
+        return JSONResponse(result)
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Processing error: {str(e)}")
+    finally:
+        # Cleanup
+        try:
+            if temp_path.exists():
+                temp_path.unlink()
+            Path(temp_dir).rmdir()
+        except Exception:
+            pass
+
+@app.post("/api/asl/extract-keypoints")
+async def extract_video_keypoints(file: UploadFile = File(...)):
+    """
+    Extract MediaPipe keypoints from ASL video
+    Returns hand and pose landmarks for further processing
+    """
+    if not file.content_type or not file.content_type.startswith("video/"):
+        raise HTTPException(
+            status_code=400,
+            detail="File must be a video"
+        )
+    
+    temp_dir = tempfile.mkdtemp()
+    temp_path = Path(temp_dir) / file.filename
+    
+    try:
+        contents = await file.read()
+        with open(temp_path, "wb") as f:
+            f.write(contents)
+        
+        # Initialize translator
+        translator = ASLTranslator()
+        
+        # Extract keypoints
+        keypoints = translator.video_processor.extract_keypoints(str(temp_path))
+        
+        return JSONResponse({
+            "success": True,
+            "filename": file.filename,
+            "num_frames": len(keypoints),
+            "keypoint_shape": keypoints.shape,
+            "message": "Keypoints extracted successfully using MediaPipe"
+        })
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        try:
+            if temp_path.exists():
+                temp_path.unlink()
+            Path(temp_dir).rmdir()
+        except Exception:
+            pass
+
+@app.get("/api/asl/models")
+async def list_asl_models():
+    """List available ASL models and their status"""
+    models = {
+        "huggingface": {
+            "sign_language_bridge": {
+                "name": "mamounyosef/sign-language-bridge",
+                "status": "available" if os.getenv("HF_TOKEN") else "requires_token",
+                "description": "Video-to-text ASL translator"
+            },
+            "signbridge_gloss": {
+                "name": "Suyash2205/signbridge-t5-base-asl-gloss",
+                "status": "available",
+                "description": "English to ASL gloss notation"
+            }
+        },
+        "ollama": {
+            "llama_vision": {
+                "name": "llama3.2-vision",
+                "status": "checking",
+                "description": "Vision LLM for ASL interpretation"
+            }
+        },
+        "datasets": {
+            "signverse": {
+                "name": "SignerX/SignVerse-2M",
+                "size": "2M videos",
+                "features": "pre-extracted pose keypoints"
+            },
+            "asl_dataset": {
+                "name": "akasheroor/American-Sign-Language-Dataset",
+                "size": "108,000 clips",
+                "features": "2,200+ words"
+            }
+        }
+    }
+    
+    # Check Ollama availability
+    try:
+        ollama_url = os.getenv("OLLAMA_URL", "http://localhost:11434")
+        response = requests.get(f"{ollama_url}/api/tags", timeout=2)
+        if response.status_code == 200:
+            models["ollama"]["status"] = "available"
+            models["ollama"]["models"] = response.json().get("models", [])
+    except Exception:
+        models["ollama"]["status"] = "unavailable"
+    
+    return JSONResponse(models)
 
 if __name__ == "__main__":
     import uvicorn
