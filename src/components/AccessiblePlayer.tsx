@@ -32,6 +32,7 @@ type AccessiblePlayerProps = {
   signOffset?: number;
   engine?: Engine;
   onTime?: (time: number) => void;
+  onComplete?: () => void;
 };
 
 const NEXT_CAPTION: Record<CaptionMode, CaptionMode> = { off: "en", en: "am", am: "off" };
@@ -47,6 +48,7 @@ export function AccessiblePlayer({
   signOffset = 0,
   engine: engineProp = "video",
   onTime,
+  onComplete,
 }: AccessiblePlayerProps) {
   const { highContrast, stopMotion } = usePreferences();
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -54,6 +56,7 @@ export function AccessiblePlayer({
   const pendingSeek = useRef<number | null>(null);
   const timeRef = useRef(0);
   const lastAd = useRef("");
+  const completed = useRef(false);
   const [clockEpoch, setClockEpoch] = useState(0);
   const captionGroup = useId();
   const [engine, setEngine] = useState<Engine>(engineProp);
@@ -78,6 +81,12 @@ export function AccessiblePlayer({
   useEffect(() => {
     onTime?.(time);
   }, [onTime, time]);
+
+  useEffect(() => {
+    if (completed.current || duration <= 1 || time < duration - 0.25) return;
+    completed.current = true;
+    onComplete?.();
+  }, [duration, onComplete, time]);
 
   useEffect(() => {
     if (engine !== "clock" || !playing) return;

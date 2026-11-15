@@ -48,6 +48,10 @@ Build both the site and the bundle with `npm run build`. The plug-in files are `
 
 Copy-paste snippets for HTML, React, WordPress, and an iframe fallback are on `/integrate`.
 
+## Integration
+
+Implemented: Open Badges 3.0 credentials as VC-JWT, signed with Ed25519 by `POST /api/credentials` and checked at `/verify/<id>`, and `schema.org/JobPosting` JSON-LD on each job card. The job cards are fictional demo data. LTI 1.3 is not implemented. It is future work.
+
 ## Experimental chat
 
 A support chat component is in the repository and is not mounted. Set `VITE_ENABLE_CHAT=true` at build time to show it. It answers from built-in sentences in the browser. It does not call a model and it does not read an API key. The unused FastAPI app and the unused ASL panel live in `experimental/` and are not part of this demo. See [docs/EXPERIMENTAL.md](docs/EXPERIMENTAL.md). The sign window is American Sign Language gloss unless `sign-lang="ethiopian"` and a real recording is loaded. See [docs/SIGN-LANGUAGE.md](docs/SIGN-LANGUAGE.md).

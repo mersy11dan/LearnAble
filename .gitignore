@@ -3,6 +3,7 @@ dist/*
 !dist/learnable.js
 .env
 .venv
+server/data/
 __pycache__
 .pytest_cache
 *.pyc

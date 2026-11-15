@@ -5,7 +5,7 @@ import { toBrf } from "../lib/braille";
 import { commandForKey } from "../lib/commands";
 import { buildClientPack, saveFile } from "../lib/pack";
 import { needsExtendedDescription } from "../lib/describe";
-import { speak, stopSpeaking } from "../lib/speech";
+import { speak, stopSpeaking, whenVoice } from "../lib/speech";
 import { buildTaggedPdf } from "../lib/taggedPdf";
 import { formatTime } from "../lib/time";
 import { cueAt, cuesToVtt, parseVtt, type Cue } from "../lib/vtt";
@@ -215,6 +215,8 @@ export class LearnAblePlayer extends HTMLElement {
         <ol class="transcript"></ol>
         <h2>Job card</h2>
         <p data-job>${jobs[0]?.summary ?? ""}</p>
+        <p lang="am" data-job-am>${jobs[0]?.summaryAm ?? ""}</p>
+        <p data-job-voice role="status"></p>
         <div class="row">
           <button type="button" data-act="job">Play audio summary</button>
           <button type="button" data-act="badge">Check certificate</button>
@@ -920,9 +922,17 @@ export class LearnAblePlayer extends HTMLElement {
       this.setStatus(action === "vtt-am" ? "Amharic captions downloaded." : "English captions downloaded.");
     }
     if (action === "job") {
-      const summary = this.root.querySelector("[data-job]")?.textContent || "";
-      speak(summary, "en");
-      this.setStatus("Playing the job summary on this device.");
+      const lang = getSettings().lang === "am" ? "am" : "en";
+      const job = jobs[0];
+      const summary = lang === "am" ? job?.summaryAm || "" : job?.summary || "";
+      const note = this.root.querySelector("[data-job-voice]");
+      if (lang === "am" && (await whenVoice("am")) !== "ready") {
+        if (note) note.textContent = "No Amharic voice is available on this device. The Amharic summary stays on this page.";
+        return;
+      }
+      if (note) note.textContent = "";
+      speak(summary, lang);
+      this.setStatus(lang === "am" ? "Playing the Amharic job summary on this device." : "Playing the job summary on this device.");
     }
     if (action === "badge") {
       const ok = await verifyOpenBadge();

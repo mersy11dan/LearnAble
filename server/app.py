@@ -11,12 +11,15 @@ from __future__ import annotations
 import base64
 import json
 import os
+import re
 from pathlib import Path
 
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
 
 import requests
 from flask import Flask, jsonify, request
+
+from credentials import fetch_credential, issue_credential, issuer_profile, revoke_credential, verify_credential
 
 ROOT = Path(__file__).resolve().parents[1]
 LESSON_PATH = ROOT / "src" / "content" / "lesson.json"
@@ -48,6 +51,10 @@ def badge_signature_ok(jwt: str, jwk: dict) -> bool:
         return True
     except Exception:  # noqa: BLE001 - any bad token is simply not valid
         return False
+
+
+def _credential_id(value: str) -> bool:
+    return bool(re.fullmatch(r"[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}", value))
 
 
 def consent_granted() -> bool:
@@ -212,6 +219,11 @@ def create_app() -> Flask:
 <li>POST /api/braille</li>
 <li>GET /api/offline-pack</li>
 <li>POST /api/certificates/verify</li>
+<li>GET /api/issuer</li>
+<li>POST /api/credentials</li>
+<li>GET /api/credentials/&lt;id&gt;</li>
+<li>GET /api/credentials/&lt;id&gt;/verify</li>
+<li>POST /api/credentials/&lt;id&gt;/revoke</li>
 </ul>
 <form method="get" action="/api/health"><button type="submit">Check health</button></form>
 </body></html>"""
@@ -220,6 +232,54 @@ def create_app() -> Flask:
     @app.get("/api/offline-pack")
     def offline_pack():
         return jsonify({"builtIn": "browser", "path": "/packs/demo/index.html", "message": "The 3G pack is assembled on the phone from the saved lesson files."})
+
+    @app.get("/api/issuer")
+    def issuer():
+        return jsonify(issuer_profile())
+
+    @app.post("/api/credentials")
+    def create_credential():
+        body = request.get_json(silent=True) or {}
+        course_id = str(body.get("courseId") or "").strip()
+        display_name = body.get("displayName")
+        consent = body.get("consent") is True
+        if not course_id:
+            return jsonify({"error": "Include a courseId."}), 400
+        try:
+            issued = issue_credential(course_id, display_name if isinstance(display_name, str) else None, consent)
+        except ValueError as exc:
+            return jsonify({"error": str(exc)}), 400
+        return jsonify(issued), 201
+
+    @app.get("/api/credentials/<credential_id>")
+    def read_credential(credential_id: str):
+        if not _credential_id(credential_id):
+            return jsonify({"error": "No credential with that id."}), 404
+        stored = fetch_credential(credential_id)
+        if stored is None:
+            return jsonify({"error": "No credential with that id."}), 404
+        return jsonify(stored)
+
+    @app.get("/api/credentials/<credential_id>/verify")
+    def read_credential_verify(credential_id: str):
+        if not _credential_id(credential_id):
+            return jsonify({"valid": False, "issuedAt": None, "issuer": None, "revoked": False, "error": "No credential with that id."}), 404
+        result = verify_credential(credential_id)
+        if result is None:
+            return jsonify({"valid": False, "issuedAt": None, "issuer": None, "revoked": False, "error": "No credential with that id."}), 404
+        return jsonify(result)
+
+    @app.post("/api/credentials/<credential_id>/revoke")
+    def revoke(credential_id: str):
+        admin = configured("LEARNABLE_ADMIN_TOKEN")
+        if not admin:
+            return jsonify({"error": "Revocation is disabled. Set LEARNABLE_ADMIN_TOKEN on the server."}), 403
+        provided = request.headers.get("Authorization", "")
+        if provided != f"Bearer {admin}":
+            return jsonify({"error": "The admin token was not accepted."}), 403
+        if not _credential_id(credential_id) or not revoke_credential(credential_id):
+            return jsonify({"error": "No credential with that id."}), 404
+        return jsonify({"revoked": True, "id": credential_id})
 
     @app.post("/api/certificates/verify")
     def verify_certificate():

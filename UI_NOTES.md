@@ -1,5 +1,14 @@
 # UI Notes
 
+## Amharic that needs native-speaker review
+
+- `summaryAm` on each job in `src/content/jobs.ts`.
+
+## Needs a human
+
+- Confirm the Amharic job summaries with a native speaker before anyone treats them as public copy.
+- A real Ethiopian Sign Language recording is not in the repo. Add one with `sign` and `sign-lang="ethiopian"` only after a Deaf ESL signer approves it. See `docs/SIGN-LANGUAGE.md`.
+
 Visual and UX observations that require functional changes (not addressed in the styling polish).
 
 ## Player
