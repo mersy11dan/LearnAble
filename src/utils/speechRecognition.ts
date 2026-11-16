@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
-export type SpeechRecognitionError = "not-allowed" | "no-speech" | "audio-capture" | "network" | "aborted" | "other";
+export type SpeechRecognitionError = "not-allowed" | "no-speech" | "audio-capture" | "other";
 
 interface SpeechRecognitionHook {
   startListening: () => void;
@@ -17,6 +17,7 @@ interface ISpeechRecognition extends EventTarget {
   interimResults: boolean;
   lang: string;
   maxAlternatives: number;
+  onstart: ((this: ISpeechRecognition, ev: Event) => void) | null;
   onresult: ((this: ISpeechRecognition, ev: ISpeechRecognitionEvent) => void) | null;
   onerror: ((this: ISpeechRecognition, ev: ISpeechRecognitionErrorEvent) => void) | null;
   onend: ((this: ISpeechRecognition) => void) | null;
@@ -32,7 +33,6 @@ interface ISpeechRecognitionEvent extends Event {
 
 interface ISpeechRecognitionErrorEvent extends Event {
   error: string;
-  message: string;
 }
 
 interface ISpeechRecognitionResultList {
@@ -50,7 +50,6 @@ interface ISpeechRecognitionResult {
 
 interface ISpeechRecognitionAlternative {
   transcript: string;
-  confidence: number;
 }
 
 interface ISpeechRecognitionConstructor {
@@ -64,22 +63,20 @@ declare global {
   }
 }
 
-function classifyError(code: string): SpeechRecognitionError {
-  if (code === "not-allowed" || code === "service-not-allowed") return "not-allowed";
-  if (code === "no-speech") return "no-speech";
-  if (code === "audio-capture") return "audio-capture";
-  if (code === "network") return "network";
-  if (code === "aborted") return "aborted";
-  return "other";
+const SILENCE_MS = 1200;
+
+function speechApi(): ISpeechRecognitionConstructor | null {
+  if (typeof window === "undefined") return null;
+  return window.SpeechRecognition || window.webkitSpeechRecognition || null;
 }
 
-function readResults(event: ISpeechRecognitionEvent): { finalText: string; interimText: string } {
+function readHeard(event: ISpeechRecognitionEvent): { finalText: string; interimText: string } {
   let finalText = "";
   let interimText = "";
-  for (let i = 0; i < event.results.length; i += 1) {
+  for (let i = event.resultIndex; i < event.results.length; i += 1) {
     const piece = event.results[i][0]?.transcript ?? "";
-    if (event.results[i].isFinal) finalText += piece;
-    else interimText += piece;
+    if (event.results[i].isFinal) finalText += `${piece} `;
+    else interimText += `${piece} `;
   }
   return { finalText: finalText.trim(), interimText: interimText.trim() };
 }
@@ -94,105 +91,153 @@ export function useSpeechRecognition(options?: {
   const [isListening, setIsListening] = useState(false);
   const recognitionRef = useRef<ISpeechRecognition | null>(null);
   const listeningRef = useRef(false);
-  const cancelledRef = useRef(false);
-  const finalRef = useRef("");
-  const startTimerRef = useRef<number | null>(null);
+  const spokenRef = useRef("");
+  const interimRef = useRef("");
+  const sentRef = useRef(false);
+  const silenceTimerRef = useRef<number | null>(null);
   const onFinalRef = useRef(options?.onFinal);
   const onInterimRef = useRef(options?.onInterim);
 
   onFinalRef.current = options?.onFinal;
   onInterimRef.current = options?.onInterim;
 
-  const isSupported =
-    typeof window !== "undefined" && ("SpeechRecognition" in window || "webkitSpeechRecognition" in window);
+  const isSupported = speechApi() !== null;
+
+  const heardSoFar = () => `${spokenRef.current} ${interimRef.current}`.trim();
+
+  const clearSilence = () => {
+    if (silenceTimerRef.current !== null) {
+      window.clearTimeout(silenceTimerRef.current);
+      silenceTimerRef.current = null;
+    }
+  };
+
+  const emitFinal = useCallback((spoken: string) => {
+    const text = spoken.trim();
+    if (sentRef.current) return;
+    sentRef.current = true;
+    listeningRef.current = false;
+    spokenRef.current = "";
+    interimRef.current = "";
+    clearSilence();
+    setIsListening(false);
+    setInterimTranscript("");
+    if (text) onFinalRef.current?.(text);
+  }, []);
 
   useEffect(() => {
-    if (!isSupported) return;
+    const API = speechApi();
+    if (!API) return;
 
-    const SpeechRecognitionAPI = window.SpeechRecognition || window.webkitSpeechRecognition;
-    const recognition = new SpeechRecognitionAPI();
-    recognitionRef.current = recognition;
-    recognition.continuous = false;
+    const recognition = new API();
+    recognition.continuous = true;
     recognition.interimResults = true;
     recognition.maxAlternatives = 1;
-    recognition.lang = "en-US";
+    recognition.lang = document.documentElement.lang === "am" ? "am-ET" : "en-US";
+
+    recognition.onstart = () => {
+      listeningRef.current = true;
+      setIsListening(true);
+    };
 
     recognition.onresult = (event: ISpeechRecognitionEvent) => {
-      const { finalText, interimText } = readResults(event);
-      if (finalText) finalRef.current = finalText;
-      setTranscript(finalText);
+      const { finalText, interimText } = readHeard(event);
+      if (finalText) spokenRef.current = `${spokenRef.current} ${finalText}`.trim();
+      interimRef.current = interimText;
+      setTranscript(spokenRef.current);
       setInterimTranscript(interimText);
-      onInterimRef.current?.(interimText || finalText);
+      onInterimRef.current?.(heardSoFar());
+      clearSilence();
+      silenceTimerRef.current = window.setTimeout(() => {
+        silenceTimerRef.current = null;
+        const spoken = heardSoFar();
+        if (spoken) {
+          try {
+            recognition.stop();
+          } catch {
+            emitFinal(spoken);
+          }
+        }
+      }, SILENCE_MS);
     };
 
     recognition.onerror = (event: ISpeechRecognitionErrorEvent) => {
-      const kind = classifyError(event.error);
-      if (kind === "aborted") return;
-      setError(kind);
+      const code = event.error;
+      if (code === "aborted") return;
       listeningRef.current = false;
       setIsListening(false);
+      if (code === "not-allowed" || code === "service-not-allowed") {
+        setError("not-allowed");
+        return;
+      }
+      if (code === "audio-capture") {
+        setError("audio-capture");
+        return;
+      }
+      if (code === "no-speech") {
+        setError("no-speech");
+        return;
+      }
+      setError("other");
     };
 
     recognition.onend = () => {
-      listeningRef.current = false;
-      setIsListening(false);
-      setInterimTranscript("");
-      const spoken = finalRef.current.trim();
-      if (!cancelledRef.current && spoken) onFinalRef.current?.(spoken);
+      if (sentRef.current) {
+        setIsListening(false);
+        return;
+      }
+      emitFinal(heardSoFar());
     };
 
+    recognitionRef.current = recognition;
     return () => {
-      cancelledRef.current = true;
-      if (startTimerRef.current !== null) window.clearTimeout(startTimerRef.current);
+      listeningRef.current = false;
+      clearSilence();
       try {
-        recognition.abort();
+        recognition.stop();
       } catch {
         /* already stopped */
       }
+      recognitionRef.current = null;
     };
-  }, [isSupported]);
+  }, [emitFinal]);
 
   const startListening = useCallback(() => {
     const recognition = recognitionRef.current;
-    if (!recognition) return;
-    cancelledRef.current = true;
-    finalRef.current = "";
+    if (!recognition) {
+      setError("other");
+      return;
+    }
+    sentRef.current = false;
+    spokenRef.current = "";
+    interimRef.current = "";
+    listeningRef.current = true;
+    clearSilence();
     setTranscript("");
     setInterimTranscript("");
     setError(null);
+    setIsListening(true);
     try {
-      recognition.abort();
+      recognition.start();
     } catch {
-      /* ignore */
+      listeningRef.current = false;
+      setIsListening(false);
+      setError("other");
     }
-    if (startTimerRef.current !== null) window.clearTimeout(startTimerRef.current);
-    startTimerRef.current = window.setTimeout(() => {
-      cancelledRef.current = false;
-      listeningRef.current = true;
-      setIsListening(true);
-      try {
-        recognition.start();
-      } catch {
-        listeningRef.current = false;
-        setIsListening(false);
-        setError("other");
-      }
-    }, 40);
   }, []);
 
   const stopListening = useCallback(() => {
-    const recognition = recognitionRef.current;
-    cancelledRef.current = true;
+    const spoken = heardSoFar();
     listeningRef.current = false;
+    clearSilence();
     setIsListening(false);
-    setInterimTranscript("");
-    if (startTimerRef.current !== null) window.clearTimeout(startTimerRef.current);
     try {
-      recognition?.abort();
+      recognitionRef.current?.stop();
     } catch {
-      /* ignore */
+      /* already stopped */
     }
-  }, []);
+    if (spoken) emitFinal(spoken);
+  }, [emitFinal]);
 
   return {
     startListening,

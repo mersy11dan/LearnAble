@@ -1,26 +1,25 @@
-import { FormEvent, useEffect, useRef, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 
 interface ChatInputProps {
   onSend: (message: string) => void;
   disabled?: boolean;
-  draft?: string;
+  spokenDraft?: string;
   listening?: boolean;
+  onTyped?: () => void;
 }
 
-export function ChatInput({ onSend, disabled, draft, listening }: ChatInputProps) {
+export function ChatInput({ onSend, disabled, spokenDraft, listening, onTyped }: ChatInputProps) {
   const [input, setInput] = useState("");
-  const wasListening = useRef(false);
-  const value = listening ? draft || "" : input;
+  const value = listening ? spokenDraft || input : input;
 
   useEffect(() => {
-    if (wasListening.current && !listening) setInput("");
-    wasListening.current = Boolean(listening);
+    if (listening) setInput("");
   }, [listening]);
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
-    const text = (listening ? draft : input)?.trim();
-    if (text && !disabled && !listening) {
+    const text = value.trim();
+    if (text && !disabled) {
       onSend(text);
       setInput("");
     }
@@ -36,17 +35,19 @@ export function ChatInput({ onSend, disabled, draft, listening }: ChatInputProps
         type="text"
         value={value}
         onChange={(e) => {
-          if (!listening) setInput(e.target.value);
+          onTyped?.();
+          setInput(e.target.value);
         }}
-        placeholder={listening ? "Listening…" : "Say or type a page, like sessions or jobs"}
-        disabled={disabled || listening}
+        placeholder={listening ? "Listening… speak now" : "Type a message"}
+        disabled={disabled}
         className={`chat-input${listening ? " chat-input-listening" : ""}`}
         aria-describedby="chat-input-hint"
+        autoComplete="off"
       />
       <span id="chat-input-hint" className="sr-only">
-        Press Enter to send. Use the microphone to search by voice, like Google.
+        Type and press Enter to send. The microphone is for spoken navigation. The box stays available if you prefer to type.
       </span>
-      <button type="submit" disabled={!value.trim() || disabled || listening} className="chat-send-btn" aria-label="Send message">
+      <button type="submit" disabled={!value.trim() || disabled} className="chat-send-btn" aria-label="Send message">
         <svg
           width="20"
           height="20"

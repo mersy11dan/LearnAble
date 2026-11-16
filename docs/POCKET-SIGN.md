@@ -9,9 +9,9 @@ was taken out.
 - **Support chat** (`src/components/ChatSupport/`). Saved answers with no key. Gemini answers through the
   transcript service once `GEMINI_API_KEY` is set and the consent box is ticked. Every answer says which it is.
 - **Voice input** in the chat, using the browser's speech recognition. Nothing is uploaded.
-- **ASL gloss panel** in the chat (`src/utils/aslTranslation.ts`). It uses the same shipped gloss file as the sign
-  window, and asks the transcript service for anything else. The service runs the model only when
-  `LEARNABLE_GLOSS_LOCAL` or `HF_GLOSS_REMOTE` is set. The browser never downloads the model.
+- **Sign window** on the lesson player (Track 2). The chat no longer has an ASL panel. Gloss still uses the shipped
+  file on the player, and the transcript service only when `LEARNABLE_GLOSS_LOCAL` or `HF_GLOSS_REMOTE` is set. The
+  browser never downloads the model.
 - **Humanised voice helper** (`src/utils/voiceHumanized.ts`), which picks a device voice. It is not an AI model.
 
 ## Removed, and why

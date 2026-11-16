@@ -14,7 +14,7 @@ export interface Message {
 }
 
 export const WELCOME =
-  "I can take you around LearnAble. Tap the mic and speak a page — sessions, jobs, lesson, pack, or verify — or type it. Ask where you are if you get lost.";
+  "I can take you around LearnAble. Tap the microphone and say a page, like sessions or jobs. If you prefer to type, use the box.";
 
 function guideMessage(content: string): Message {
   return {

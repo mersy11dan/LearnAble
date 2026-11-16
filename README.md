@@ -49,8 +49,8 @@ A chat button sits in the corner of the demo site. It answers questions about th
 accessibility controls. With no key, every answer is saved text written by hand, and each one says so. When
 `GEMINI_API_KEY` is set on the transcript service, a question is sent to Google Gemini only after the consent box
 in the chat is ticked. The key never reaches the browser. Voice input uses the browser's own speech recognition.
-The ASL panel in the chat shows the same gloss as the sign window: ASL, not Ethiopian Sign Language, from the
-shipped file, or from the model when it is opted in on the service. The browser never downloads a model.
+Sign language for Track 2 is the player sign window, not a chat panel. It is ASL gloss, not Ethiopian Sign
+Language. The browser never downloads a model.
 
 ## Install in an hour
 

@@ -16,16 +16,6 @@ vi.mock("../utils/gemini", () => ({
   }),
 }));
 
-vi.mock("../utils/aslTranslation", () => ({
-  translateToASL: vi.fn().mockResolvedValue({
-    gloss: "TEST RESPONSE",
-    source: "offline",
-    label: "English words in capitals. No model is running.",
-    note: "",
-    model: "",
-  }),
-}));
-
 vi.mock("../utils/speechRecognition", () => ({
   useSpeechRecognition: () => ({
     startListening: vi.fn(),
@@ -46,6 +36,7 @@ vi.mock("../utils/speechSynthesis", () => ({
     isSupported: true,
   }),
 }));
+
 
 function renderChat(path = "/") {
   return render(
@@ -122,23 +113,10 @@ describe("ChatSupport", () => {
     sessionStorage.removeItem("learnable-consent");
     renderChat();
     fireEvent.click(screen.getByLabelText("Open support chat"));
-    const consent = screen.getByLabelText(/Send my questions to Google Gemini/);
+    const consent = screen.getByLabelText(/send questions to Gemini/i);
     expect(consent).not.toBeChecked();
     fireEvent.click(consent);
     expect(sessionStorage.getItem("learnable-consent")).toBe("yes");
-  });
-
-  it("labels ASL output as gloss that is not Ethiopian Sign Language", async () => {
-    renderChat();
-    fireEvent.click(screen.getByLabelText("Open support chat"));
-    fireEvent.click(screen.getByLabelText("Toggle ASL translator"));
-    expect(screen.getByText(/not Ethiopian Sign Language/)).toBeInTheDocument();
-    fireEvent.change(screen.getByLabelText("Text to translate to ASL"), { target: { value: "test response" } });
-    fireEvent.click(screen.getByRole("button", { name: "Translate to ASL" }));
-    await waitFor(() => {
-      expect(screen.getByText("TEST RESPONSE")).toBeInTheDocument();
-    });
-    expect(screen.getByText("English words in capitals. No model is running.")).toBeInTheDocument();
   });
 
   it("closes when clicking the close button", () => {
@@ -158,16 +136,25 @@ describe("ChatSupport", () => {
     expect(screen.getByRole("dialog")).not.toHaveClass("minimized");
   });
 
-  it("has a Google-style voice search button", () => {
+  it("has the original circular mic beside the text field", () => {
     renderChat();
     fireEvent.click(screen.getByLabelText("Open support chat"));
-    expect(screen.getByLabelText("Search by voice")).toBeInTheDocument();
+    const mic = screen.getByLabelText("Start voice input");
+    const input = screen.getByLabelText("Type your message");
+    expect(mic).toBeInTheDocument();
+    expect(mic).toHaveClass("voice-control-btn");
+    expect(mic.parentElement).toHaveClass("chat-input-row");
+    expect(input.closest(".chat-input-row")).toBe(mic.parentElement);
+    expect(screen.queryByLabelText("Toggle ASL translator")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Jobs" })).not.toBeInTheDocument();
+    expect(screen.getByLabelText("Type your message")).not.toBeDisabled();
   });
 
-  it("has ASL translator toggle", () => {
+  it("closes with Escape", () => {
     renderChat();
     fireEvent.click(screen.getByLabelText("Open support chat"));
-    expect(screen.getByLabelText("Toggle ASL translator")).toBeInTheDocument();
+    fireEvent.keyDown(window, { key: "Escape" });
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 
   it("meets accessibility standards", () => {

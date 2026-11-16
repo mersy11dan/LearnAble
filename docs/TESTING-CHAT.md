@@ -51,24 +51,19 @@ Open http://127.0.0.1:5173 in your browser.
 
 **Note:** Voice input requires browser permission for microphone access.
 
-### 3. ASL Translation 🤟
+### 3. Track 2 sign language (player, not chat)
+
+Sign language is a Track 2 player control, not a chat panel.
 
 **Test Steps:**
-1. Open the chat
-2. Click the "ASL" button at the bottom
-3. Type "Hana opens her lesson on a phone in Addis Ababa." in the text area
-4. Click "Translate to ASL"
-5. Verify the gloss "fs-ADDIS fs-ABABA, HANA IX-3 PHONE LESSON OPEN" appears under "Corrected by hand"
-6. Try "The doctor will help you now"
+1. Open `/lesson/slow-connection`
+2. Press `S` or use the sign control
+3. Confirm the sign window, captions, audio description, and player stay usable together
 
 **Expected Result:**
-- ASL panel opens
-- The panel says it is ASL, not Ethiopian Sign Language
-- A lesson caption shows the hand-corrected gloss at once
-- Any other sentence shows the English words in capitals with "No model is running", unless the transcript
-  service has `LEARNABLE_GLOSS_LOCAL=1`, in which case the model line is labelled as model output
-- No model is downloaded by the browser
-- Panel can be closed by clicking ASL button again
+- The chat has no ASL button
+- The sign window is ASL gloss, not Ethiopian Sign Language
+- Captions, audio description, the offline pack, and tagged documents remain available from the rest of the site
 
 ### 4. Keyboard Navigation ⌨️
 
@@ -76,7 +71,7 @@ Open http://127.0.0.1:5173 in your browser.
 1. Close the chat if open
 2. Press Tab multiple times until chat button is focused
 3. Press Enter to open chat
-4. Press Tab to navigate through: input field → send button → voice button → ASL button
+4. Press Tab to navigate through: microphone → input field → send button
 5. Type a question and press Enter
 6. Press Escape to close chat
 
@@ -215,12 +210,12 @@ All questions receive relevant saved answers without a Gemini key, each labelled
 
 Test in these browsers if available:
 
-| Browser | Version | Chat | Voice | ASL |
-|---------|---------|------|-------|-----|
-| Chrome  | Latest  | ✅   | ✅    | ✅  |
-| Firefox | Latest  | ✅   | ⚠️*   | ✅  |
-| Safari  | Latest  | ✅   | ✅    | ✅  |
-| Edge    | Latest  | ✅   | ✅    | ✅  |
+| Browser | Version | Chat | Voice |
+|---------|---------|------|-------|
+| Chrome  | Latest  | ✅   | ✅    |
+| Firefox | Latest  | ✅   | ⚠️*   |
+| Safari  | Latest  | ✅   | ✅    |
+| Edge    | Latest  | ✅   | ✅    |
 
 *Firefox voice input requires `media.webspeech.recognition.enable` to be set to `true` in about:config
 
@@ -291,9 +286,9 @@ Chat support is working correctly if:
    - Requires microphone permission
    - May not work on older mobile devices
 
-2. **ASL gloss:**
-   - ASL, not Ethiopian Sign Language, and gloss notation, not video
-   - Only the six lesson captions are glossed without the model switched on
+2. **Sign language:**
+   - Lives on the lesson player, not in chat
+   - ASL gloss, not Ethiopian Sign Language, and not a recorded signer
 
 3. **Gemini:**
    - Optional. Saved answers are shown without it
