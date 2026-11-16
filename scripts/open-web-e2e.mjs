@@ -155,14 +155,23 @@ const dockPage = await dockContext.newPage({ viewport: { width: 1280, height: 90
 await dockPage.goto(base + "/dock.html", { waitUntil: "domcontentloaded" });
 await dockPage.addScriptTag({ url: `${base}/learnable/learnable.js` });
 const dockBar = dockPage.locator("learnable-toolbar").locator(".bar");
-await dockBar.waitFor();
+await dockPage.locator("learnable-toolbar").waitFor();
 const keepDock = dockPage.getByRole("button", { name: "Keep LearnAble voice" });
 if (await keepDock.count()) await keepDock.click();
+if (!(await dockBar.isVisible())) await dockPage.locator("learnable-toolbar").locator("[data-act=launcher]").click();
+await dockBar.waitFor();
 await dockBar.screenshot({ path: "/opt/cursor/artifacts/toolbar-expanded.png" });
+await dockPage.locator("learnable-toolbar").locator("summary", { hasText: "Position" }).click();
 await dockPage.locator("learnable-toolbar").locator("[data-act=collapse]").click();
 await dockPage.locator("learnable-toolbar").locator("[data-act=launcher]").screenshot({ path: "/opt/cursor/artifacts/toolbar-collapsed.png" });
 await dockPage.locator("learnable-toolbar").locator("[data-act=launcher]").click();
-await dockPage.locator("learnable-toolbar").locator("[data-corner=tr]").click();
+const topRight = dockPage.locator("learnable-toolbar").locator("[data-corner=tr]");
+await topRight.evaluate((node) => {
+  const details = node.closest("details");
+  if (details) details.open = true;
+  node.scrollIntoView({ block: "center", inline: "nearest" });
+});
+await topRight.click();
 const corner = await dockPage.locator("learnable-toolbar").getAttribute("data-corner");
 if (corner !== "tr") throw new Error(`corner ${corner}`);
 await dockPage.screenshot({ path: "/opt/cursor/artifacts/toolbar-moved.png" });

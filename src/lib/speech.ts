@@ -69,6 +69,12 @@ async function speakNow(text: string, lang: string, hooks: SpeakHooks): Promise<
   }
 
   const voices = window.speechSynthesis?.getVoices?.() ?? [];
+  if (!voices.length) {
+    const live = document.getElementById("learnable-reader-live");
+    if (live) live.textContent = "This browser has no speech voices, so LearnAble cannot speak aloud. The words stay on screen.";
+    hooks.onend?.();
+    return;
+  }
   const voice = matchingVoice(lang);
   if (!voice && voices.length > 0) {
     const spoken = await speakWithEspeak(text, lang, rate);
@@ -126,6 +132,37 @@ export function speak(text: string, lang: string, rate = 1, hooks: SpeakHooks = 
   }
   pending = null;
   void speakNow(next.text, next.lang, next.hooks);
+}
+
+export function findVoice(lang: string): "ready" | "missing" {
+  const synth = typeof window === "undefined" ? undefined : window.speechSynthesis;
+  if (!synth || typeof synth.getVoices !== "function") return "missing";
+  const voices = synth.getVoices();
+  if (!voices.length) return "missing";
+  const prefix = lang.toLowerCase().slice(0, 2);
+  return voices.some((voice) => voice.lang.toLowerCase().startsWith(prefix)) ? "ready" : "missing";
+}
+
+/** Resolves ready when a voice for the language is installed. Missing means do not pretend it spoke. */
+export function whenVoice(lang: string): Promise<"ready" | "missing"> {
+  if (findVoice(lang) === "ready") return Promise.resolve("ready");
+  const synth = typeof window === "undefined" ? undefined : window.speechSynthesis;
+  if (!synth?.addEventListener) return Promise.resolve("missing");
+  return new Promise((resolve) => {
+    let settled = false;
+    const finish = () => {
+      if (settled) return;
+      settled = true;
+      resolve(findVoice(lang));
+    };
+    try {
+      synth.addEventListener("voiceschanged", finish, { once: true });
+    } catch {
+      finish();
+      return;
+    }
+    window.setTimeout(finish, 300);
+  });
 }
 
 export function stopSpeaking(): void {

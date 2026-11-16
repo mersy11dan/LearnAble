@@ -14,6 +14,7 @@ export default tseslint.config(
       "scripts",
       "coverage",
       "node_modules",
+      "experimental",
     ],
   },
   {

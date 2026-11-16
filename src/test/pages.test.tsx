@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { axe } from "jest-axe";
 import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it } from "vitest";
@@ -27,9 +27,18 @@ async function expectClean(container: HTMLElement) {
 }
 
 describe("pages", () => {
+  it("does not mount the support chat unless the build flag is on", () => {
+    renderAt("/");
+    expect(screen.queryByRole("button", { name: "Open support chat" })).not.toBeInTheDocument();
+  });
+
   it("opens on the lesson promise", async () => {
     const { container } = renderAt("/");
     expect(screen.getByRole("heading", { level: 1, name: /still plays/i })).toBeInTheDocument();
+    await waitFor(() => expect(document.title).toBe("A lesson that still plays when the connection does not – LearnAble"));
+    expect(screen.getByRole("heading", { level: 1 })).toHaveAttribute("tabindex", "-1");
+    expect(document.getElementById("main")).toHaveAttribute("tabindex", "-1");
+    expect(screen.getByRole("link", { name: "Skip to content" })).toHaveAttribute("href", "#main");
     expect(screen.getByRole("link", { name: "Open the lesson" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "LearnAble" })).toBeInTheDocument();
     await expectClean(container);

@@ -1,3 +1,5 @@
+import { allowOrigin } from "../lib/guard";
+
 let scriptBase = "";
 let configuredBase = "";
 
@@ -25,6 +27,7 @@ export function setAssetBase(value: string | undefined): void {
   if (!value) return;
   configuredBase = new URL(value, scriptBase || `${location.origin}/`).href;
   if (!configuredBase.endsWith("/")) configuredBase += "/";
+  allowOrigin(configuredBase);
 }
 
 export function assetBase(): string {

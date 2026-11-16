@@ -12,11 +12,14 @@ export type TranslateResult = {
   message: string;
 };
 
+import { allowOrigin, safeFetch } from "./guard";
+
 const base = import.meta.env.VITE_API_BASE ?? "";
+if (base) allowOrigin(base);
 
 async function request<T>(path: string, init?: RequestInit): Promise<T | null> {
   try {
-    const response = await fetch(`${base}${path}`, {
+    const response = await safeFetch(`${base}${path}`, {
       ...init,
       signal: AbortSignal.timeout(8000),
     });

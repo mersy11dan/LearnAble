@@ -21,7 +21,7 @@ export type Lesson = {
   voiceNote: string;
   video: { en: string; am: string; poster: string };
   audio: { en: string; am: string };
-  captions: { en: string; am: string; descriptions: string };
+  captions: { en: string; am: string; descriptions: string; descriptionsAm: string };
   signVideo: string;
   signPoster: string;
   figure: { src: string; alt: string; long: string };

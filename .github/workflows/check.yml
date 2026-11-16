@@ -33,5 +33,7 @@ jobs:
           node scripts/voice-e2e.mjs
           node scripts/open-web-e2e.mjs
           node scripts/regressions-e2e.mjs
+          node scripts/a11y-names-e2e.mjs
+          node scripts/bandwidth-e2e.mjs
         env:
           CHROME_PATH: /usr/bin/google-chrome

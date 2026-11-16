@@ -1,0 +1,7 @@
+Contact: mailto:security@example.invalid
+Expires: 2027-11-15T00:00:00.000Z
+Preferred-Languages: en
+Canonical: https://example.invalid/.well-known/security.txt
+Policy: https://github.com/mersy11dan/LearnAble/blob/main/docs/SECURITY.md
+
+This file is a sample for the LearnAble demo. Replace the contact address before using it on a real host.

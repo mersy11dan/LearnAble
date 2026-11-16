@@ -4,14 +4,32 @@ import { verifyOpenBadge } from "../lib/badge";
 import { toBrf } from "../lib/braille";
 import { commandForKey } from "../lib/commands";
 import { buildClientPack, saveFile } from "../lib/pack";
-import { needsExtendedDescription } from "../lib/describe";
-import { speak, stopSpeaking } from "../lib/speech";
+import { cueToDeliver, needsExtendedDescription, scheduleDescriptions, spokenSeconds } from "../lib/describe";
+import { speak, stopSpeaking, whenVoice } from "../lib/speech";
 import { buildTaggedPdf } from "../lib/taggedPdf";
 import { formatTime } from "../lib/time";
 import { cueAt, cuesToVtt, parseVtt, type Cue } from "../lib/vtt";
+import { safeFetch } from "../lib/guard";
 import { resolveUrl } from "./assets";
+import {
+  DEFAULT_FRAME,
+  EMBED_SIGN_FRAME_KEY,
+  NUDGE_PX,
+  NUDGE_SHIFT_PX,
+  boundsFromRect,
+  clampFrame,
+  mediaMatches,
+  movedAnnouncement,
+  nudgeFrame,
+  readStoredFrame,
+  writeStoredFrame,
+  type Frame,
+} from "../lib/signFrame";
+import { presentSign, type SignLoad } from "../lib/signLabel";
+import { attachSignSync } from "../lib/signSync";
+import { closeHands, presentHands } from "./signer";
 import { ASL_GLOSS_LABEL, GLOSS_MODEL, signPanel, signSummary, visualsFor, type SignVisual } from "./signs";
-import { getFeatures, getSettings, getTheme, optedIn, PRESETS, updateSettings, type CaptionPreset } from "./settings";
+import { getFeatures, getSettings, getTheme, optedIn, PRESETS, updateSettings, type CaptionPreset, type DescriptionMode } from "./settings";
 import { widgetCss } from "./styles";
 
 function emit(element: HTMLElement, name: string, detail: unknown): void {
@@ -27,13 +45,23 @@ export class LearnAblePlayer extends HTMLElement {
   private en: Cue[] = [];
   private am: Cue[] = [];
   private ad: Cue[] = [];
+  private adAm: Cue[] = [];
   private mode: "off" | "en" | "am" = "en";
-  private adOn = false;
   private signOn = true;
-  private lastAd = "";
   private held = false;
+  private adLock: { text: string; start: number; holdUntil: number } | null = null;
+  private adTimer = 0;
   private built = false;
   private handKey = "";
+  private signLoad: SignLoad = "idle";
+  private moving = false;
+  private frame: Frame = { ...DEFAULT_FRAME };
+  private moveTimer = 0;
+  private stopSignSync: (() => void) | undefined;
+  private readonly onHostResize = (): void => {
+    this.frame = clampFrame(this.frame, this.signBounds());
+    this.layoutSign();
+  };
 
   constructor() {
     super();
@@ -46,6 +74,7 @@ export class LearnAblePlayer extends HTMLElement {
     this.applySettings();
     window.addEventListener("learnable-settings", this.onSettings);
     window.addEventListener("learnable-speech-cancel", this.onSpeechCancel);
+    window.addEventListener("resize", this.onHostResize);
   }
 
   refresh(): void {
@@ -58,6 +87,10 @@ export class LearnAblePlayer extends HTMLElement {
   disconnectedCallback(): void {
     window.removeEventListener("learnable-settings", this.onSettings);
     window.removeEventListener("learnable-speech-cancel", this.onSpeechCancel);
+    window.removeEventListener("resize", this.onHostResize);
+    this.stopSignSync?.();
+    window.clearTimeout(this.moveTimer);
+    window.clearTimeout(this.adTimer);
     stopSpeaking();
   }
 
@@ -80,21 +113,64 @@ export class LearnAblePlayer extends HTMLElement {
     this.root.innerHTML = `
       <style>${widgetCss}
 :host { position: relative; z-index: auto; width: 100%; max-width: none; max-height: none; container-type: inline-size; }
-.media-row { grid-template-columns: minmax(0, 1fr) auto minmax(16rem, 38%); }
+.media-row { grid-template-columns: minmax(0, 1fr); }
 .stage, .stage video, video { min-width: 0; max-width: 100%; }
+.stage { min-height: 12rem; }
+.caption { position: static; left: auto; bottom: auto; transform: none; max-width: 40rem; margin: 0.5rem 0 0; }
 @container (max-width: 36rem) {
   .media-row { grid-template-columns: 1fr; }
 }
-.sign h2 { font-size: 1rem; }
-.hands { display: flex; flex-wrap: wrap; gap: 0.35rem; margin: 0.5rem 0.75rem; }
-.hands figure { margin: 0; width: 3.4rem; }
-.hands img, .hands .point { width: 3.4rem; height: 3.4rem; object-fit: contain; background: #f7f4ee; border: 2px solid var(--color-line); }
-.hands figcaption { font-size: 0.75rem; text-align: center; color: var(--color-ink); }
-.hands figure[data-current] img, .hands figure[data-current] .point { border-color: var(--color-focus); }
-.point { display: grid; place-items: center; font-size: 0.7rem; color: #172033; }
+.sign { height: auto; overflow: visible; }
+.sign-head {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  min-width: 0;
+  background: var(--color-navy);
+  color: var(--color-navy-ink);
+  padding: 0.5rem 0.75rem;
+}
+.sign-head h2 {
+  flex: 1 1 auto;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  background: transparent;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  overflow-wrap: normal;
+  word-break: keep-all;
+}
+.sign-head .sign-resize-grip,
+.sign .row button,
+.sign-grip {
+  position: static;
+  flex: 0 0 auto;
+  width: auto;
+  height: auto;
+  min-width: max-content;
+  max-width: none;
+  white-space: nowrap;
+  overflow-wrap: normal;
+  word-break: keep-all;
+  writing-mode: horizontal-tb;
+}
 .gloss-small { font-size: 0.95rem; }
 .sign-info { margin: 0.35rem 0.75rem 0.6rem; }
 .sign-info summary { cursor: pointer; min-height: 2.75rem; display: flex; align-items: center; }
+.sign-float { position: absolute; z-index: 5; margin-top: 0; }
+.sign-stacked.sign-float { position: static; left: auto; top: auto; width: auto; height: auto; }
+.sign-drag-handle { touch-action: none; cursor: grab; }
+.sign-resize-grip { position: static; width: auto; height: auto; min-width: max-content; cursor: nwse-resize; white-space: nowrap; }
+.sign-missing, .sign-video-label, .sign-moved { margin: 0.5rem 0.75rem; }
+.sign-move-controls { display: contents; }
+.sign-stacked .sign-move-controls, .sign-move-controls[hidden] { display: none; }
+@media (max-width: 52rem) {
+  .sign-move-controls { display: none; }
+}
 .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
 .media-error { margin: 0.5rem 0.75rem; }
 .media-error a { color: var(--color-focus); }
@@ -110,37 +186,56 @@ export class LearnAblePlayer extends HTMLElement {
         <button type="button" class="sign-grip" aria-label="Resize the sign panel">Resize</button>
         ${
           sign
-            ? `<aside class="sign" data-sign aria-label="ASL. ${ASL_GLOSS_LABEL}">
-                <h2>ASL</h2>
+            ? `<aside class="sign" data-sign aria-label="${ASL_GLOSS_LABEL}">
+                <div class="sign-head">
+                  <h2 data-sign-heading class="sign-drag-handle">ASL</h2>
+                  <button type="button" class="sign-resize-grip" data-sign-resize aria-label="Resize sign window">Resize</button>
+                </div>
                 <p class="sr" aria-live="polite" data-sign-live></p>
+                <p class="sign-missing" data-sign-notice hidden></p>
+                <p class="sign-video-label" data-sign-label hidden></p>
+                <video data-sign-video muted playsinline preload="metadata" hidden></video>
                 <div class="hands" data-hands></div>
                 <p class="sign-kind" data-sign-kind></p>
                 <p class="gloss gloss-small" data-gloss-corrected lang="en"></p>
                 <p class="sign-note" data-sign-note></p>
                 <details class="sign-info">
                   <summary>About this ASL</summary>
-                  <p>${ASL_GLOSS_LABEL}. The pictures are the main content. The corrected gloss is under them. A Deaf ASL signer should review the hand correction. This is not a recorded signer.</p>
+                  <p>${ASL_GLOSS_LABEL}. Computer-generated signing uses ASL fingerspelling. A real recording is optional. If you have one, put an H.264 file at public/media/signs/ and set its clip in src/content/signs.json. This panel does not require that file.</p>
                   <p data-model-term>Model output (${GLOSS_MODEL})</p>
                   <p class="gloss gloss-small" data-gloss-model lang="en"></p>
                   <p>Fingerspelling drawings are public domain, from WPClipart (edited by Paul Sherman), the files Sign language A.svg through Z.svg on Wikimedia Commons. ASL-LEX is CC BY-NC, so it is not included. Lifeprint and Handspeak are not open licences, so they are not included. No lexical sign picture is shipped. Every word here is fingerspelled.</p>
                 </details>
                 <p class="spell" data-spell></p>
-                <video data-sign-video muted playsinline preload="metadata" hidden></video>
+                <video data-gloss-clip muted playsinline preload="metadata" hidden></video>
+                <p class="sign-moved" aria-live="polite" data-sign-moved></p>
                 <div class="row">
-                  <button type="button" data-act="left">Narrower</button>
-                  <button type="button" data-act="right">Wider</button>
+                  <span class="sign-move-controls">
+                    <button type="button" data-act="move" aria-pressed="false" aria-keyshortcuts="ArrowUp ArrowDown ArrowLeft ArrowRight">Move</button>
+                  </span>
                   <button type="button" data-act="shrink">Smaller</button>
                   <button type="button" data-act="grow">Larger</button>
+                  <button type="button" data-act="reset">Reset</button>
+                  <button type="button" data-act="left">Narrower</button>
+                  <button type="button" data-act="right">Wider</button>
                 </div>
               </aside>`
             : ""
         }
         </div>
         <p class="status" aria-live="polite">Paused.</p>
+        <p class="time" data-time>0:00 of 0:00.</p>
+        <p class="ad-live" aria-live="polite" data-ad-live></p>
         <div class="row">
           <button type="button" data-act="play">Play</button>
           <button type="button" data-act="captions">Captions: English</button>
-          ${describe ? `<button type="button" data-act="ad" aria-pressed="${getSettings().audioDescription}">Audio description</button>` : ""}
+          ${describe ? `<button type="button" data-act="ad" aria-pressed="${getSettings().audioDescription}">Audio description</button>
+          <fieldset data-ad-choice>
+            <legend>Audio description</legend>
+            <label><input type="radio" name="ad-mode" value="off" data-ad-mode="off"${getSettings().descriptionMode === "off" ? " checked" : ""}> Off</label>
+            <label><input type="radio" name="ad-mode" value="spoken" data-ad-mode="spoken"${getSettings().descriptionMode === "spoken" ? " checked" : ""}> Spoken</label>
+            <label><input type="radio" name="ad-mode" value="text" data-ad-mode="text"${getSettings().descriptionMode === "text" ? " checked" : ""}> Text for my screen reader</label>
+          </fieldset>` : ""}
           ${sign ? `<button type="button" data-act="sign" aria-pressed="true">Sign window</button>` : ""}
           <label>Caption size <input data-act="size" type="range" min="1" max="2.2" step="0.1" value="1.15" /></label>
           <label>Caption colours
@@ -164,6 +259,8 @@ export class LearnAblePlayer extends HTMLElement {
         <ol class="transcript"></ol>
         <h2>Job card</h2>
         <p data-job>${jobs[0]?.summary ?? ""}</p>
+        <p lang="am" data-job-am>${jobs[0]?.summaryAm ?? ""}</p>
+        <p data-job-voice role="status"></p>
         <div class="row">
           <button type="button" data-act="job">Play audio summary</button>
           <button type="button" data-act="badge">Check certificate</button>
@@ -184,10 +281,40 @@ export class LearnAblePlayer extends HTMLElement {
       if (event.key === "Home") this.setSignColumn(12);
       if (event.key === "End") this.setSignColumn(24);
     });
+    this.root.querySelector<HTMLElement>("[data-sign-heading]")?.addEventListener("pointerdown", (event) => this.dragFrame(event));
+    this.root.querySelector<HTMLElement>("[data-sign-resize]")?.addEventListener("pointerdown", (event) => this.resizeFramePointer(event));
+    this.root.querySelector<HTMLButtonElement>("[data-act=move]")?.addEventListener("keydown", (event) => this.onMoveKey(event));
+    this.signClip = this.root.querySelector("[data-sign-video]");
+    this.signClip?.addEventListener("loadeddata", () => {
+      this.signLoad = "ready";
+      this.applySignPresentation();
+      this.bindSignSync();
+    });
+    this.signClip?.addEventListener("error", () => {
+      this.signLoad = "error";
+      if (this.signClip) this.signClip.hidden = true;
+      this.applySignPresentation();
+      this.bindSignSync();
+    });
+    this.frame = readStoredFrame(this.storage(), EMBED_SIGN_FRAME_KEY) ?? { ...DEFAULT_FRAME };
+    this.layoutSign();
+    this.applySignSource();
     const stage = this.root.querySelector<HTMLElement>(".stage");
     stage?.addEventListener("keydown", (event) => this.onKey(event));
     this.root.querySelectorAll<HTMLButtonElement>("button[data-act]").forEach((button) => {
       button.addEventListener("click", () => this.onAction(button.dataset.act || ""));
+    });
+    this.root.addEventListener("click", (event) => {
+      const button = event.target instanceof Element ? event.target.closest("button[data-act]") : null;
+      if (!(button instanceof HTMLButtonElement)) return;
+      if (button.dataset.act === "sign-prev" || button.dataset.act === "sign-next") return;
+    });
+    this.root.querySelectorAll<HTMLInputElement>("[data-ad-mode]").forEach((input) => {
+      input.addEventListener("change", () => {
+        if (!input.checked) return;
+        const mode: DescriptionMode = input.value === "text" || input.value === "spoken" ? input.value : "off";
+        this.applyDescriptionMode(mode);
+      });
     });
     this.root.querySelector<HTMLInputElement>("[data-act=size]")?.addEventListener("input", (event) => {
       const value = Number((event.target as HTMLInputElement).value);
@@ -200,14 +327,21 @@ export class LearnAblePlayer extends HTMLElement {
       this.styleCaption(getSettings().captionScale, preset);
     });
     this.video?.addEventListener("timeupdate", () => this.sync());
+    this.video?.addEventListener("seeking", () => {
+      this.adLock = null;
+      window.clearTimeout(this.adTimer);
+      stopSpeaking();
+    });
     this.video?.addEventListener("error", () => this.showMediaError());
     this.video?.addEventListener("play", () => {
       this.clearMediaError();
       this.setPlayLabel(true);
+      this.setStatus("Playing.");
       emit(this, "learnable-play", { playing: true });
     });
     this.video?.addEventListener("pause", () => {
       this.setPlayLabel(false);
+      if (!this.held) this.setStatus("Paused.");
       emit(this, "learnable-play", { playing: false });
     });
   }
@@ -226,11 +360,11 @@ export class LearnAblePlayer extends HTMLElement {
       if (src) fallback.src = resolveUrl(src);
     }
     this.ensureDescriptionTrack();
-    this.signClip = this.root.querySelector("[data-sign-video]");
-    const signUrl = this.getAttribute("sign");
-    if (this.signClip && signUrl && signUrl !== "false") this.signClip.src = resolveUrl(signUrl);
     const frame = this.querySelector("iframe");
-    if (frame && !frame.getAttribute("title")) frame.setAttribute("title", "Embedded lesson video");
+    if (frame) {
+      if (!frame.getAttribute("title")) frame.setAttribute("title", "Embedded lesson video");
+      if (!frame.getAttribute("sandbox")) frame.setAttribute("sandbox", "allow-scripts allow-same-origin allow-presentation");
+    }
   }
 
   private signColumn(): number {
@@ -264,6 +398,8 @@ export class LearnAblePlayer extends HTMLElement {
     this.en = await this.fetchCues(this.getAttribute("captions-en"));
     this.am = await this.fetchCues(this.getAttribute("captions-am"));
     this.ad = await this.fetchCues(this.getAttribute("describe"));
+    const amDescription = this.getAttribute("descriptions-am") || (this.getAttribute("describe") && this.getAttribute("describe") !== "false" ? "/media/descriptions-am.vtt" : null);
+    this.adAm = await this.fetchCues(amDescription);
     const sign = this.root.querySelector<HTMLElement>("[data-sign]");
     if (sign) sign.hidden = !this.signOn;
     this.renderTranscript();
@@ -292,7 +428,7 @@ export class LearnAblePlayer extends HTMLElement {
   private async fetchCues(url: string | null): Promise<Cue[]> {
     if (!url || url === "false") return [];
     try {
-      const response = await fetch(resolveUrl(url));
+      const response = await safeFetch(resolveUrl(url));
       if (!response.ok) return [];
       return parseVtt(await response.text());
     } catch {
@@ -311,9 +447,11 @@ export class LearnAblePlayer extends HTMLElement {
     if (preset) preset.value = settings.captionPreset;
     if (size) size.value = String(settings.captionScale);
     this.styleCaption(settings.captionScale, settings.captionPreset);
-    this.adOn = settings.audioDescription;
-    const ad = this.root.querySelector<HTMLButtonElement>("[data-act=ad]");
-    if (ad) ad.setAttribute("aria-pressed", String(this.adOn));
+    this.root.querySelectorAll<HTMLInputElement>("[data-ad-mode]").forEach((input) => {
+      input.checked = input.value === settings.descriptionMode;
+    });
+    const adButton = this.root.querySelector<HTMLButtonElement>("[data-act=ad]");
+    if (adButton) adButton.setAttribute("aria-pressed", String(settings.descriptionMode !== "off"));
     this.sync();
   }
 
@@ -331,6 +469,18 @@ export class LearnAblePlayer extends HTMLElement {
       this.video.append(track);
     }
     if (track.getAttribute("src") !== url) track.src = url;
+    const amSrc = this.getAttribute("descriptions-am") || "/media/descriptions-am.vtt";
+    let amTrack = this.video.querySelector<HTMLTrackElement>("track[data-descriptions-am]");
+    if (!amTrack) {
+      amTrack = document.createElement("track");
+      amTrack.kind = "descriptions";
+      amTrack.label = "Amharic audio description";
+      amTrack.srclang = "am";
+      amTrack.dataset.descriptionsAm = "true";
+      this.video.append(amTrack);
+    }
+    const amUrl = resolveUrl(amSrc);
+    if (amTrack.getAttribute("src") !== amUrl) amTrack.src = amUrl;
   }
 
   private resumeHeld(): void {
@@ -351,52 +501,22 @@ export class LearnAblePlayer extends HTMLElement {
   private setPlayLabel(playing: boolean): void {
     const button = this.root.querySelector<HTMLButtonElement>("[data-act=play]");
     if (button) button.textContent = playing ? "Pause" : "Play";
-    const status = this.root.querySelector(".status");
-    const current = status?.textContent || "";
-    if (status && this.video && (current.startsWith("Playing") || current.startsWith("Paused"))) {
-      status.textContent = `${playing ? "Playing" : "Paused"}. ${formatTime(this.video.currentTime)} of ${formatTime(this.video.duration || 0)}.`;
-    }
+    const clock = this.root.querySelector("[data-time]");
+    if (clock && this.video) clock.textContent = `${formatTime(this.video.currentTime)} of ${formatTime(this.video.duration || 0)}.`;
   }
 
-  private paintHands(frames: SignVisual[], cue?: Cue): void {
-    const host = this.root.querySelector("[data-hands]");
-    if (!host) return;
-    const key = frames.map((frame) => frame.alt).join("|");
-    if (key !== this.handKey) {
-      this.handKey = key;
-      host.replaceChildren();
-      for (const frame of frames) {
-        const figure = document.createElement("figure");
-        if (frame.src) {
-          const image = document.createElement("img");
-          image.src = resolveUrl(frame.src);
-          image.alt = frame.alt;
-          figure.append(image);
-        } else {
-          const point = document.createElement("div");
-          point.className = "point";
-          point.textContent = frame.caption;
-          point.setAttribute("role", "img");
-          point.setAttribute("aria-label", frame.alt);
-          figure.append(point);
-        }
-        const caption = document.createElement("figcaption");
-        caption.textContent = frame.caption;
-        figure.append(caption);
-        host.append(figure);
-      }
+  private paintHands(frames: SignVisual[], note = "", word = ""): void {
+    const host = this.root.querySelector<HTMLElement>("[data-hands]");
+    if (host) host.replaceChildren();
+    const key = frames.map((frame) => frame.alt).join("|") + note;
+    if (!frames.length) {
+      this.handKey = "";
+      closeHands(false);
+      return;
     }
-    const count = frames.length;
-    let current = -1;
-    if (cue && count && this.video) {
-      const span = Math.max(0.2, cue.end - cue.start);
-      const ratio = Math.min(0.999, Math.max(0, (this.video.currentTime - cue.start) / span));
-      current = Math.floor(ratio * count);
-    }
-    host.querySelectorAll("figure").forEach((figure, index) => {
-      if (index === current) figure.setAttribute("data-current", "true");
-      else figure.removeAttribute("data-current");
-    });
+    if (key === this.handKey) return;
+    this.handKey = key;
+    presentHands(frames, { word, note, anchor: this, source: "lesson" });
   }
 
   private sync(): void {
@@ -410,8 +530,11 @@ export class LearnAblePlayer extends HTMLElement {
       caption.setAttribute("lang", this.mode === "am" ? "am" : "en");
     }
     const panel = signPanel(cue?.text || "", this.mode);
-    const frames = panel.gloss ? visualsFor(panel.gloss) : [];
-    this.paintHands(frames, cue);
+    const englishCue = this.mode === "am" ? cueAt(this.en, time) : cue;
+    const glossSource = this.mode === "am" ? signPanel(englishCue?.text || "", "en") : panel;
+    const frames = glossSource.gloss ? visualsFor(glossSource.gloss) : [];
+    const amharicNote = this.mode === "am" ? "English letters only. Amharic is not fingerspelled." : "";
+    this.paintHands(frames, amharicNote, glossSource.gloss);
     const corrected = this.root.querySelector("[data-gloss-corrected]");
     const model = this.root.querySelector("[data-gloss-model]");
     const modelTerm = this.root.querySelector<HTMLElement>("[data-model-term]");
@@ -431,34 +554,21 @@ export class LearnAblePlayer extends HTMLElement {
     if (live && live.textContent !== summary) live.textContent = summary;
     const spell = this.root.querySelector("[data-spell]");
     if (spell) spell.textContent = frames.length ? "" : panel.spell;
-    if (this.signClip) {
+    const glossClip = this.root.querySelector<HTMLVideoElement>("[data-gloss-clip]");
+    if (glossClip) {
       if (panel.clip) {
-        this.signClip.hidden = false;
-        if (this.signClip.getAttribute("src") !== resolveUrl(panel.clip)) this.signClip.src = resolveUrl(panel.clip);
-      } else this.signClip.hidden = true;
-    }
-    if (this.signClip?.getAttribute("src") && this.video && Math.abs(this.signClip.currentTime - time) > 0.4) {
-      this.signClip.currentTime = time;
-    }
-    if (this.adOn) {
-      const description = cueAt(this.ad, time);
-      if (!description) this.lastAd = "";
-      else if (description.text !== this.lastAd) {
-        this.lastAd = description.text;
-        const settings = getSettings();
-        const gap = description.end - description.start;
-        const extended = needsExtendedDescription(description.text, gap, settings.readRate);
-        if (extended && !this.video.paused) {
-          this.video.pause();
-          this.held = true;
+        glossClip.hidden = false;
+        const next = resolveUrl(panel.clip);
+        if (glossClip.getAttribute("src") !== next) {
+          glossClip.src = next;
+          void glossClip.play().catch(() => undefined);
         }
-        speak(description.text, "en", settings.readRate, {
-          pitch: settings.readPitch,
-          onend: () => this.resumeHeld(),
-          oncancel: () => this.resumeHeld(),
-        });
+      } else if (!glossClip.hidden) {
+        glossClip.pause();
+        glossClip.hidden = true;
       }
     }
+    this.deliverDescription();
     const button = this.root.querySelector<HTMLButtonElement>("[data-act=captions]");
     if (button) button.textContent = this.mode === "off" ? "Captions: off" : this.mode === "am" ? "Captions: Amharic" : "Captions: English";
     this.setPlayLabel(!this.video.paused);
@@ -483,10 +593,20 @@ export class LearnAblePlayer extends HTMLElement {
     try {
       if (this.video.paused) {
         await this.video.play();
-        if (this.signClip?.getAttribute("src")) void this.signClip.play().catch(() => undefined);
+        if (this.signClip?.getAttribute("src")) {
+          try {
+            void this.signClip.play().catch(() => undefined);
+          } catch {
+            /* The lesson keeps playing when the sign file cannot. */
+          }
+        }
       } else {
         this.video.pause();
-        this.signClip?.pause();
+        try {
+          this.signClip?.pause();
+        } catch {
+          /* The lesson keeps its own pause state. */
+        }
       }
     } catch {
       this.showMediaError("The video did not play. Captions are still listed when the file loads.");
@@ -523,16 +643,72 @@ export class LearnAblePlayer extends HTMLElement {
   private cycleCaptions(): void {
     this.mode = this.mode === "off" ? "en" : this.mode === "en" ? "am" : "off";
     this.sync();
+    this.setStatus(this.mode === "off" ? "Captions off." : this.mode === "am" ? "Amharic captions on." : "English captions on.");
     emit(this, "learnable-captions", { lang: this.mode });
   }
 
+  private applyDescriptionMode(mode: DescriptionMode): void {
+    updateSettings({ descriptionMode: mode, audioDescription: mode !== "off" });
+    this.adLock = null;
+    window.clearTimeout(this.adTimer);
+    if (mode !== "spoken") stopSpeaking();
+    if (mode === "off") this.resumeHeld();
+    const live = this.root.querySelector<HTMLElement>("[data-ad-live]");
+    if (live && mode !== "text") live.textContent = "";
+    const button = this.root.querySelector<HTMLButtonElement>("[data-act=ad]");
+    if (button) button.setAttribute("aria-pressed", String(mode !== "off"));
+    this.setStatus(mode === "off" ? "Audio description off." : mode === "text" ? "Audio description as text." : "Audio description on.");
+    this.sync();
+  }
+
   private toggleAd(): void {
-    const on = !getSettings().audioDescription;
-    updateSettings({ audioDescription: on });
-    if (!on) {
-      stopSpeaking();
-      this.resumeHeld();
+    const current = getSettings().descriptionMode;
+    const next: DescriptionMode = current === "off" ? "spoken" : current === "spoken" ? "text" : "off";
+    this.applyDescriptionMode(next);
+  }
+
+  private descriptionCues(): Cue[] {
+    return getSettings().lang === "am" && this.adAm.length ? this.adAm : this.ad;
+  }
+
+  private deliverDescription(): void {
+    if (!this.video) return;
+    const settings = getSettings();
+    const live = this.root.querySelector<HTMLElement>("[data-ad-live]");
+    if (settings.descriptionMode === "off") {
+      this.adLock = null;
+      if (live) live.textContent = "";
+      return;
     }
+    if (this.video.paused && !this.held) return;
+    const planned = scheduleDescriptions(this.descriptionCues(), settings.readRate);
+    const cue = cueToDeliver(planned, this.video.currentTime, this.adLock);
+    if (!cue) return;
+    this.adLock = { text: cue.text, start: cue.start, holdUntil: cue.holdUntil };
+    const extended = needsExtendedDescription(cue.text, Math.max(0, cue.end - cue.start), settings.readRate);
+    const lang = settings.lang === "am" && this.adAm.length ? "am" : "en";
+    if (extended && !this.video.paused) {
+      this.held = true;
+      this.video.pause();
+    }
+    if (settings.descriptionMode === "text") {
+      stopSpeaking();
+      if (live) {
+        live.lang = lang;
+        live.textContent = cue.text;
+      }
+      if (extended) {
+        window.clearTimeout(this.adTimer);
+        this.adTimer = window.setTimeout(() => this.resumeHeld(), spokenSeconds(cue.text, settings.readRate) * 1000);
+      }
+      return;
+    }
+    if (live) live.textContent = "";
+    speak(cue.text, lang, settings.readRate, {
+      pitch: settings.readPitch,
+      onend: () => this.resumeHeld(),
+      oncancel: () => this.resumeHeld(),
+    });
   }
 
   private nudge(direction: string): void {
@@ -544,12 +720,201 @@ export class LearnAblePlayer extends HTMLElement {
     this.setSignColumn(this.signColumn() + step * 2);
   }
 
+  private signLang(): string {
+    return (this.getAttribute("sign-lang") || "").trim().toLowerCase();
+  }
+
+  private signOffset(): number {
+    const value = Number(this.getAttribute("sign-offset"));
+    return Number.isFinite(value) ? value : 0;
+  }
+
+  private storage(): Storage | null {
+    try {
+      return window.localStorage;
+    } catch {
+      return null;
+    }
+  }
+
+  private signBounds() {
+    const rect = this.getBoundingClientRect();
+    if (rect.width >= 32 && rect.height >= 32) return { left: 0, top: 0, width: rect.width, height: rect.height };
+    return boundsFromRect(null, { width: window.innerWidth || 0, height: window.innerHeight || 0 });
+  }
+
+  private signStacked(): boolean {
+    if (mediaMatches("(max-width: 52rem)")) return true;
+    const width = this.getBoundingClientRect().width;
+    return width > 0 && width <= 36 * 16;
+  }
+
+  private persistFrame(): void {
+    writeStoredFrame(this.storage(), EMBED_SIGN_FRAME_KEY, this.frame);
+  }
+
+  private layoutSign(): void {
+    const sign = this.root.querySelector<HTMLElement>(".sign");
+    if (!sign) return;
+    const stacked = this.signStacked();
+    sign.classList.toggle("sign-stacked", stacked);
+    sign.classList.remove("sign-float");
+    const move = this.root.querySelector<HTMLElement>(".sign-move-controls");
+    if (move) move.hidden = stacked;
+    sign.style.left = "";
+    sign.style.top = "";
+    sign.style.width = "";
+    sign.style.height = "";
+  }
+
+  private applySignSource(): void {
+    this.signClip = this.root.querySelector("[data-sign-video]");
+    const src = this.getAttribute("sign");
+    const view = presentSign({ src, signLang: this.signLang(), load: "idle" });
+    this.signLoad = view.showVideo ? "loading" : "idle";
+    if (this.signClip) {
+      this.signClip.muted = true;
+      if (!view.showVideo) {
+        this.signClip.removeAttribute("src");
+        this.signClip.hidden = true;
+      } else if (src) {
+        const url = resolveUrl(src);
+        if (this.signClip.getAttribute("src") !== url) this.signClip.src = url;
+        this.signClip.hidden = false;
+      }
+    }
+    this.applySignPresentation();
+    this.bindSignSync();
+  }
+
+  private applySignPresentation(): void {
+    const view = presentSign({ src: this.getAttribute("sign"), signLang: this.signLang(), load: this.signLoad });
+    const heading = this.root.querySelector("[data-sign-heading]");
+    if (heading) heading.textContent = view.shortHeading;
+    const aside = this.root.querySelector("[data-sign]");
+    if (aside) aside.setAttribute("aria-label", view.heading);
+    const notice = this.root.querySelector<HTMLElement>("[data-sign-notice]");
+    if (notice) {
+      notice.hidden = !view.missingNotice;
+      notice.textContent = view.missingNotice ?? "";
+    }
+    const label = this.root.querySelector<HTMLElement>("[data-sign-label]");
+    if (label) {
+      label.hidden = !view.videoLabel;
+      label.textContent = view.videoLabel ?? "";
+    }
+    if (this.signClip) this.signClip.hidden = !view.showVideo;
+  }
+
+  private bindSignSync(): void {
+    this.stopSignSync?.();
+    this.stopSignSync = undefined;
+    const view = presentSign({ src: this.getAttribute("sign"), signLang: this.signLang(), load: this.signLoad });
+    if (!this.video || !this.signClip || !view.showVideo) return;
+    this.stopSignSync = attachSignSync(this.video, this.signClip, () => this.signOffset());
+  }
+
+  private enterMove(): void {
+    this.moving = true;
+    this.root.querySelector("[data-act=move]")?.setAttribute("aria-pressed", "true");
+  }
+
+  private exitMove(announce = true): void {
+    this.moving = false;
+    window.clearTimeout(this.moveTimer);
+    this.root.querySelector("[data-act=move]")?.setAttribute("aria-pressed", "false");
+    if (!announce) return;
+    const live = this.root.querySelector("[data-sign-moved]");
+    if (live) live.textContent = movedAnnouncement(this.frame);
+  }
+
+  private nudgeFrameBy(dx: number, dy: number): void {
+    this.frame = nudgeFrame(this.frame, dx, dy, this.signBounds());
+    this.persistFrame();
+    this.layoutSign();
+    window.clearTimeout(this.moveTimer);
+    this.moveTimer = window.setTimeout(() => {
+      const live = this.root.querySelector("[data-sign-moved]");
+      if (live) live.textContent = movedAnnouncement(this.frame);
+    }, 800);
+  }
+
+  private onMoveKey(event: KeyboardEvent): void {
+    if (event.key === "Escape") {
+      event.preventDefault();
+      if (this.moving) this.exitMove();
+      return;
+    }
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      if (this.moving) this.exitMove();
+      else this.enterMove();
+      return;
+    }
+    if (!this.moving) return;
+    const step = event.shiftKey ? NUDGE_SHIFT_PX : NUDGE_PX;
+    let dx = 0;
+    let dy = 0;
+    if (event.key === "ArrowLeft") dx = -step;
+    else if (event.key === "ArrowRight") dx = step;
+    else if (event.key === "ArrowUp") dy = -step;
+    else if (event.key === "ArrowDown") dy = step;
+    else return;
+    event.preventDefault();
+    this.nudgeFrameBy(dx, dy);
+  }
+
+  private dragFrame(event: PointerEvent): void {
+    if (this.signStacked() || event.button !== 0) return;
+    const handle = event.currentTarget;
+    if (!(handle instanceof HTMLElement)) return;
+    const startX = event.clientX;
+    const startY = event.clientY;
+    const origin = { ...this.frame };
+    const move = (next: PointerEvent) => {
+      this.frame = nudgeFrame(origin, next.clientX - startX, next.clientY - startY, this.signBounds());
+      this.layoutSign();
+    };
+    const up = () => {
+      handle.removeEventListener("pointermove", move);
+      handle.removeEventListener("pointerup", up);
+      this.persistFrame();
+      const live = this.root.querySelector("[data-sign-moved]");
+      if (live) live.textContent = movedAnnouncement(this.frame);
+    };
+    handle.setPointerCapture(event.pointerId);
+    handle.addEventListener("pointermove", move);
+    handle.addEventListener("pointerup", up);
+  }
+
+  private resizeFramePointer(event: PointerEvent): void {
+    if (event.button !== 0) return;
+    event.preventDefault();
+    event.stopPropagation();
+    const handle = event.currentTarget;
+    if (!(handle instanceof HTMLElement)) return;
+    const startX = event.clientX;
+    const origin = this.signColumn();
+    const move = (next: PointerEvent) => {
+      this.setSignColumn(origin + (next.clientX - startX) / 16);
+    };
+    const up = () => {
+      handle.removeEventListener("pointermove", move);
+      handle.removeEventListener("pointerup", up);
+      this.persistFrame();
+    };
+    handle.setPointerCapture(event.pointerId);
+    handle.addEventListener("pointermove", move);
+    handle.addEventListener("pointerup", up);
+  }
+
   private toggleSign(): void {
     this.signOn = !this.signOn;
     const sign = this.root.querySelector<HTMLElement>("[data-sign]");
     if (sign) sign.hidden = !this.signOn;
     const button = this.root.querySelector<HTMLButtonElement>("[data-act=sign]");
     if (button) button.setAttribute("aria-pressed", String(this.signOn));
+    this.setStatus(this.signOn ? "Sign window opened." : "Sign window closed.");
   }
 
   private setStatus(message: string): void {
@@ -564,10 +929,20 @@ export class LearnAblePlayer extends HTMLElement {
   private async onAction(action: string): Promise<void> {
     if (action === "play") void this.toggle();
     if (action === "captions") this.cycleCaptions();
-    if (action === "ad") this.toggleAd();
+    if (action === "ad") this.applyDescriptionMode(getSettings().descriptionMode === "off" ? "spoken" : "off");
     if (action === "sign") this.toggleSign();
     if (action === "left" || action === "right" || action === "up" || action === "down") this.nudge(action);
     if (action === "shrink" || action === "grow") this.scaleSign(action === "grow" ? 1 : -1);
+    if (action === "move") {
+      if (this.moving) this.exitMove();
+      else this.enterMove();
+    }
+    if (action === "reset") {
+      this.frame = { ...DEFAULT_FRAME };
+      this.persistFrame();
+      this.setSignColumn(16);
+      this.layoutSign();
+    }
     if (action === "pack") {
       try {
         const packed = await buildClientPack({
@@ -591,7 +966,7 @@ export class LearnAblePlayer extends HTMLElement {
     }
     if (action === "pdf") {
       try {
-        const shipped = await fetch(resolveUrl(this.getAttribute("pdf") || "/media/learnable-lesson.pdf"));
+        const shipped = await safeFetch(resolveUrl(this.getAttribute("pdf") || "/media/learnable-lesson.pdf"));
         if (shipped.ok) {
           saveFile(new Uint8Array(await shipped.arrayBuffer()), "learnable-lesson.pdf", "application/pdf");
           this.setStatus("Tagged PDF downloaded, with Amharic and the picture description.");
@@ -626,9 +1001,17 @@ export class LearnAblePlayer extends HTMLElement {
       this.setStatus(action === "vtt-am" ? "Amharic captions downloaded." : "English captions downloaded.");
     }
     if (action === "job") {
-      const summary = this.root.querySelector("[data-job]")?.textContent || "";
-      speak(summary, "en");
-      this.setStatus("Playing the job summary on this device.");
+      const lang = getSettings().lang === "am" ? "am" : "en";
+      const job = jobs[0];
+      const summary = lang === "am" ? job?.summaryAm || "" : job?.summary || "";
+      const note = this.root.querySelector("[data-job-voice]");
+      if (lang === "am" && (await whenVoice("am")) !== "ready") {
+        if (note) note.textContent = "No Amharic voice is available on this device. The Amharic summary stays on this page.";
+        return;
+      }
+      if (note) note.textContent = "";
+      speak(summary, lang);
+      this.setStatus(lang === "am" ? "Playing the Amharic job summary on this device." : "Playing the job summary on this device.");
     }
     if (action === "badge") {
       const ok = await verifyOpenBadge();

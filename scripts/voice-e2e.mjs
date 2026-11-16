@@ -142,6 +142,14 @@ async function keyboardPass(page, path) {
   const returned = await page.evaluate(() => document.activeElement === window.__helpFrom);
   if (!returned) throw new Error(`${path} focus did not return from help`);
   const field = page.locator("learnable-toolbar").locator("[data-key=contrastMode]");
+  if (!(await page.locator("learnable-toolbar").locator(".bar").isVisible())) {
+    await page.locator("learnable-toolbar").locator("[data-act=launcher]").click();
+  }
+  await field.evaluate((node) => {
+    const details = node.closest("details");
+    if (details) details.open = true;
+    node.scrollIntoView({ block: "center", inline: "nearest" });
+  });
   await field.focus();
   await page.keyboard.press("h");
   const stayed = await page.evaluate(() => document.querySelector("learnable-toolbar")?.shadowRoot?.activeElement?.getAttribute("data-key"));
@@ -160,7 +168,9 @@ const promptFocus = await page.evaluate(() => document.activeElement?.textConten
 if (!promptFocus.includes("Keep LearnAble voice")) throw new Error(`prompt focus ${promptFocus}`);
 await prompt.screenshot({ path: "/opt/cursor/artifacts/voice-prompt.png" });
 await page.keyboard.press("Enter");
-await page.locator("learnable-toolbar").locator(".bar").screenshot({ path: "/opt/cursor/artifacts/voice-toggle.png" });
+const voiceBar = page.locator("learnable-toolbar").locator(".bar");
+if (!(await voiceBar.isVisible())) await page.locator("learnable-toolbar").locator("[data-act=launcher]").click();
+await voiceBar.screenshot({ path: "/opt/cursor/artifacts/voice-toggle.png" });
 if ((await page.locator("learnable-toolbar").locator("[data-act=voice]").getAttribute("aria-pressed")) !== "true") {
   throw new Error("voice toggle was not pressed");
 }
@@ -193,6 +203,8 @@ await page.evaluate(() => {
   if (dock) dock.hidden = false;
   if (launcher) launcher.hidden = true;
   const button = root?.querySelector("[data-act=voice]");
+  const group = button?.closest("details");
+  if (group) group.open = true;
   button?.getBoundingClientRect();
   document.dispatchEvent(new KeyboardEvent("keydown", { key: "Tab", bubbles: true, cancelable: true }));
   button?.focus();
