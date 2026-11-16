@@ -71,7 +71,7 @@ The chat support button appears in the bottom-right corner of every page. Click 
 
 ## Configuration
 
-The chat is not on the page unless the build sets `VITE_ENABLE_CHAT=true`. Answers come from `getFallbackResponse` in the browser. There is no Gemini key and no request leaves the machine. See `docs/EXPERIMENTAL.md`.
+The chat is on the page unless the build sets `VITE_ENABLE_CHAT=false`. Answers come from `getFallbackResponse` in the browser. There is no Gemini key and no request leaves the machine. See `docs/EXPERIMENTAL.md`.
 
 ## Design System
 
@@ -188,7 +188,7 @@ npm test  # Runs all existing tests
 ## Troubleshooting
 
 ### Chat button doesn't appear
-The chat is off unless `VITE_ENABLE_CHAT=true` at build time. That is the default.
+The chat is on unless `VITE_ENABLE_CHAT=false` at build time.
 
 ### Voice input not working
 - Check browser permissions for microphone

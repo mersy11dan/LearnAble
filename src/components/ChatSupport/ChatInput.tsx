@@ -1,17 +1,26 @@
-import { useState, FormEvent } from "react";
+import { FormEvent, useEffect, useState } from "react";
 
 interface ChatInputProps {
   onSend: (message: string) => void;
   disabled?: boolean;
+  spokenDraft?: string;
+  listening?: boolean;
+  onTyped?: () => void;
 }
 
-export function ChatInput({ onSend, disabled }: ChatInputProps) {
+export function ChatInput({ onSend, disabled, spokenDraft, listening, onTyped }: ChatInputProps) {
   const [input, setInput] = useState("");
+  const value = listening ? spokenDraft || input : input;
+
+  useEffect(() => {
+    if (listening) setInput("");
+  }, [listening]);
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
-    if (input.trim() && !disabled) {
-      onSend(input);
+    const text = value.trim();
+    if (text && !disabled) {
+      onSend(text);
       setInput("");
     }
   };
@@ -24,22 +33,21 @@ export function ChatInput({ onSend, disabled }: ChatInputProps) {
       <input
         id="chat-input"
         type="text"
-        value={input}
-        onChange={(e) => setInput(e.target.value)}
-        placeholder="Type your question..."
+        value={value}
+        onChange={(e) => {
+          onTyped?.();
+          setInput(e.target.value);
+        }}
+        placeholder={listening ? "Listening… speak now" : "Type a message"}
         disabled={disabled}
-        className="chat-input"
+        className={`chat-input${listening ? " chat-input-listening" : ""}`}
         aria-describedby="chat-input-hint"
+        autoComplete="off"
       />
       <span id="chat-input-hint" className="sr-only">
-        Press Enter to send your message
+        Type and press Enter to send. The microphone is spoken navigation. The box stays available if you prefer to type.
       </span>
-      <button
-        type="submit"
-        disabled={!input.trim() || disabled}
-        className="chat-send-btn"
-        aria-label="Send message"
-      >
+      <button type="submit" disabled={!value.trim() || disabled} className="chat-send-btn" aria-label="Send message">
         <svg
           width="20"
           height="20"

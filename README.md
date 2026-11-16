@@ -57,7 +57,7 @@ Implemented: Open Badges 3.0 credentials as VC-JWT, signed with Ed25519 by `POST
 
 ## Experimental chat
 
-A support chat component is in the repository and is not mounted. Set `VITE_ENABLE_CHAT=true` at build time to show it. It answers from built-in sentences in the browser. It does not call a model and it does not read an API key. The unused FastAPI app and the unused ASL panel live in `experimental/` and are not part of this demo. See [docs/EXPERIMENTAL.md](docs/EXPERIMENTAL.md). The sign window is American Sign Language gloss unless `sign-lang="ethiopian"` and a real recording is loaded. See [docs/SIGN-LANGUAGE.md](docs/SIGN-LANGUAGE.md).
+A support chat is on the page. Tap the microphone and say a page such as sessions or jobs, or type in the box. Answers stay in the browser. Set `VITE_ENABLE_CHAT=false` to hide it. It does not call a model and it does not read an API key. The unused FastAPI app and the unused ASL panel live in `experimental/` and are not part of this demo. See [docs/EXPERIMENTAL.md](docs/EXPERIMENTAL.md). The sign window is American Sign Language gloss unless `sign-lang="ethiopian"` and a real recording is loaded. See [docs/SIGN-LANGUAGE.md](docs/SIGN-LANGUAGE.md).
 
 ## Install in an hour
 

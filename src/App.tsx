@@ -2,8 +2,6 @@ import { Route, Routes } from "react-router-dom";
 import { LocaleProvider } from "./a11y/locale";
 import { Layout } from "./components/Layout";
 import { ChatSupport } from "./components/ChatSupport";
-
-const chatEnabled = import.meta.env.VITE_ENABLE_CHAT === "true";
 import { AccessibilityPage } from "./pages/AccessibilityPage";
 import { CareersPage } from "./pages/CareersPage";
 import { DemoPage } from "./pages/DemoPage";
@@ -48,7 +46,7 @@ export function App() {
         />
       </Route>
     </Routes>
-    {chatEnabled ? <ChatSupport /> : null}
+    {import.meta.env.VITE_ENABLE_CHAT === "false" ? null : <ChatSupport />}
     </LocaleProvider>
   );
 }

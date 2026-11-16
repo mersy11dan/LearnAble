@@ -9,7 +9,7 @@ LearnAble does not add analytics, cookies for tracking, or a call home. Nothing 
 | Text sent for translation or transcription | Hasab or Hugging Face, from the Flask process only | Only if that key is set and the person has checked the consent box. The request then includes `X-LearnAble-Consent: yes`. Default is no key and no consent |
 | Image sent for a description | Hugging Face, from the Flask process only | Same consent rule. Default is off |
 | Speech synthesis audio | Hasab, from the Flask process only | Same consent rule. With no key, the page uses the device voice and sends nothing |
-| Support chat text | Nowhere. Answers are chosen in the browser from built-in sentences | The chat is not mounted unless `VITE_ENABLE_CHAT=true`. There is no browser API key |
+| Support chat text | Nowhere. Answers are chosen in the browser from built-in sentences | The chat is mounted unless `VITE_ENABLE_CHAT=false`. There is no browser API key |
 | Certificate request | The LearnAble Flask process on this host (`POST /api/credentials`) | Only after the person finishes a lesson and asks for a certificate. A display name is stored only when they tick the consent box. If the API is down, the page shows the built-in demo badge and sends nothing |
 | Certificate check | The same Flask process, or the published demo badge in the browser | Employers open `/verify/<id>` with no login. The private key stays in `server/data/` or at `LEARNABLE_SIGNING_KEY`, both git-ignored |
 | Experimental FastAPI app | Not running. Not in Docker Compose | Not used by the demo |

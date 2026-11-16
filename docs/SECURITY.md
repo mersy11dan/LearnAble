@@ -1,6 +1,6 @@
 # Security notes for the embed
 
-LearnAble is a script a host pastes into a page. The repository is public. Nothing in a `VITE_` variable is a secret. `VITE_API_BASE` is only the public address of this site’s own transcript service. `VITE_ENABLE_CHAT` is a flag, and the default build does not mount the chat. Do not put a model key in any `VITE_` name.
+LearnAble is a script a host pastes into a page. The repository is public. Nothing in a `VITE_` variable is a secret. `VITE_API_BASE` is only the public address of this site’s own transcript service. `VITE_ENABLE_CHAT=false` hides the support chat. Do not put a model key in any `VITE_` name.
 
 ## What this pass fixes
 

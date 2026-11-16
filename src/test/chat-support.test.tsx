@@ -1,9 +1,18 @@
 import { describe, it, expect, vi } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
 import * as matchers from "@testing-library/jest-dom/matchers";
 
 expect.extend(matchers);
 import { ChatSupport } from "../components/ChatSupport";
+
+function renderChat() {
+  return render(
+    <MemoryRouter>
+      <ChatSupport />
+    </MemoryRouter>,
+  );
+}
 
 Element.prototype.scrollIntoView = vi.fn();
 
@@ -20,6 +29,8 @@ vi.mock("../utils/speechRecognition", () => ({
     startListening: vi.fn(),
     stopListening: vi.fn(),
     transcript: "",
+    interimTranscript: "",
+    error: null,
     isSupported: true,
     isListening: false,
   }),
@@ -36,13 +47,13 @@ vi.mock("../utils/speechSynthesis", () => ({
 
 describe("ChatSupport", () => {
   it("renders the floating action button when closed", () => {
-    render(<ChatSupport />);
+    renderChat();
     const fab = screen.getByLabelText("Open support chat");
     expect(fab).toBeInTheDocument();
   });
 
   it("opens the chat when clicking the FAB", () => {
-    render(<ChatSupport />);
+    renderChat();
     const fab = screen.getByLabelText("Open support chat");
     fireEvent.click(fab);
     
@@ -51,7 +62,7 @@ describe("ChatSupport", () => {
   });
 
   it("displays the initial welcome message", () => {
-    render(<ChatSupport />);
+    renderChat();
     const fab = screen.getByLabelText("Open support chat");
     fireEvent.click(fab);
     
@@ -59,7 +70,7 @@ describe("ChatSupport", () => {
   });
 
   it("has accessible input field", () => {
-    render(<ChatSupport />);
+    renderChat();
     const fab = screen.getByLabelText("Open support chat");
     fireEvent.click(fab);
     
@@ -69,7 +80,7 @@ describe("ChatSupport", () => {
   });
 
   it("can type and submit a message", async () => {
-    render(<ChatSupport />);
+    renderChat();
     const fab = screen.getByLabelText("Open support chat");
     fireEvent.click(fab);
     
@@ -87,7 +98,7 @@ describe("ChatSupport", () => {
   });
 
   it("closes when clicking the close button", () => {
-    render(<ChatSupport />);
+    renderChat();
     const fab = screen.getByLabelText("Open support chat");
     fireEvent.click(fab);
     
@@ -99,7 +110,7 @@ describe("ChatSupport", () => {
   });
 
   it("can minimize and expand the chat", () => {
-    render(<ChatSupport />);
+    renderChat();
     const fab = screen.getByLabelText("Open support chat");
     fireEvent.click(fab);
     
@@ -116,7 +127,7 @@ describe("ChatSupport", () => {
   });
 
   it("has voice control button when supported", () => {
-    render(<ChatSupport />);
+    renderChat();
     const fab = screen.getByLabelText("Open support chat");
     fireEvent.click(fab);
     
@@ -125,7 +136,7 @@ describe("ChatSupport", () => {
   });
 
   it("has ASL translator toggle", () => {
-    render(<ChatSupport />);
+    renderChat();
     const fab = screen.getByLabelText("Open support chat");
     fireEvent.click(fab);
     
@@ -134,7 +145,7 @@ describe("ChatSupport", () => {
   });
 
   it("meets accessibility standards", () => {
-    render(<ChatSupport />);
+    renderChat();
     const fab = screen.getByLabelText("Open support chat");
     fireEvent.click(fab);
     

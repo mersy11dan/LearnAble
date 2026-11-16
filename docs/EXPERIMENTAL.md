@@ -4,7 +4,7 @@ These files exist in the repository. They are off by default, they are not part 
 
 ## What is actually here
 
-- `src/components/ChatSupport/` is a support panel. The site mounts it only when the build sets `VITE_ENABLE_CHAT=true`. The default build does not mount it.
+- `src/components/ChatSupport/` is a support panel. The site mounts it unless the build sets `VITE_ENABLE_CHAT=false`.
 - With or without that flag, the panel answers from `getFallbackResponse` in the browser. It does not call Google Gemini. It does not read an API key. Text typed into it stays on the machine.
 - The ASL button in that panel returns a short offline gloss. That gloss is American Sign Language word order, not Ethiopian Sign Language, and it is not a recording.
 - `experimental/ASLInterpreter/` is an unused panel. It is not imported.
