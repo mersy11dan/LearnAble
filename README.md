@@ -13,7 +13,10 @@ English and Amharic captions, a sign window, audio description, and optional 3G 
   captions-en="/media/captions-en.vtt"
   captions-am="/media/captions-am.vtt"
   sign="/media/esl-placeholder.mp4"
+  sign-lang=""
+  sign-offset="0.0"
   describe="/media/descriptions.vtt"
+  descriptions-am="/media/descriptions-am.vtt"
   offline
   braille
   docs>
@@ -29,8 +32,13 @@ The lesson videos are H.264 Constrained Baseline, `yuv420p`, AAC, with the index
 | `lang` | `"en"` | `"en"` or `"am"` caption language |
 | `theme` | `"paper"` | `"paper"` or `"navy"` |
 | `features.toolbar` | on | Floating larger text, high contrast, stop motion, caption size and colour |
+| `sign` | none | Sign-recording URL, for example `sign="/media/esl/lesson-1.mp4"`. `esl-placeholder.mp4` is not a recording |
+| `sign-lang` | empty | Set `ethiopian` only when the file is an Ethiopian Sign Language recording. Any other value keeps the ASL gloss label |
+| `sign-offset` | `0` | Seconds added to the lesson time to line up the sign recording. `0.0` when both files start together |
 | `features.signWindow` | on | Sign window. Turn off with `sign="false"` |
-| `features.audioDescription` | on | Spoken description. Turn off with `describe="false"` |
+| `describe` | `/media/descriptions.vtt` when the feature is on | English audio-description cues |
+| `descriptions-am` | `/media/descriptions-am.vtt` when `describe` is set | Amharic audio-description cues. The lines need native-speaker review |
+| `features.audioDescription` | on | Description. The player offers Off, Spoken, or Text for a screen reader. Turn the control off with `describe="false"` |
 | `features.offlinePack` | off | 3G zip. Also on when the element has `offline` |
 | `features.braille` | off | `.brf` download. Also on when the element has `braille` |
 | `features.taggedDocs` | off | Tagged PDF. Also on when the element has `docs` |
@@ -39,18 +47,17 @@ The lesson videos are H.264 Constrained Baseline, `yuv420p`, AAC, with the index
 
 Events, on the element and on `window`: `learnable-ready`, `learnable-play`, `learnable-captions`, `learnable-settings`.
 
-Build both the site and the bundle with `npm run build`. The plug-in files are `dist/learnable.js` (IIFE, for the script tag) and `dist/learnable.es.js`, each with a sourcemap. The IIFE is about 44 KB, about 16 KB gzipped.
+Build both the site and the bundle with `npm run build`. The plug-in files are `dist/learnable.js` (IIFE, for the script tag) and `dist/learnable.es.js`, each with a sourcemap. The IIFE is about 143 KB, about 47 KB gzipped. The older “44 KB” figure was from before the sign window and description controls.
 
 Copy-paste snippets for HTML, React, WordPress, and an iframe fallback are on `/integrate`.
 
+## Integration
+
+Implemented: Open Badges 3.0 credentials as VC-JWT, signed with Ed25519 by `POST /api/credentials` and checked at `/verify/<id>`, and `schema.org/JobPosting` JSON-LD on each job card. The job cards are fictional demo data. LTI 1.3 is not implemented. It is future work.
+
 ## Support chat
 
-A chat button sits in the corner of the demo site. It answers questions about the lesson, the player, and the
-accessibility controls. With no key, every answer is saved text written by hand, and each one says so. When
-`GEMINI_API_KEY` is set on the transcript service, a question is sent to Google Gemini only after the consent box
-in the chat is ticked. The key never reaches the browser. Voice input uses the browser's own speech recognition.
-Sign language for Track 2 is the player sign window, not a chat panel. It is ASL gloss, not Ethiopian Sign
-Language. The browser never downloads a model.
+A chat button sits in the corner of the demo site. Tap the microphone and say a page such as sessions or jobs, or type in the box. With no key, every answer is saved text written by hand, and each one says so. When `GEMINI_API_KEY` is set on the transcript service, a question is sent to Google Gemini only after the consent box in the chat is ticked. The key never reaches the browser. Set `VITE_ENABLE_CHAT=false` to hide the chat. Sign language for Track 2 is the player sign window, not a chat panel. It is ASL gloss, not Ethiopian Sign Language. The unused FastAPI app and the unused ASL panel live in `experimental/`. See [docs/EXPERIMENTAL.md](docs/EXPERIMENTAL.md) and [docs/SIGN-LANGUAGE.md](docs/SIGN-LANGUAGE.md).
 
 ## Install in an hour
 
@@ -106,7 +113,7 @@ About four minutes. Leave the sound off for the first minute.
 
 `npm run preview` serves the production build on http://127.0.0.1:4173. The service worker is registered only in that build, so the app shell can be reopened after one online visit. With `.env` empty, known lesson sentences return the bundled caption and are marked `sample`. Other text is not invented.
 
-Rebuild the demo media (needs `espeak-ng` and `ffmpeg`) with `npm run media`.
+Rebuild the demo media (needs `espeak-ng` and `ffmpeg`) with `npm run media`. The 3G pack narration was 1,904,228 bytes of WAV per language (about 158 MB an hour). It is now mono Opus at 32 kbps, 137,270 bytes in English and 158,136 bytes in Amharic for the 43 second lesson, plus AAC fallbacks of 178,016 and 202,162 bytes. The downloadable pack is 703,942 bytes, about 704 KB.
 
 ## Design system
 

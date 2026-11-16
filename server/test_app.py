@@ -252,3 +252,81 @@ def test_chat_needs_consent_then_calls_gemini(client, monkeypatch):
     roles = [turn["role"] for turn in captured["json"]["contents"]]
     assert roles == ["user", "model", "user"]
     assert "Captions: press C." in captured["json"]["contents"][-1]["parts"][0]["text"]
+
+
+@pytest.fixture
+def issuer_client(monkeypatch, tmp_path):
+    monkeypatch.setenv("LEARNABLE_DATA_DIR", str(tmp_path))
+    monkeypatch.setenv("LEARNABLE_PUBLIC_BASE", "http://learnable.test")
+    monkeypatch.setenv("LEARNABLE_ADMIN_TOKEN", "admin-test")
+    return create_app().test_client()
+
+
+def test_issue_fetch_verify_revoke_and_missing(issuer_client):
+    from credentials import signature_ok
+
+    refused = issuer_client.post("/api/credentials", json={"courseId": "not-a-course"})
+    assert refused.status_code == 400
+    anonymous = issuer_client.post(
+        "/api/credentials",
+        json={"courseId": "slow-connection", "displayName": "Should Not Be Stored", "consent": False},
+    )
+    assert anonymous.status_code == 201
+    hidden = anonymous.get_json()["credential"]["credentialSubject"]
+    assert "name" not in hidden
+    assert hidden["id"].startswith("urn:uuid:")
+
+    issued = issuer_client.post(
+        "/api/credentials",
+        json={"courseId": "slow-connection", "displayName": "Hana Bekele", "consent": True},
+    )
+    assert issued.status_code == 201
+    body = issued.get_json()
+    credential_id = body["id"]
+    assert body["verifyUrl"] == f"/verify/{credential_id}"
+    assert "learnable.local" not in json.dumps(body)
+    assert body["credential"]["type"] == ["VerifiableCredential", "OpenBadgeCredential"]
+    assert body["credential"]["credentialSubject"]["name"] == "Hana Bekele"
+
+    fetched = issuer_client.get(f"/api/credentials/{credential_id}")
+    assert fetched.status_code == 200
+    assert fetched.get_json()["jwt"] == body["jwt"]
+
+    issuer = issuer_client.get("/api/issuer").get_json()
+    assert issuer["id"] == "http://learnable.test/api/issuer"
+    assert issuer["publicKey"]["crv"] == "Ed25519"
+    assert signature_ok(body["jwt"], issuer["publicKey"]) is True
+    tampered = body["jwt"][:-4] + "AAAA"
+    assert signature_ok(tampered, issuer["publicKey"]) is False
+
+    verified = issuer_client.get(f"/api/credentials/{credential_id}/verify").get_json()
+    assert verified == {
+        "valid": True,
+        "issuedAt": body["credential"]["validFrom"],
+        "issuer": "http://learnable.test/api/issuer",
+        "revoked": False,
+    }
+
+    missing = issuer_client.get("/api/credentials/00000000-0000-4000-8000-000000000000")
+    assert missing.status_code == 404
+    assert missing.get_json()["error"] == "No credential with that id."
+    missing_verify = issuer_client.get("/api/credentials/00000000-0000-4000-8000-000000000000/verify")
+    assert missing_verify.status_code == 404
+    assert missing_verify.get_json()["valid"] is False
+
+    blocked = issuer_client.post(f"/api/credentials/{credential_id}/revoke")
+    assert blocked.status_code == 403
+    revoked = issuer_client.post(
+        f"/api/credentials/{credential_id}/revoke",
+        headers={"Authorization": "Bearer admin-test"},
+    )
+    assert revoked.status_code == 200
+    after = issuer_client.get(f"/api/credentials/{credential_id}/verify").get_json()
+    assert after["valid"] is False
+    assert after["revoked"] is True
+
+    spec = issuer_client.get("/api/openapi.yaml").get_data(as_text=True)
+    assert "/api/issuer" in spec
+    assert "/api/credentials:" in spec or "/api/credentials" in spec
+    assert "/api/credentials/{id}/verify" in spec
+    assert "/api/credentials/{id}/revoke" in spec

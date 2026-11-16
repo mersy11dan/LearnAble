@@ -384,7 +384,7 @@ button:disabled, .button[aria-disabled="true"] {
 }
 .preview-captions {
   padding: var(--space-4) var(--space-5);
-  background: linear-gradient(to top, rgba(0,0,0,0.3) 0%, transparent 100%);
+  background: var(--color-paper);
   border-top: 3px solid var(--color-caption);
 }
 .preview-captions p {
@@ -392,7 +392,12 @@ button:disabled, .button[aria-disabled="true"] {
   font-size: var(--text-lg);
   line-height: var(--leading-ui);
 }
-.preview-captions p + p { margin-top: var(--space-2); color: var(--color-caption); }
+.preview-captions p + p {
+  margin-top: var(--space-2);
+  color: var(--color-ink);
+  background: var(--color-caption);
+  padding: 0 0.25rem;
+}
 
 .frame {
   margin: 0;
@@ -787,7 +792,7 @@ legend {
 }
 
 .sign-handle {
-  background: linear-gradient(135deg, var(--color-navy) 0%, color-mix(in srgb, var(--color-navy) 85%, var(--color-moss)) 100%);
+  background: var(--color-navy);
   color: var(--color-navy-ink);
   padding: var(--space-3) var(--space-4);
   cursor: grab;
@@ -806,13 +811,7 @@ legend {
   display: block;
   width: 6px;
   height: 20px;
-  background: repeating-linear-gradient(
-    to bottom,
-    var(--color-navy-ink) 0,
-    var(--color-navy-ink) 2px,
-    transparent 2px,
-    transparent 5px
-  );
+  background: var(--color-navy-ink);
   opacity: 0.6;
   flex-shrink: 0;
 }
@@ -1164,4 +1163,22 @@ html[data-contrast="high"] fieldset {
 html[data-contrast="high"] .notice {
   border-left-width: 4px;
   background: var(--color-paper);
+}
+
+.sign-drag-handle { touch-action: none; }
+.sign-move-controls { display: contents; }
+.sign-missing,
+.sign-video-label,
+.sign-moved { margin: var(--space-2) var(--space-3); }
+.sign-resize-grip {
+  position: static;
+  width: auto;
+  min-width: max-content;
+  white-space: nowrap;
+  overflow-wrap: normal;
+  word-break: keep-all;
+  cursor: nwse-resize;
+}
+@media (max-width: 62rem) {
+  .sign-move-controls { display: none; }
 }

@@ -46,7 +46,7 @@ export function App() {
         />
       </Route>
     </Routes>
-    <ChatSupport />
+    {import.meta.env.VITE_ENABLE_CHAT === "false" ? null : <ChatSupport />}
     </LocaleProvider>
   );
 }

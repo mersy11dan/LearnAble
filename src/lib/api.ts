@@ -1,3 +1,5 @@
+import { allowOrigin, safeFetch } from "./guard";
+
 export type PipelineHealth = {
   hasab: boolean;
   huggingface: boolean;
@@ -33,6 +35,7 @@ export type GlossResult = {
 export type ChatTurn = { role: "user" | "assistant"; content: string };
 
 const base = import.meta.env.VITE_API_BASE ?? "";
+if (base) allowOrigin(base);
 
 /** The consent box on a page stores "yes" in sessionStorage. Nothing leaves the host before that. */
 export function consentHeaders(): Record<string, string> {
@@ -43,7 +46,7 @@ export function consentHeaders(): Record<string, string> {
 
 async function request<T>(path: string, init?: RequestInit, acceptStatus: number[] = []): Promise<T | null> {
   try {
-    const response = await fetch(`${base}${path}`, {
+    const response = await safeFetch(`${base}${path}`, {
       ...init,
       signal: AbortSignal.timeout(8000),
     });

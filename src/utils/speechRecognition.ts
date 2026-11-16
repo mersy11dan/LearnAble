@@ -164,6 +164,13 @@ export function useSpeechRecognition(options?: {
     recognition.onerror = (event: ISpeechRecognitionErrorEvent) => {
       const code = event.error;
       if (code === "aborted") return;
+      if (code === "network") {
+        if (heardSoFar()) return;
+        listeningRef.current = false;
+        setIsListening(false);
+        setError("other");
+        return;
+      }
       listeningRef.current = false;
       setIsListening(false);
       if (code === "not-allowed" || code === "service-not-allowed") {
@@ -219,7 +226,10 @@ export function useSpeechRecognition(options?: {
     setIsListening(true);
     try {
       recognition.start();
-    } catch {
+    } catch (err) {
+      if (err instanceof DOMException && err.name === "InvalidStateError") {
+        return;
+      }
       listeningRef.current = false;
       setIsListening(false);
       setError("other");

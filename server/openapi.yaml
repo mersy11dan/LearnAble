@@ -159,6 +159,71 @@ paths:
       responses:
         "200":
           description: The pack is built in the browser from /packs/demo so a phone can save it.
+  /api/issuer:
+    get:
+      summary: Open Badges issuer profile and public key
+      responses:
+        "200":
+          description: Profile JSON with an Ed25519 public JWK. The private key is not returned.
+  /api/credentials:
+    post:
+      summary: Issue an Open Badges 3.0 credential
+      description: |
+        Signs an OpenBadgeCredential as a VC-JWT with Ed25519.
+        displayName is stored only when consent is true. Otherwise the subject is a random pseudonymous id.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [courseId]
+              properties:
+                courseId: { type: string }
+                displayName: { type: string }
+                consent: { type: boolean }
+      responses:
+        "201":
+          description: The new credential id, a /verify link, the VC-JWT, and the credential JSON.
+        "400":
+          description: Missing or unknown courseId.
+  /api/credentials/{id}:
+    get:
+      summary: Fetch one credential
+      parameters:
+        - $ref: "#/components/parameters/CredentialId"
+      responses:
+        "200":
+          description: The credential JSON, the VC-JWT, issuedAt, and revoked.
+        "404":
+          description: No credential with that id.
+  /api/credentials/{id}/verify:
+    get:
+      summary: Check the signature and revocation state
+      parameters:
+        - $ref: "#/components/parameters/CredentialId"
+      responses:
+        "200":
+          description: valid, issuedAt, issuer, and revoked.
+        "404":
+          description: No credential with that id. valid is false.
+  /api/credentials/{id}/revoke:
+    post:
+      summary: Revoke a credential
+      description: Disabled unless LEARNABLE_ADMIN_TOKEN is set. Send that token as Authorization Bearer.
+      parameters:
+        - $ref: "#/components/parameters/CredentialId"
+        - name: Authorization
+          in: header
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: The credential is revoked.
+        "403":
+          description: Revocation is disabled, or the admin token was not accepted.
+        "404":
+          description: No credential with that id.
   /api/certificates/verify:
     post:
       summary: Check an Open Badges 3.0 credential
@@ -176,6 +241,11 @@ paths:
           description: valid true or false, with the learner name when the proof matches.
 components:
   parameters:
+    CredentialId:
+      name: id
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
     Consent:
       name: X-LearnAble-Consent
       in: header

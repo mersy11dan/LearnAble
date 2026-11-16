@@ -12,7 +12,7 @@ describe("LearnAble embed", () => {
   it("registers the custom elements and the global API", () => {
     expect(customElements.get("learnable-player")).toBeTruthy();
     expect(customElements.get("learnable-toolbar")).toBeTruthy();
-    expect(window.LearnAble?.version).toBe("0.3.0");
+    expect(window.LearnAble?.version).toBe("0.4.0");
     expect(LearnAble.init).toBe(init);
   });
 

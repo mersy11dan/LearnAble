@@ -48,4 +48,4 @@ npm run build
 pytest
 ```
 
-See `README.md` for the embed, the keyboard map, and the licences.
+See `README.md` for the embed, the keyboard map, and the licences. Set `VITE_ENABLE_CHAT=false` to hide the chat. `experimental/backend/` is not started by Docker Compose.

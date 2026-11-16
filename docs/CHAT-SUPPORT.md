@@ -19,6 +19,8 @@ pipeline page uses. Nothing leaves the site until it is ticked. The key never re
 
 If the transcript service is not running, the chat still works. Every answer is then saved text, and says so.
 
+The chat is on the page unless the build sets `VITE_ENABLE_CHAT=false`.
+
 ## Configuration
 
 On the machine that runs `server/app.py`:
