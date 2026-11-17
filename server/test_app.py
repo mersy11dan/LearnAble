@@ -330,3 +330,57 @@ def test_issue_fetch_verify_revoke_and_missing(issuer_client):
     assert "/api/credentials:" in spec or "/api/credentials" in spec
     assert "/api/credentials/{id}/verify" in spec
     assert "/api/credentials/{id}/revoke" in spec
+
+
+def test_sign_video_is_unavailable_and_downloads_nothing(client, monkeypatch):
+    def refuse(*_args, **_kwargs):
+        raise AssertionError("a model host was called")
+
+    monkeypatch.setattr("app.requests.post", refuse)
+    monkeypatch.setattr("app.requests.get", refuse)
+    missing = client.post("/api/sign-video")
+    assert missing.status_code == 400
+    assert missing.get_json()["source"] == "unavailable"
+    assert "No model was downloaded" in missing.get_json()["message"]
+
+    response = client.post(
+        "/api/sign-video",
+        data={"video": (BytesIO(b"tiny-mp4"), "sign.mp4")},
+        content_type="multipart/form-data",
+    )
+    body = response.get_json()
+    assert response.status_code == 200
+    assert body["source"] == "unavailable"
+    assert body["text"] is None
+    assert body["label"] == "Computer-generated. ASL, not Ethiopian Sign Language."
+    assert "none is downloaded" in body["message"]
+    dumped = json.dumps(body)
+    assert "api_key" not in dumped.lower()
+    assert "AIza" not in dumped
+
+    huge = client.post(
+        "/api/sign-video",
+        data={"video": (BytesIO(b"x" * 1_500_001), "big.mp4")},
+        content_type="multipart/form-data",
+    )
+    assert huge.status_code == 413
+    assert "1.5 MB" in huge.get_json()["message"]
+
+
+def test_sign_video_opt_in_still_does_not_download(client, monkeypatch):
+    monkeypatch.setenv("LEARNABLE_SIGN_VIDEO", "1")
+
+    def refuse(*_args, **_kwargs):
+        raise AssertionError("a model host was called")
+
+    monkeypatch.setattr("app.requests.post", refuse)
+    response = client.post(
+        "/api/sign-video",
+        data={"video": (BytesIO(b"tiny-mp4"), "sign.mp4")},
+        content_type="multipart/form-data",
+    )
+    body = response.get_json()
+    assert response.status_code == 200
+    assert body["source"] == "unavailable"
+    assert "nothing was downloaded" in body["message"]
+    assert client.get("/api/health").get_json()["signVideo"] is True

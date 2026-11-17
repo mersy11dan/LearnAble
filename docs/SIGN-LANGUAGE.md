@@ -11,6 +11,8 @@ Two outside traditions show up in the history of deaf education that reached Eth
 
 Public EthSL text-to-sign models and openly licensed EthSL video are still too thin to ship. The sign window shows one public-domain ASL fingerspelling hand at a time, from `public/signs/fingerspell/`. There is no drawn person. The label on screen is “Computer-generated. ASL fingerspelling, not Ethiopian Sign Language.”
 
+A short sign video can be sent to `POST /api/sign-video` on the transcript service. The page does not download a model, and it does not hold an API key. The route is off unless `LEARNABLE_SIGN_VIDEO=1`. Even then this build does not download Torch, Ollama, or a Hugging Face sign model. The reply is computer-generated ASL, not Ethiopian Sign Language, or an honest “video-to-text is unavailable” message. Keep the file under 1.5 MB so a slow connection can send it.
+
 An optional real recording can still be added later. Put an H.264 file at `public/media/signs/<GLOSS>.mp4` and set `clip` on that gloss in `src/content/signs.json`. The demo does not require that file, and it does not invent one.
 
 Where there is no video, the toolbar button “Sign selection” signs the selected text, or the start of the main text, with the same generated fingerspelling, and reads that text aloud. The frozen Savanna reference pages in `public/reference/savanna/` contain no `<video>`, `<audio>`, or YouTube or Vimeo iframe. The with-LearnAble copies add one lesson video so the player can be tested. Signing on a text page does not depend on those copies.
