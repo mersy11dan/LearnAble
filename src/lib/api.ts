@@ -82,6 +82,20 @@ export function chat(message: string, context: string, history: ChatTurn[] = [])
   );
 }
 
+export type SignVideoResult = {
+  source: "unavailable";
+  text: null;
+  label: string;
+  message: string;
+};
+
+/** ASL video-to-text. The transcript service holds any key. This call does not download a model. */
+export function signVideo(file: File): Promise<SignVideoResult | null> {
+  const body = new FormData();
+  body.append("video", file);
+  return request<SignVideoResult>("/api/sign-video", { method: "POST", body }, [400, 413]);
+}
+
 /** English caption to ASL gloss. The service answers from the shipped file unless the model is opted in. */
 export function glossText(text: string): Promise<GlossResult | null> {
   return request<GlossResult>("/api/gloss", {

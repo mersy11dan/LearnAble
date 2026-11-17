@@ -248,6 +248,7 @@ def create_app() -> Flask:
 <li>POST /api/translate</li>
 <li>POST /api/gloss</li>
 <li>POST /api/chat</li>
+<li>POST /api/sign-video</li>
 <li>POST /api/transcribe</li>
 <li>POST /api/describe-image</li>
 <li>POST /api/speak</li>
@@ -348,8 +349,41 @@ def create_app() -> Flask:
                 "glossLocal": bool(configured("LEARNABLE_GLOSS_LOCAL")),
                 "gemini": bool(configured("GEMINI_API_KEY")),
                 "chatModel": chat_model(),
+                "signVideo": configured("LEARNABLE_SIGN_VIDEO") == "1",
             }
         )
+
+    @app.post("/api/sign-video")
+    def sign_video():
+        """ASL video-to-text. Off by default, and this build never downloads a model."""
+        label = "Computer-generated. ASL, not Ethiopian Sign Language."
+        upload = request.files.get("video")
+        if upload is None or not (upload.filename or "").strip():
+            return jsonify(
+                {
+                    "source": "unavailable",
+                    "text": None,
+                    "label": label,
+                    "message": "Choose a short sign video. No model was downloaded.",
+                }
+            ), 400
+        payload = upload.read(1_500_001)
+        if len(payload) > 1_500_000:
+            return jsonify(
+                {
+                    "source": "unavailable",
+                    "text": None,
+                    "label": label,
+                    "message": "That video is too large for a slow connection. Keep it under 1.5 MB. No model was downloaded.",
+                }
+            ), 413
+        opted_in = configured("LEARNABLE_SIGN_VIDEO") == "1"
+        detail = (
+            "The optional sign-video switch is on, but this build does not include a recognition model, so nothing was downloaded."
+            if opted_in
+            else "Video-to-text is unavailable. No sign-recognition model is installed, and none is downloaded."
+        )
+        return jsonify({"source": "unavailable", "text": None, "label": label, "message": detail})
 
     @app.post("/api/chat")
     def chat():

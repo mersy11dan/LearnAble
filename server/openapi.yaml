@@ -137,6 +137,28 @@ paths:
           description: source gemini with a reply when GEMINI_API_KEY is set and consent was sent. Otherwise source saved with reply null, and the page shows its saved answer.
         "403":
           description: A key is set but the consent header is missing. Nothing was sent to Google.
+  /api/sign-video:
+    post:
+      summary: Read a short ASL sign video, or say that recognition is unavailable
+      description: |
+        Off unless LEARNABLE_SIGN_VIDEO=1. This build does not download Torch, Ollama, or a Hugging Face sign model.
+        The label is computer-generated ASL, not Ethiopian Sign Language. Files over 1.5 MB are refused.
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [video]
+              properties:
+                video: { type: string, format: binary }
+      responses:
+        "200":
+          description: source unavailable, text null, and an honest message. No model was downloaded.
+        "400":
+          description: No video was sent.
+        "413":
+          description: The video is over 1.5 MB.
   /api/braille:
     post:
       summary: Points at the browser braille exporter

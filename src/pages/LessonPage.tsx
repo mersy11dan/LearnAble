@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { AccessiblePlayer } from "../components/AccessiblePlayer";
+import { SignVideoRead } from "../components/SignVideoRead";
 import { Breadcrumbs } from "../components/Breadcrumbs";
 import { CertificateOffer } from "../components/CertificateOffer";
 import { demoLesson } from "../content/lesson";
@@ -53,6 +54,7 @@ export function LessonPage() {
         signPoster={demoLesson.signPoster}
         onComplete={finish}
       />
+      <SignVideoRead />
       {done ? <CertificateOffer courseId={demoLesson.id} /> : null}
       <p className="next">
         <Link to="/offline">Next: keep the 3G pack</Link>
