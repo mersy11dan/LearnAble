@@ -133,7 +133,7 @@ export function useSpeechRecognition(options?: {
     recognition.continuous = true;
     recognition.interimResults = true;
     recognition.maxAlternatives = 1;
-    recognition.lang = "en-US";
+    recognition.lang = document.documentElement.lang === "am" ? "am-ET" : "en-US";
 
     recognition.onstart = () => {
       listeningRef.current = true;
@@ -164,7 +164,6 @@ export function useSpeechRecognition(options?: {
     recognition.onerror = (event: ISpeechRecognitionErrorEvent) => {
       const code = event.error;
       if (code === "aborted") return;
-      // Chrome often fires "network" and then onend. Keep any words we already heard.
       if (code === "network") {
         if (heardSoFar()) return;
         listeningRef.current = false;

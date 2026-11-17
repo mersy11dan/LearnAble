@@ -1,10 +1,28 @@
-/** Offline answers. The browser never calls Gemini and never reads an API key. */
-export async function generateResponse(userMessage: string, context: string): Promise<string> {
-  void context;
-  return getFallbackResponse(userMessage);
+import { chat, type ChatTurn } from "../lib/api";
+
+export type ChatAnswer = {
+  text: string;
+  /** "gemini" when a model answered through the transcript service. "saved" is a fixed answer written by hand. */
+  source: "gemini" | "saved";
+  model?: string;
+  note: string;
+};
+
+const OFFLINE_NOTE = "The transcript service is not running. This is a saved answer. No model is running.";
+
+/**
+ * The key for Gemini lives on the transcript service, never in this bundle.
+ * The service only calls Google after the consent box is ticked.
+ */
+export async function generateResponse(userMessage: string, context: string, history: ChatTurn[] = []): Promise<ChatAnswer> {
+  const result = await chat(userMessage, context, history);
+  if (result?.source === "gemini" && result.reply) {
+    return { text: result.reply, source: "gemini", model: result.model, note: result.message };
+  }
+  return { text: getFallbackResponse(userMessage), source: "saved", note: result?.message ?? OFFLINE_NOTE };
 }
 
-export function getFallbackResponse(userMessage: string): string {
+function getFallbackResponse(userMessage: string): string {
   const message = userMessage.toLowerCase();
 
   if (message.includes("caption") || message.includes("subtitle")) {
@@ -15,7 +33,7 @@ export function getFallbackResponse(userMessage: string): string {
     return "LearnAble includes a sign language interpretation window. Press 'S' to toggle the sign window, and use arrow keys to reposition it. The window has Smaller and Larger buttons for adjusting its size without needing a mouse.";
   }
 
-  if (message.includes("voice") || message.includes("audio description")) {
+  if (message.includes("audio description") || message.includes("audio descriptions")) {
     return "Audio descriptions provide spoken narration of visual content. Press 'D' to toggle audio descriptions. This feature helps users who are blind or have low vision understand the visual elements of the lesson.";
   }
 
@@ -35,9 +53,5 @@ export function getFallbackResponse(userMessage: string): string {
     return "LearnAble includes an accessibility toolbar with:\n• Larger Text: Increases font size by 25%\n• High Contrast: Black, white, and yellow color scheme\n• Stop Motion: Reduces or eliminates animations\n\nThese settings are saved in your browser and work across all pages.";
   }
 
-  if (message.includes("navigate") || message.includes("find") || message.includes("where")) {
-    return "LearnAble has several main sections:\n• Lesson: Watch the video lesson\n• Pack: Download offline content\n• Session: View recorded sessions\n• Jobs: Browse career opportunities\n• Verify: Check certificate authenticity\n\nThe navigation bar at the top provides access to all sections.";
-  }
-
-  return "I'm here to help you with LearnAble! You can ask me about:\n• Captions and language options\n• Sign language features\n• Audio descriptions\n• Offline downloads\n• Certificates and verification\n• Keyboard shortcuts\n• Accessibility features\n\nWhat would you like to know?";
+  return "I did not match that to a saved answer. Say a page such as sessions, jobs, lesson, or pack. Or ask how captions, audio description, or keyboard shortcuts work.";
 }

@@ -55,9 +55,9 @@ Copy-paste snippets for HTML, React, WordPress, and an iframe fallback are on `/
 
 Implemented: Open Badges 3.0 credentials as VC-JWT, signed with Ed25519 by `POST /api/credentials` and checked at `/verify/<id>`, and `schema.org/JobPosting` JSON-LD on each job card. The job cards are fictional demo data. LTI 1.3 is not implemented. It is future work.
 
-## Experimental chat
+## Support chat
 
-A support chat is on the page. Tap the microphone and say a page such as sessions or jobs, or type in the box. Answers stay in the browser. Set `VITE_ENABLE_CHAT=false` to hide it. It does not call a model and it does not read an API key. The unused FastAPI app and the unused ASL panel live in `experimental/` and are not part of this demo. See [docs/EXPERIMENTAL.md](docs/EXPERIMENTAL.md). The sign window is American Sign Language gloss unless `sign-lang="ethiopian"` and a real recording is loaded. See [docs/SIGN-LANGUAGE.md](docs/SIGN-LANGUAGE.md).
+A chat button sits in the corner of the demo site. Tap the microphone and say a page such as sessions or jobs, or type in the box. With no key, every answer is saved text written by hand, and each one says so. When `GEMINI_API_KEY` is set on the transcript service, a question is sent to Google Gemini only after the consent box in the chat is ticked. The key never reaches the browser. Set `VITE_ENABLE_CHAT=false` to hide the chat. Sign language for Track 2 is the player sign window, not a chat panel. It is ASL gloss, not Ethiopian Sign Language. The unused FastAPI app and the unused ASL panel live in `experimental/`. See [docs/EXPERIMENTAL.md](docs/EXPERIMENTAL.md) and [docs/SIGN-LANGUAGE.md](docs/SIGN-LANGUAGE.md).
 
 ## Install in an hour
 
@@ -66,7 +66,6 @@ Prerequisites: Node.js 22, npm, Python 3.12, and a current browser. Docker is op
 ```bash
 git clone https://github.com/mersy11dan/LearnAble.git
 cd LearnAble
-git checkout cursor/learnable-track2-82be
 npm install
 npm test
 npm run lint
@@ -171,6 +170,8 @@ Copy `.env.example` to `.env`. Leave the secrets blank to use the fallbacks.
 | `HF_ASR_MODEL` | Default `waxal-benchmarking/whisper-small-waxal-amh` | Amharic speech recognition, CC-BY-4.0 |
 | `HF_MT_MODEL` | Empty. Set `facebook/nllb-200-distilled-600M` only to opt in | NLLB weights are CC-BY-NC-4.0 and stay off by default |
 | `HF_CAPTION_MODEL` | Default `Salesforce/blip-image-captioning-base` | English image captions to review before they become alt text. BSD-3-Clause |
+| `GEMINI_API_KEY` | Google Gemini for the support chat. Server-only, behind the consent header | https://aistudio.google.com/app/apikey |
+| `GEMINI_MODEL` | Defaults to `gemini-2.5-flash` | Only change it to another current Gemini model id |
 | `VITE_API_BASE` | Public URL of the transcript service | Empty in dev, because Vite proxies `/api`. Never put a key in a `VITE_` variable |
 
 Leyu is datasets and a Hugging Face model (`gheero-Leyu/amharic-omnivoice-tts`), not an inference API, so it is not called.

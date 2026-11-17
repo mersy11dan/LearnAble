@@ -26,6 +26,12 @@ LESSON_PATH = ROOT / "src" / "content" / "lesson.json"
 GLOSS_PATH = ROOT / "src" / "content" / "asl-gloss.json"
 GLOSS_MODEL = "Suyash2205/signbridge-t5-base-asl-gloss"
 GLOSS_PROMPT = "translate English to ASL gloss: "
+CHAT_MODEL_DEFAULT = "gemini-2.5-flash"
+CHAT_PROMPT = """You are the help assistant inside LearnAble, an accessible lesson player for Ethiopia.
+It has English and Amharic captions, a sign panel that shows ASL gloss and is not Ethiopian Sign Language,
+spoken audio description, a 3G offline pack, braille (.brf) and tagged PDF downloads, a recorded session viewer,
+job cards with spoken summaries, and Open Badges 3.0 certificate checks.
+Answer in two or three short paragraphs. If you are not sure about a LearnAble detail, say so."""
 
 
 def lesson() -> dict:
@@ -106,6 +112,34 @@ def hasab_translate(text: str, source: str, target: str) -> str:
     if not found:
         raise ValueError("Hasab returned no translation text.")
     return found
+
+
+def chat_model() -> str:
+    return configured("GEMINI_MODEL") or CHAT_MODEL_DEFAULT
+
+
+def gemini_chat(message: str, context: str, history: list[dict]) -> str:
+    """Ask Gemini through its REST API. The key stays on this machine."""
+    contents = []
+    for turn in history[-6:]:
+        role = "model" if turn.get("role") == "assistant" else "user"
+        text = str(turn.get("content") or "").strip()
+        if text:
+            contents.append({"role": role, "parts": [{"text": text}]})
+    contents.append({"role": "user", "parts": [{"text": f"{context}\n\nQuestion: {message}".strip()}]})
+    response = requests.post(
+        f"https://generativelanguage.googleapis.com/v1beta/models/{chat_model()}:generateContent",
+        headers={"x-goog-api-key": configured("GEMINI_API_KEY"), "Content-Type": "application/json"},
+        json={"system_instruction": {"parts": [{"text": CHAT_PROMPT}]}, "contents": contents},
+        timeout=45,
+    )
+    response.raise_for_status()
+    body = response.json()
+    parts = body.get("candidates", [{}])[0].get("content", {}).get("parts", [])
+    text = " ".join(str(part.get("text") or "") for part in parts).strip()
+    if not text:
+        raise ValueError("Gemini returned no text.")
+    return text
 
 
 def gloss_table() -> dict:
@@ -213,6 +247,7 @@ def create_app() -> Flask:
 <li>GET /api/health</li>
 <li>POST /api/translate</li>
 <li>POST /api/gloss</li>
+<li>POST /api/chat</li>
 <li>POST /api/transcribe</li>
 <li>POST /api/describe-image</li>
 <li>POST /api/speak</li>
@@ -311,8 +346,51 @@ def create_app() -> Flask:
                 "captionModel": configured("HF_CAPTION_MODEL") or "Salesforce/blip-image-captioning-base",
                 "glossModel": GLOSS_MODEL,
                 "glossLocal": bool(configured("LEARNABLE_GLOSS_LOCAL")),
+                "gemini": bool(configured("GEMINI_API_KEY")),
+                "chatModel": chat_model(),
             }
         )
+
+    @app.post("/api/chat")
+    def chat():
+        body = request.get_json(silent=True) or {}
+        message = str(body.get("message") or "").strip()
+        context = str(body.get("context") or "").strip()
+        history = body.get("history") if isinstance(body.get("history"), list) else []
+        if not message:
+            return jsonify({"source": "unavailable", "reply": None, "model": chat_model(), "message": "Include the question."}), 400
+        if not configured("GEMINI_API_KEY"):
+            return jsonify(
+                {
+                    "source": "saved",
+                    "reply": None,
+                    "model": chat_model(),
+                    "message": "No Gemini key is set. The page shows a saved answer. No model is running.",
+                }
+            )
+        if not consent_granted():
+            return (
+                jsonify(
+                    {
+                        "source": "saved",
+                        "reply": None,
+                        "model": chat_model(),
+                        "message": "Gemini was not called. Send X-LearnAble-Consent: yes first.",
+                    }
+                ),
+                403,
+            )
+        try:
+            return jsonify({"source": "gemini", "reply": gemini_chat(message, context, history), "model": chat_model(), "message": f"Answered by {chat_model()}."})
+        except Exception as exc:  # noqa: BLE001
+            return jsonify(
+                {
+                    "source": "saved",
+                    "reply": None,
+                    "model": chat_model(),
+                    "message": f"Gemini did not answer ({exc.__class__.__name__}). The page shows a saved answer.",
+                }
+            )
 
     @app.post("/api/gloss")
     def gloss():

@@ -45,7 +45,7 @@ export function ChatInput({ onSend, disabled, spokenDraft, listening, onTyped }:
         autoComplete="off"
       />
       <span id="chat-input-hint" className="sr-only">
-        Type and press Enter to send. The microphone is spoken navigation. The box stays available if you prefer to type.
+        Type and press Enter to send. The microphone is for spoken navigation. The box stays available if you prefer to type.
       </span>
       <button type="submit" disabled={!value.trim() || disabled} className="chat-send-btn" aria-label="Send message">
         <svg

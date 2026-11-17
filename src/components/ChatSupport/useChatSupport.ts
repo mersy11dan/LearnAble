@@ -8,14 +8,21 @@ export interface Message {
   role: "user" | "assistant";
   content: string;
   timestamp: Date;
-  hasASL?: boolean;
+  source?: "gemini" | "saved" | "guide";
+  model?: string;
+  note?: string;
 }
+
+export const WELCOME =
+  "I can take you around LearnAble. Tap the microphone and say a page, like sessions or jobs. If you prefer to type, use the box.";
 
 function guideMessage(content: string): Message {
   return {
     role: "assistant",
     content,
     timestamp: new Date(),
+    source: "guide",
+    note: "Spoken guide. No model is running.",
   };
 }
 
@@ -25,9 +32,10 @@ export function useChatSupport() {
   const [messages, setMessages] = useState<Message[]>([
     {
       role: "assistant",
-      content:
-        "Hello! I'm here to help you with the LearnAble course. You can ask me about:\n\n• Course content and navigation\n• How to use accessibility features\n• Captions, audio descriptions, and sign language\n• Offline packs and downloads\n• Certificates and verification\n\nYou can type your question or use the voice button to speak. ASL support is also available.",
+      content: WELCOME,
       timestamp: new Date(),
+      source: "saved",
+      note: "A fixed greeting.",
     },
   ]);
   const [isLoading, setIsLoading] = useState(false);
@@ -50,29 +58,39 @@ export function useChatSupport() {
         return command.reply;
       }
 
-      setMessages((prev) => [...prev, userMessage]);
+      let history: { role: "user" | "assistant"; content: string }[] = [];
+      setMessages((prev) => {
+        history = prev
+          .filter((line) => line.content !== WELCOME)
+          .map((line) => ({ role: line.role, content: line.content }));
+        return [...prev, userMessage];
+      });
       setIsLoading(true);
 
       try {
         const context = CourseKnowledgeBase.getContext(content);
-        const response = await generateResponse(content, context);
+        const answer = await generateResponse(content, context, history);
         const assistantMessage: Message = {
           role: "assistant",
-          content: response,
+          content: answer.text,
           timestamp: new Date(),
+          source: answer.source,
+          model: answer.model,
+          note: answer.note,
         };
         setMessages((prev) => [...prev, assistantMessage]);
-        return response;
+        return assistantMessage.content;
       } catch (error) {
         console.error("Error generating response:", error);
-        const errorText =
-          "I apologize, but I encountered an error. Please try again or contact support if the problem persists.";
+        const errorText = "Something went wrong. Please try again.";
         setMessages((prev) => [
           ...prev,
           {
             role: "assistant",
             content: errorText,
             timestamp: new Date(),
+            source: "saved",
+            note: "An error message, not a model answer.",
           },
         ]);
         return errorText;

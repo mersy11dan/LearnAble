@@ -5,8 +5,8 @@ These files exist in the repository. They are off by default, they are not part 
 ## What is actually here
 
 - `src/components/ChatSupport/` is a support panel. The site mounts it unless the build sets `VITE_ENABLE_CHAT=false`.
-- With or without that flag, the panel answers from `getFallbackResponse` in the browser. It does not call Google Gemini. It does not read an API key. Text typed into it stays on the machine.
-- The ASL button in that panel returns a short offline gloss. That gloss is American Sign Language word order, not Ethiopian Sign Language, and it is not a recording.
+- With no `GEMINI_API_KEY`, answers come from saved text in the browser. Gemini is used only when that server key is set and the chat consent box is ticked. The key never reaches the page.
+- There is no ASL panel in the chat. Sign language for Track 2 is the lesson player sign window.
 - `experimental/ASLInterpreter/` is an unused panel. It is not imported.
 - `experimental/backend/` is an unused FastAPI app. Docker Compose does not start it. It is written for hosted database, chat, and embedding services. Those are not configured.
 
