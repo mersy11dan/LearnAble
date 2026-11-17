@@ -464,6 +464,9 @@ button:disabled, .button[aria-disabled="true"] {
 
 .measure { max-width: var(--measure); }
 
+.sign-video-read { max-width: 100%; overflow-wrap: anywhere; }
+.sign-video-read input[type="file"] { display: block; max-width: 100%; }
+
 .crumbs { margin: 0 0 var(--space-5); }
 
 .crumbs ol {

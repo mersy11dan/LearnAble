@@ -23,7 +23,7 @@ export function SignVideoRead() {
   }
 
   return (
-    <form className="measure" onSubmit={onSubmit} aria-labelledby="sign-video-title">
+    <form className="measure sign-video-read" onSubmit={onSubmit} aria-labelledby="sign-video-title">
       <h2 id="sign-video-title">Read a sign video</h2>
       <p>{HONEST} Nothing is downloaded until you choose a video, and no recognition model ships with LearnAble.</p>
       <p>
