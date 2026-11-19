@@ -12,14 +12,6 @@ const VOICE_ERROR = {
   other: "ስህተት ተፈጥሯል። እባክዎ እንደገና ይሞክሩ።",
 } as const;
 
-interface CourseLocation {
-  path: string;
-  title: string;
-  titleAm: string;
-  description: string;
-  descriptionAm: string;
-}
-
 export function AmharicVoiceAgent() {
   const [isActive, setIsActive] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
@@ -65,9 +57,11 @@ export function AmharicVoiceAgent() {
 
   useEffect(() => {
     if (isActive && !isMinimized) {
-      const currentLocation = CourseNavigator.getCurrentLocation(location.pathname, language);
+      const currentLocation = CourseNavigator.getCurrentLocation(location.pathname);
       if (currentLocation) {
-        speak(`${currentLocation.title}. ${currentLocation.description}`);
+        const title = language === "am" ? currentLocation.titleAm : currentLocation.title;
+        const description = language === "am" ? currentLocation.descriptionAm : currentLocation.description;
+        speak(`${title}. ${description}`);
       }
     }
   }, [location.pathname, isActive, isMinimized, language, speak]);

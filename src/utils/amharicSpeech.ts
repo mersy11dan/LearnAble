@@ -68,14 +68,6 @@ export function useAmharicSpeech(language: "en" | "am" = "am"): AmharicSpeechHoo
   useEffect(() => {
     if (!isSupported) return;
 
-    const handleEnd = () => {
-      setIsSpeaking(false);
-      isProcessingRef.current = false;
-      processQueue();
-    };
-
-    window.speechSynthesis.addEventListener("end", handleEnd);
-
     if (window.speechSynthesis.getVoices().length === 0) {
       window.speechSynthesis.addEventListener("voiceschanged", () => {
         window.speechSynthesis.getVoices();
@@ -83,7 +75,6 @@ export function useAmharicSpeech(language: "en" | "am" = "am"): AmharicSpeechHoo
     }
 
     return () => {
-      window.speechSynthesis.removeEventListener("end", handleEnd);
       window.speechSynthesis.cancel();
       if (audioRef.current) {
         audioRef.current.pause();
@@ -92,8 +83,8 @@ export function useAmharicSpeech(language: "en" | "am" = "am"): AmharicSpeechHoo
     };
   }, [isSupported]);
 
-  const processQueue = useCallback(() => {
-    if (isProcessingRef.current || utteranceQueueRef.current.length === 0) {
+  const processNextInQueue = useCallback(() => {
+    if (!isSupported || isProcessingRef.current || utteranceQueueRef.current.length === 0) {
       return;
     }
 
@@ -101,90 +92,91 @@ export function useAmharicSpeech(language: "en" | "am" = "am"): AmharicSpeechHoo
     if (!text) return;
 
     isProcessingRef.current = true;
-    speakText(text);
-  }, []);
 
-  const speakText = async (text: string) => {
-    if (!isSupported || !text) {
-      isProcessingRef.current = false;
-      return;
-    }
+    const speakWithBrowserTTS = (textToSpeak: string) => {
+      window.speechSynthesis.cancel();
 
-    setIsSpeaking(true);
+      const utterance = new SpeechSynthesisUtterance(textToSpeak);
+      
+      const voice = getVoiceForLanguage(language);
+      if (voice) {
+        utterance.voice = voice;
+      }
+      
+      utterance.lang = language === "am" ? "am-ET" : "en-US";
+      utterance.rate = 0.9;
+      utterance.pitch = 1.0;
+      utterance.volume = 1.0;
 
-    if (language === "am") {
-      const audioBlob = await fetchHasabSpeech(text, language);
-      if (audioBlob) {
-        const audioUrl = URL.createObjectURL(audioBlob);
-        const audio = new Audio(audioUrl);
-        audioRef.current = audio;
+      utterance.onstart = () => {
+        setIsSpeaking(true);
+      };
 
-        audio.onended = () => {
-          URL.revokeObjectURL(audioUrl);
-          setIsSpeaking(false);
-          isProcessingRef.current = false;
-          processQueue();
-        };
+      utterance.onend = () => {
+        setIsSpeaking(false);
+        isProcessingRef.current = false;
+        processNextInQueue();
+      };
 
-        audio.onerror = () => {
-          URL.revokeObjectURL(audioUrl);
-          fallbackToBrowserTTS(text);
-        };
+      utterance.onerror = (event) => {
+        console.error("Speech synthesis error:", event);
+        setIsSpeaking(false);
+        isProcessingRef.current = false;
+        processNextInQueue();
+      };
 
-        try {
-          await audio.play();
-          return;
-        } catch (error) {
-          console.warn("Audio playback failed, falling back to browser TTS:", error);
-          URL.revokeObjectURL(audioUrl);
+      window.speechSynthesis.speak(utterance);
+    };
+
+    const speakText = async () => {
+      if (!text) {
+        isProcessingRef.current = false;
+        return;
+      }
+
+      setIsSpeaking(true);
+
+      if (language === "am") {
+        const audioBlob = await fetchHasabSpeech(text, language);
+        if (audioBlob) {
+          const audioUrl = URL.createObjectURL(audioBlob);
+          const audio = new Audio(audioUrl);
+          audioRef.current = audio;
+
+          audio.onended = () => {
+            URL.revokeObjectURL(audioUrl);
+            setIsSpeaking(false);
+            isProcessingRef.current = false;
+            processNextInQueue();
+          };
+
+          audio.onerror = () => {
+            URL.revokeObjectURL(audioUrl);
+            speakWithBrowserTTS(text);
+          };
+
+          try {
+            await audio.play();
+            return;
+          } catch (error) {
+            console.warn("Audio playback failed, falling back to browser TTS:", error);
+            URL.revokeObjectURL(audioUrl);
+          }
         }
       }
-    }
 
-    fallbackToBrowserTTS(text);
-  };
-
-  const fallbackToBrowserTTS = (text: string) => {
-    window.speechSynthesis.cancel();
-
-    const utterance = new SpeechSynthesisUtterance(text);
-    
-    const voice = getVoiceForLanguage(language);
-    if (voice) {
-      utterance.voice = voice;
-    }
-    
-    utterance.lang = language === "am" ? "am-ET" : "en-US";
-    utterance.rate = 0.9;
-    utterance.pitch = 1.0;
-    utterance.volume = 1.0;
-
-    utterance.onstart = () => {
-      setIsSpeaking(true);
+      speakWithBrowserTTS(text);
     };
 
-    utterance.onend = () => {
-      setIsSpeaking(false);
-      isProcessingRef.current = false;
-      processQueue();
-    };
-
-    utterance.onerror = (event) => {
-      console.error("Speech synthesis error:", event);
-      setIsSpeaking(false);
-      isProcessingRef.current = false;
-      processQueue();
-    };
-
-    window.speechSynthesis.speak(utterance);
-  };
+    void speakText();
+  }, [isSupported, language]);
 
   const speak = useCallback((text: string) => {
     if (!isSupported || !text) return;
 
     utteranceQueueRef.current.push(text);
-    processQueue();
-  }, [isSupported, processQueue]);
+    processNextInQueue();
+  }, [isSupported, processNextInQueue]);
 
   const stop = useCallback(() => {
     if (isSupported) {

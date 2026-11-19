@@ -178,7 +178,7 @@ function isHelpCommand(command: string, language: "en" | "am"): boolean {
 }
 
 export class CourseNavigator {
-  static getCurrentLocation(pathname: string, language: "en" | "am"): CourseLocation | null {
+  static getCurrentLocation(pathname: string): CourseLocation | null {
     const normalized = pathname.replace(/\/$/, "") || "/";
     return COURSE_LOCATIONS.find(loc => loc.path === normalized) || null;
   }
