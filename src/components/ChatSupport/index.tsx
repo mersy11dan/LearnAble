@@ -1,36 +1,85 @@
-import { useState, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { ChatMessage } from "./ChatMessage";
 import { ChatInput } from "./ChatInput";
 import { VoiceControl } from "./VoiceControl";
-import { ASLTranslator } from "./ASLTranslator";
 import { useChatSupport } from "./useChatSupport";
+import { useSpeechRecognition } from "../../utils/speechRecognition";
+import { useSpeechSynthesis } from "../../utils/speechSynthesis";
 import "./styles.css";
+
+const VOICE_ERROR = {
+  "not-allowed": "Microphone is blocked. Allow it, then tap the mic and speak. You can also type in the box.",
+  "no-speech": "I did not catch that. Tap the mic and say a page, like sessions or jobs. Or type it.",
+  "audio-capture": "No microphone found. Type in the box instead.",
+  other: "I could not hear you. Type sessions, jobs, lesson, pack, or verify in the box.",
+} as const;
+
+function storedConsent(): boolean {
+  return typeof sessionStorage !== "undefined" && sessionStorage.getItem("learnable-consent") === "yes";
+}
 
 export function ChatSupport() {
   const [isOpen, setIsOpen] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
+  const [draft, setDraft] = useState("");
   const { messages, sendMessage, isLoading } = useChatSupport();
+  const [consent, setConsent] = useState(storedConsent);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const { speak, stop: stopSpeaking } = useSpeechSynthesis();
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  };
+  const handleVoiceFinal = useCallback(
+    (text: string) => {
+      setDraft("");
+      void sendMessage(text).then((reply) => {
+        if (reply) speak(reply);
+      });
+    },
+    [sendMessage, speak],
+  );
+
+  const { startListening, stopListening, interimTranscript, error, isSupported, isListening } = useSpeechRecognition({
+    onFinal: handleVoiceFinal,
+    onInterim: setDraft,
+  });
 
   useEffect(() => {
-    scrollToBottom();
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  const handleVoiceInput = (text: string) => {
-    sendMessage(text);
+  useEffect(() => {
+    if (!isOpen) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        stopListening();
+        stopSpeaking();
+        setIsOpen(false);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [isOpen, stopListening, stopSpeaking]);
+
+  const spokenErrorRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (error && error !== spokenErrorRef.current) speak(VOICE_ERROR[error]);
+    spokenErrorRef.current = error;
+  }, [error, speak]);
+
+  const handleSend = (text: string) => {
+    stopSpeaking();
+    stopListening();
+    setDraft("");
+    void sendMessage(text);
+  };
+
+  const beginVoice = () => {
+    startListening();
+    setDraft("");
   };
 
   if (!isOpen) {
     return (
-      <button
-        className="chat-support-fab"
-        onClick={() => setIsOpen(true)}
-        aria-label="Open support chat"
-      >
+      <button className="chat-support-fab" onClick={() => setIsOpen(true)} aria-label="Open support chat">
         <svg
           width="24"
           height="24"
@@ -47,15 +96,13 @@ export function ChatSupport() {
     );
   }
 
+  const spokenDraft = isListening ? interimTranscript || draft : "";
+  const errorText = error ? VOICE_ERROR[error] : "";
+
   return (
-    <div
-      className={`chat-support-container ${isMinimized ? "minimized" : ""}`}
-      role="dialog"
-      aria-label="Support chat"
-      aria-modal="true"
-    >
+    <div className={`chat-support-container ${isMinimized ? "minimized" : ""}`} role="dialog" aria-label="Support chat">
       <div className="chat-support-header">
-        <h2 className="chat-support-title">LearnAble Support</h2>
+        <h2 className="chat-support-title">LearnAble guide</h2>
         <div className="chat-support-actions">
           <button
             onClick={() => setIsMinimized(!isMinimized)}
@@ -73,7 +120,11 @@ export function ChatSupport() {
             )}
           </button>
           <button
-            onClick={() => setIsOpen(false)}
+            onClick={() => {
+              stopListening();
+              stopSpeaking();
+              setIsOpen(false);
+            }}
             aria-label="Close chat"
             className="chat-support-btn"
           >
@@ -102,9 +153,56 @@ export function ChatSupport() {
           </div>
 
           <div className="chat-support-input-area">
-            <ASLTranslator />
-            <ChatInput onSend={sendMessage} disabled={isLoading} />
-            <VoiceControl onVoiceInput={handleVoiceInput} disabled={isLoading} />
+            <label className="chat-consent">
+              <input
+                type="checkbox"
+                checked={consent}
+                onChange={(event) => {
+                  setConsent(event.target.checked);
+                  if (event.target.checked) sessionStorage.setItem("learnable-consent", "yes");
+                  else sessionStorage.removeItem("learnable-consent");
+                }}
+              />
+              Optional: send questions to Gemini when the transcript service has a key. Until this is ticked, answers stay on
+              this device.
+            </label>
+            <div className="chat-composer">
+              <div className="chat-input-row">
+                {isSupported ? (
+                  <VoiceControl
+                    isListening={isListening}
+                    startListening={beginVoice}
+                    stopListening={stopListening}
+                    disabled={isLoading}
+                  />
+                ) : null}
+                <ChatInput
+                  onSend={handleSend}
+                  disabled={isLoading}
+                  spokenDraft={spokenDraft}
+                  listening={isListening}
+                  onTyped={() => {
+                    if (isListening) stopListening();
+                  }}
+                />
+              </div>
+              <p className="sr-only" role="status" aria-live="assertive">
+                {isListening ? "Listening. Say a page name, like sessions or jobs." : errorText}
+              </p>
+              {isListening ? (
+                <p className="voice-status">Listening… say sessions, jobs, lesson, pack, or verify.</p>
+              ) : null}
+              {!isSupported ? (
+                <p className="voice-status" role="status">
+                  This browser has no spoken input. Type in the box. A screen reader can still read the replies.
+                </p>
+              ) : null}
+              {errorText ? (
+                <p className="voice-error" role="alert">
+                  {errorText}
+                </p>
+              ) : null}
+            </div>
           </div>
         </>
       )}

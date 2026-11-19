@@ -1,7 +1,9 @@
 import type { ContrastMode } from "../lib/contrast";
+import { ownData } from "../lib/guard";
 
 export type CaptionPreset = "white" | "yellow" | "black" | "cyan";
 export type Lang = "en" | "am";
+export type DescriptionMode = "off" | "spoken" | "text";
 
 export type EnhanceFlag = boolean | {
   toolbar?: boolean;
@@ -37,6 +39,7 @@ export type WidgetSettings = {
   voice: boolean;
   voiceChosen: boolean;
   audioDescription: boolean;
+  descriptionMode: DescriptionMode;
   keyboard: boolean;
   keys: ShortcutMap;
   toolbarCorner: "tl" | "tr" | "bl" | "br";
@@ -98,10 +101,11 @@ export const defaultSettings = (): WidgetSettings => ({
   voice: true,
   voiceChosen: false,
   audioDescription: true,
+  descriptionMode: "spoken",
   keyboard: true,
   keys: { heading: "h", landmark: "l", help: "?", voice: "Alt+Shift+S" },
-  toolbarCorner: "bl",
-  toolbarCollapsed: false,
+  toolbarCorner: "br",
+  toolbarCollapsed: true,
   toolbarVisited: false,
 });
 
@@ -141,22 +145,30 @@ export function loadSettings(): WidgetSettings {
   try {
     const saved = localStorage.getItem(KEY);
     if (!saved) return base;
-    const parsed = JSON.parse(saved) as Partial<WidgetSettings>;
+    const parsed = ownData(JSON.parse(saved)) as Partial<WidgetSettings>;
     const lang = parsed.lang === "am" ? "am" : parsed.lang === "en" ? "en" : base.lang;
     const uiLang = parsed.uiLang === "am" ? "am" : parsed.uiLang === "en" ? "en" : base.uiLang;
     const contrastMode = parsed.contrastMode === "bw" || parsed.contrastMode === "yb" ? parsed.contrastMode : "off";
     const contrastLevel = Math.min(10, Math.max(1, Number(parsed.contrastLevel) || base.contrastLevel));
     const keys = { ...base.keys, ...(parsed.keys || {}) };
+    const descriptionMode: DescriptionMode =
+      parsed.descriptionMode === "off" || parsed.descriptionMode === "spoken" || parsed.descriptionMode === "text"
+        ? parsed.descriptionMode
+        : typeof parsed.audioDescription === "boolean"
+          ? parsed.audioDescription
+            ? "spoken"
+            : "off"
+          : base.descriptionMode;
     return {
       ...base,
-      ...parsed,
       lang,
       uiLang,
       contrastMode,
       contrastLevel,
       voice: typeof parsed.voice === "boolean" ? parsed.voice : base.voice,
       voiceChosen: parsed.voiceChosen === true,
-      audioDescription: typeof parsed.audioDescription === "boolean" ? parsed.audioDescription : base.audioDescription,
+      audioDescription: descriptionMode !== "off",
+      descriptionMode,
       keyboard: parsed.keyboard !== false,
       keys: {
         heading: cleanShortcut(keys.heading, base.keys.heading),
@@ -164,7 +176,7 @@ export function loadSettings(): WidgetSettings {
         help: cleanShortcut(keys.help, base.keys.help),
         voice: cleanShortcut(keys.voice, base.keys.voice),
       },
-      toolbarCorner: parsed.toolbarCorner === "tl" || parsed.toolbarCorner === "tr" || parsed.toolbarCorner === "br" || parsed.toolbarCorner === "bl" ? parsed.toolbarCorner : "bl",
+      toolbarCorner: parsed.toolbarCorner === "tl" || parsed.toolbarCorner === "tr" || parsed.toolbarCorner === "br" || parsed.toolbarCorner === "bl" ? parsed.toolbarCorner : "br",
       toolbarCollapsed: parsed.toolbarCollapsed === true,
       toolbarVisited: parsed.toolbarVisited === true,
     };
@@ -192,13 +204,17 @@ export function saveSettings(next: WidgetSettings): void {
 }
 
 export function updateSettings(partial: Partial<WidgetSettings>): WidgetSettings {
-  const next = { ...getSettings(), ...partial };
+  const next = { ...getSettings(), ...ownData(partial) } as WidgetSettings;
   saveSettings(next);
   return getSettings();
 }
 
 export function configure(config: LearnAbleConfig = {}): void {
-  features = { ...defaultFeatures(), ...config.features };
+  const incoming = ownData(config.features);
+  features = { ...defaultFeatures() };
+  for (const key of Object.keys(defaultFeatures()) as (keyof FeatureFlags)[]) {
+    if (typeof incoming[key] === "boolean") features[key] = incoming[key] as boolean;
+  }
   if (config.theme) themeName = config.theme;
   if (config.enhance !== undefined) enhance = config.enhance;
   const stored = loadSettings();
@@ -209,7 +225,10 @@ export function configure(config: LearnAbleConfig = {}): void {
   };
   if (stored.voiceChosen !== true && config.voice) {
     settings.voice = config.voice === "on";
-    if (config.voice === "off") settings.audioDescription = false;
+    if (config.voice === "off") {
+      settings.audioDescription = false;
+      settings.descriptionMode = "off";
+    }
   }
   saveSettings(settings);
 }

@@ -97,8 +97,10 @@ describe("player shortcuts", () => {
 describe("light pack", () => {
   it("ships audio, alt text, and both languages without the video", () => {
     const html = readFileSync(resolve(root, "public/packs/demo/index.html"), "utf8");
-    expect(html).toContain('src="lesson-en.wav"');
-    expect(html).toContain('src="lesson-am.wav"');
+    expect(html).toContain('src="lesson-en.opus"');
+    expect(html).toContain('src="lesson-en.m4a"');
+    expect(html).toContain('src="lesson-am.opus"');
+    expect(html).toContain('src="lesson-am.m4a"');
     expect(html).toContain(demoLesson.figure.alt);
     expect(html).toContain("lang=\"am\"");
     expect(html).not.toContain(".mp4");

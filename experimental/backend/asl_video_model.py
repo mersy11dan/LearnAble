@@ -15,6 +15,18 @@ from transformers import AutoModelForSeq2SeqLM, AutoTokenizer, pipeline
 import os
 
 
+def heavy_models_enabled() -> bool:
+    """Hugging Face and Ollama downloads stay off unless this is exactly 1."""
+    return os.environ.get("LEARNABLE_ASL_VIDEO", "").strip() == "1"
+
+UNAVAILABLE = {
+    "success": False,
+    "source": "unavailable",
+    "label": "Computer-generated. ASL, not Ethiopian Sign Language.",
+    "message": "Video-to-text is unavailable. Set LEARNABLE_ASL_VIDEO=1 to opt in. Nothing was downloaded.",
+}
+
+
 class ASLVideoProcessor:
     """Process ASL videos using MediaPipe pose extraction"""
     
@@ -122,6 +134,8 @@ class ASLTranslator:
         
     def load_hf_models(self):
         """Load Hugging Face models locally"""
+        if not heavy_models_enabled():
+            raise RuntimeError("LEARNABLE_ASL_VIDEO is not 1, so no Hugging Face model is downloaded.")
         if self.tokenizer is None:
             try:
                 # Load gloss translation model
@@ -137,6 +151,8 @@ class ASLTranslator:
         Translate ASL video using Hugging Face models
         Returns text in the target language (en or am)
         """
+        if not heavy_models_enabled():
+            return dict(UNAVAILABLE)
         try:
             # Extract keypoints from video
             keypoints = self.video_processor.extract_keypoints(video_path)
@@ -221,6 +237,8 @@ class ASLTranslator:
         Translate ASL video using Ollama (local LLM)
         Uses vision model to analyze video frames
         """
+        if not heavy_models_enabled():
+            return dict(UNAVAILABLE)
         try:
             # Extract keypoints
             keypoints = self.video_processor.extract_keypoints(video_path)
@@ -410,7 +428,7 @@ Provide a natural, human-readable translation in {"English" if target_lang == "e
 # Convenience functions
 def process_asl_video(
     video_path: str,
-    mode: str = "dual",  # "hf", "ollama", or "dual"
+    mode: str = "off",
     target_lang: str = "both",  # "en", "am", or "both"
     hf_token: Optional[str] = None,
     ollama_url: str = "http://localhost:11434"
@@ -428,8 +446,10 @@ def process_asl_video(
     Returns:
         Dictionary with translation results
     """
+    if not heavy_models_enabled() or mode in ("", "off"):
+        return dict(UNAVAILABLE)
     translator = ASLTranslator(hf_token=hf_token, ollama_url=ollama_url)
-    
+
     if mode == "dual" or target_lang == "both":
         return translator.translate_video_dual(video_path)
     elif mode == "hf":

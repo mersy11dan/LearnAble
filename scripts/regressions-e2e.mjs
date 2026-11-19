@@ -106,6 +106,7 @@ async function collapseFlow(page, label) {
   await launcher.click();
   const open = await dockBox(page);
   if (open.hidden || open.display === "none" || open.height < 80) throw new Error(`${label} dock did not return ${JSON.stringify(open)}`);
+  await toolbar.locator("summary", { hasText: "Position" }).click();
   await toolbar.locator("[data-act=collapse]").click();
   await assertCollapsed(page);
   await launcher.click();
@@ -148,6 +149,14 @@ const narrowOverflow = await narrow.evaluate(() => {
 });
 if (narrowOverflow === null) throw new Error("sign panel missing at 360px");
 if (narrowOverflow > 1) throw new Error(`sign panel overflow at 360px: ${narrowOverflow}`);
+const narrowResize = await narrow.evaluate(() => {
+  const button = document.querySelector("learnable-player")?.shadowRoot?.querySelector("[data-sign-resize]");
+  if (!button) return null;
+  return { scrollHeight: button.scrollHeight, whiteSpace: getComputedStyle(button).whiteSpace };
+});
+if (!narrowResize || narrowResize.whiteSpace !== "nowrap" || narrowResize.scrollHeight > 72) {
+  throw new Error(`resize wrapped at 360px ${JSON.stringify(narrowResize)}`);
+}
 await narrow.close();
 
 const zoomed = await browser.newPage({ viewport: { width: 1280, height: 900 } });
@@ -164,6 +173,11 @@ const zoomOverflow = await zoomed.evaluate(() => {
 });
 if (zoomOverflow === null) throw new Error("sign panel missing at 200%");
 if (zoomOverflow > 1) throw new Error(`sign panel overflow at 200%: ${zoomOverflow}`);
+const zoomResize = await zoomed.evaluate(() => {
+  const button = document.querySelector("learnable-player")?.shadowRoot?.querySelector("[data-sign-resize]");
+  return button ? button.scrollHeight : null;
+});
+if (zoomResize === null || zoomResize > 96) throw new Error(`resize wrapped at 200% height ${zoomResize}`);
 await zoomed.close();
 console.log("sign panel fits at 360px and 200%");
 
@@ -193,7 +207,15 @@ const layoutContext = await browser.newContext({ viewport: { width: 1280, height
 const layout = await layoutContext.newPage();
 await layout.goto(`${base}/pages/concept-with-learnable.html`, { waitUntil: "domcontentloaded" });
 await dismissVoice(layout);
-await layout.locator("[data-hands] img").first().waitFor({ timeout: 8000 });
+const profile = await layout.getByText("My Profile").boundingBox();
+const launch = await layout.locator("learnable-toolbar").locator("[data-act=launcher]").boundingBox();
+const coversProfile = Boolean(
+  profile && launch &&
+  launch.left < profile.x + profile.width && launch.left + launch.width > profile.x &&
+  launch.top < profile.y + profile.height && launch.top + launch.height > profile.y
+);
+if (coversProfile) throw new Error("launcher covers My Profile");
+await layout.locator("[data-signer-now]").waitFor({ timeout: 8000 });
 const placed = await layout.evaluate(() => {
   const player = document.querySelector("learnable-player");
   const sign = player?.shadowRoot?.querySelector(".sign");
@@ -214,10 +236,55 @@ const placed = await layout.evaluate(() => {
 if (placed.position === "fixed" || placed.position === "absolute") throw new Error(`player position ${placed.position}`);
 if (placed.overlaps) throw new Error("sign panel overlaps a host image");
 if (placed.signWidth < placed.rem * 16 - 1) throw new Error(`sign width ${placed.signWidth} rem ${placed.rem}`);
+const separated = await layout.evaluate(() => {
+  const root = document.querySelector("learnable-player")?.shadowRoot;
+  const caption = root?.querySelector(".caption")?.getBoundingClientRect();
+  const stage = document.querySelector("#learnable-sign-window .stage")?.getBoundingClientRect();
+  const sign = document.querySelector("#learnable-sign-window")?.getBoundingClientRect();
+  const overlaps = Boolean(
+    caption && stage && caption.width > 2 && caption.height > 2 && stage.width > 2 &&
+    caption.left < stage.right - 1 && caption.right > stage.left + 1 && caption.top < stage.bottom - 1 && caption.bottom > stage.top + 1
+  );
+  return {
+    overlaps,
+    stageBottom: stage?.bottom || 0,
+    signBottom: sign?.bottom || 0,
+    stageHeight: stage?.height || 0,
+  };
+});
+if (separated.overlaps) throw new Error("caption overlaps the signer");
+if (separated.stageHeight < 72) throw new Error(`signer stage too short ${separated.stageHeight}`);
+if (separated.stageBottom > separated.signBottom + 2) throw new Error("signer is cut off by the sign panel");
+async function clearOfPlayer(page, label) {
+  const hit = await page.evaluate(() => {
+    const sign = document.querySelector("#learnable-sign-window")?.getBoundingClientRect();
+    const root = document.querySelector("learnable-player")?.shadowRoot;
+    if (!sign || !root) return "missing";
+    const targets = ["video", "[data-act=play]", "[data-act=captions]", "[data-act=ad]"]
+      .map((sel) => root.querySelector(sel)?.getBoundingClientRect())
+      .filter((rect) => rect && rect.width > 2 && rect.height > 2);
+    const overlap = targets.some((rect) =>
+      sign.left < rect.right - 1 && sign.right > rect.left + 1 && sign.top < rect.bottom - 1 && sign.bottom > rect.top + 1
+    );
+    return overlap ? "overlap" : "";
+  });
+  if (hit) throw new Error(`${label} sign window ${hit} video or player controls`);
+}
+await clearOfPlayer(layout, "desktop");
+await layout.setViewportSize({ width: 360, height: 800 });
+await layout.waitForTimeout(200);
+await clearOfPlayer(layout, "360");
+await layout.setViewportSize({ width: 1280, height: 900 });
 await layout.locator("learnable-player").locator(".sign").screenshot({ path: "/opt/cursor/artifacts/sign-panel-desktop.png" });
 const launcher = layout.locator("learnable-toolbar").locator("[data-act=launcher]");
 if (await launcher.isVisible()) await launcher.click();
-await layout.locator("learnable-toolbar").locator("[data-key=contrastMode]").selectOption("bw");
+const contrastMode = layout.locator("learnable-toolbar").locator("[data-key=contrastMode]");
+await contrastMode.evaluate((node) => {
+  const details = node.closest("details");
+  if (details) details.open = true;
+  node.scrollIntoView({ block: "center", inline: "nearest" });
+});
+await contrastMode.selectOption("bw");
 const contrastPlaced = await layout.evaluate(() => {
   const sign = document.querySelector("learnable-player")?.shadowRoot?.querySelector(".sign");
   const hero = document.querySelector("#curriculum_navigation_content img");

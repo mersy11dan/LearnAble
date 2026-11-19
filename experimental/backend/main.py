@@ -110,7 +110,7 @@ class CacheResponse(BaseModel):
     data: Optional[Dict] = None
 
 class ASLVideoRequest(BaseModel):
-    mode: str = "dual"  # "hf", "ollama", or "dual"
+    mode: str = "off"  # "off", "hf", "ollama", or "dual". Downloads only when LEARNABLE_ASL_VIDEO=1.
     target_lang: str = "both"  # "en", "am", or "both"
 
 class VoiceRequest(BaseModel):
@@ -365,7 +365,7 @@ async def clear_cache():
 @app.post("/api/asl/translate-video")
 async def translate_asl_video(
     file: UploadFile = File(...),
-    mode: str = "dual",
+    mode: str = "off",
     target_lang: str = "both"
 ):
     """
@@ -377,6 +377,13 @@ async def translate_asl_video(
     
     Returns translations in English and/or Amharic with humanized output
     """
+    if os.getenv("LEARNABLE_ASL_VIDEO", "").strip() != "1" or mode in ("", "off"):
+        return JSONResponse({
+            "success": False,
+            "source": "unavailable",
+            "label": "Computer-generated. ASL, not Ethiopian Sign Language.",
+            "message": "Video-to-text is unavailable. Set LEARNABLE_ASL_VIDEO=1 to opt in. Nothing was downloaded.",
+        })
     # Validate file type
     if not file.content_type or not file.content_type.startswith("video/"):
         raise HTTPException(
@@ -534,8 +541,12 @@ async def list_asl_models():
         }
     }
     
-    # Check Ollama availability
+    # Check Ollama availability only after an explicit opt-in. The default install does not call it.
+    if os.getenv("LEARNABLE_ASL_VIDEO", "").strip() != "1":
+        models["ollama"]["llama_vision"]["status"] = "off"
+        return models
     try:
+        import requests
         ollama_url = os.getenv("OLLAMA_URL", "http://localhost:11434")
         response = requests.get(f"{ollama_url}/api/tags", timeout=2)
         if response.status_code == 200:
@@ -645,7 +656,7 @@ async def reset_conversation(conversation_id: str = "default"):
 @app.post("/api/asl/translate-with-voice")
 async def translate_video_with_voice(
     file: UploadFile = File(...),
-    mode: str = "dual",
+    mode: str = "off",
     target_lang: str = "both",
     include_voice: bool = True,
     for_blind: bool = False
@@ -767,14 +778,16 @@ async def test_voice_system():
     if os.getenv("HASAB_API_KEY"):
         status["hasab"] = True
     
-    # Test Ollama
-    try:
-        ollama_url = os.getenv("OLLAMA_URL", "http://localhost:11434")
-        response = requests.get(f"{ollama_url}/api/tags", timeout=2)
-        if response.status_code == 200:
-            status["ollama_chat"] = True
-    except:
-        pass
+    # Test Ollama only after an explicit opt-in.
+    if os.getenv("LEARNABLE_ASL_VIDEO", "").strip() == "1":
+        try:
+            import requests
+            ollama_url = os.getenv("OLLAMA_URL", "http://localhost:11434")
+            response = requests.get(f"{ollama_url}/api/tags", timeout=2)
+            if response.status_code == 200:
+                status["ollama_chat"] = True
+        except Exception:
+            pass
     
     return JSONResponse({
         "status": status,

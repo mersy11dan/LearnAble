@@ -1,5 +1,9 @@
 # ASL Video-to-Text Implementation Summary
 
+These notes describe an experiment. It is off unless `LEARNABLE_ASL_VIDEO=1`. The running demo does not download the models listed below.
+
+# ASL Video-to-Text Implementation Summary
+
 ## 🎉 What We Built
 
 A comprehensive **ASL (American Sign Language) video-to-text recognition system** with multilingual support for English and Amharic. The system works both locally (using Ollama) and online (using Hugging Face models).

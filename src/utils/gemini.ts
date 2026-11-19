@@ -1,48 +1,25 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { chat, type ChatTurn } from "../lib/api";
 
-const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY || "";
+export type ChatAnswer = {
+  text: string;
+  /** "gemini" when a model answered through the transcript service. "saved" is a fixed answer written by hand. */
+  source: "gemini" | "saved";
+  model?: string;
+  note: string;
+};
 
-let genAI: GoogleGenerativeAI | null = null;
+const OFFLINE_NOTE = "The transcript service is not running. This is a saved answer. No model is running.";
 
-if (GEMINI_API_KEY) {
-  genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
-}
-
-export async function generateResponse(
-  userMessage: string,
-  context: string
-): Promise<string> {
-  if (!genAI) {
-    return getFallbackResponse(userMessage);
+/**
+ * The key for Gemini lives on the transcript service, never in this bundle.
+ * The service only calls Google after the consent box is ticked.
+ */
+export async function generateResponse(userMessage: string, context: string, history: ChatTurn[] = []): Promise<ChatAnswer> {
+  const result = await chat(userMessage, context, history);
+  if (result?.source === "gemini" && result.reply) {
+    return { text: result.reply, source: "gemini", model: result.model, note: result.message };
   }
-
-  try {
-    const model = genAI.getGenerativeModel({ model: "gemini-pro" });
-
-    const prompt = `You are a helpful assistant for the LearnAble educational platform. LearnAble is an accessible learning platform with features like:
-- Multi-language support (English and Amharic)
-- Video lessons with captions and audio descriptions
-- Sign language interpretation
-- Offline packs for 3G connections
-- Braille and tagged PDF support
-- Accessibility toolbar with larger text, high contrast, and reduced motion
-- Certificate verification
-- Transcript pipeline
-
-Context about LearnAble:
-${context}
-
-User question: ${userMessage}
-
-Provide a helpful, concise response (2-3 paragraphs maximum). Focus on being clear and actionable. If you're not sure about something specific to LearnAble, acknowledge that and provide general guidance.`;
-
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    return response.text();
-  } catch (error) {
-    console.error("Gemini API error:", error);
-    return getFallbackResponse(userMessage);
-  }
+  return { text: getFallbackResponse(userMessage), source: "saved", note: result?.message ?? OFFLINE_NOTE };
 }
 
 function getFallbackResponse(userMessage: string): string {
@@ -56,7 +33,7 @@ function getFallbackResponse(userMessage: string): string {
     return "LearnAble includes a sign language interpretation window. Press 'S' to toggle the sign window, and use arrow keys to reposition it. The window has Smaller and Larger buttons for adjusting its size without needing a mouse.";
   }
 
-  if (message.includes("voice") || message.includes("audio description")) {
+  if (message.includes("audio description") || message.includes("audio descriptions")) {
     return "Audio descriptions provide spoken narration of visual content. Press 'D' to toggle audio descriptions. This feature helps users who are blind or have low vision understand the visual elements of the lesson.";
   }
 
@@ -76,9 +53,5 @@ function getFallbackResponse(userMessage: string): string {
     return "LearnAble includes an accessibility toolbar with:\n• Larger Text: Increases font size by 25%\n• High Contrast: Black, white, and yellow color scheme\n• Stop Motion: Reduces or eliminates animations\n\nThese settings are saved in your browser and work across all pages.";
   }
 
-  if (message.includes("navigate") || message.includes("find") || message.includes("where")) {
-    return "LearnAble has several main sections:\n• Lesson: Watch the video lesson\n• Pack: Download offline content\n• Session: View recorded sessions\n• Jobs: Browse career opportunities\n• Verify: Check certificate authenticity\n\nThe navigation bar at the top provides access to all sections.";
-  }
-
-  return "I'm here to help you with LearnAble! You can ask me about:\n• Captions and language options\n• Sign language features\n• Audio descriptions\n• Offline downloads\n• Certificates and verification\n• Keyboard shortcuts\n• Accessibility features\n\nWhat would you like to know?";
+  return "I did not match that to a saved answer. Say a page such as sessions, jobs, lesson, or pack. Or ask how captions, audio description, or keyboard shortcuts work.";
 }

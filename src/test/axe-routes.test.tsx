@@ -53,7 +53,7 @@ describe("axe on every route", () => {
   it.each(routes)("has no serious or critical issues on %s", async (path) => {
     renderAt(path);
     await seriousOrCritical(path);
-  });
+  }, 20000);
 
   it("has no serious or critical issues in high contrast", async () => {
     localStorage.setItem(

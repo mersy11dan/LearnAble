@@ -1,14 +1,24 @@
-import { useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { AccessiblePlayer } from "../components/AccessiblePlayer";
+import { SignVideoRead } from "../components/SignVideoRead";
 import { Breadcrumbs } from "../components/Breadcrumbs";
+import { CertificateOffer } from "../components/CertificateOffer";
 import { demoLesson } from "../content/lesson";
+import { isLessonComplete, markLessonComplete } from "../lib/completion";
 import { rememberLesson } from "../lib/resume";
 
 export function LessonPage() {
   const { lessonId } = useParams();
+  const [done, setDone] = useState(() => (lessonId ? isLessonComplete(lessonId) : false));
+  const finish = useCallback(() => {
+    if (!lessonId) return;
+    markLessonComplete(lessonId);
+    setDone(true);
+  }, [lessonId]);
   useEffect(() => {
     if (lessonId === demoLesson.id) rememberLesson(demoLesson.id);
+    setDone(lessonId ? isLessonComplete(lessonId) : false);
   }, [lessonId]);
   if (lessonId !== demoLesson.id) {
     return (
@@ -42,7 +52,10 @@ export function LessonPage() {
         tracks={demoLesson.captions}
         signVideo={demoLesson.signVideo}
         signPoster={demoLesson.signPoster}
+        onComplete={finish}
       />
+      <SignVideoRead />
+      {done ? <CertificateOffer courseId={demoLesson.id} /> : null}
       <p className="next">
         <Link to="/offline">Next: keep the 3G pack</Link>
       </p>

@@ -3,7 +3,12 @@
 
 set -e
 
-echo "🚀 Setting up LearnAble ASL Backend..."
+if [ "${LEARNABLE_ASL_VIDEO}" != "1" ]; then
+  echo "ASL video setup is off. Set LEARNABLE_ASL_VIDEO=1 to opt in. Nothing was installed."
+  exit 0
+fi
+
+echo "Setting up the optional LearnAble ASL backend..."
 echo ""
 
 # Check Python version

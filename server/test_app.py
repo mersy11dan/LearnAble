@@ -15,6 +15,8 @@ def clear_keys(monkeypatch):
     monkeypatch.delenv("HF_TOKEN", raising=False)
     monkeypatch.delenv("LEARNABLE_GLOSS_LOCAL", raising=False)
     monkeypatch.delenv("HF_GLOSS_REMOTE", raising=False)
+    monkeypatch.delenv("GEMINI_API_KEY", raising=False)
+    monkeypatch.delenv("GEMINI_MODEL", raising=False)
 
 
 @pytest.fixture
@@ -26,6 +28,8 @@ def test_health_hides_secrets(client):
     body = client.get("/api/health").get_json()
     assert body["hasab"] is False
     assert body["huggingface"] is False
+    assert body["gemini"] is False
+    assert body["chatModel"] == "gemini-2.5-flash"
     assert body["asrModel"] == "waxal-benchmarking/whisper-small-waxal-amh"
     dumped = json.dumps(body).lower()
     assert "bearer" not in dumped
@@ -191,3 +195,192 @@ def test_missing_upload_returns_the_demo_transcript(client):
     body = client.post("/api/transcribe").get_json()
     assert body["source"] == "sample"
     assert "Addis Ababa" in body["text"]
+
+
+def test_chat_without_a_key_is_a_saved_answer(client, monkeypatch):
+    def refuse(*_args, **_kwargs):
+        raise AssertionError("provider was called")
+
+    monkeypatch.setattr("app.requests.post", refuse)
+    body = client.post("/api/chat", json={"message": "How do I turn on captions?"}).get_json()
+    assert body["source"] == "saved"
+    assert body["reply"] is None
+    assert "No model is running" in body["message"]
+    empty = client.post("/api/chat", json={"message": ""})
+    assert empty.status_code == 400
+
+
+def test_chat_needs_consent_then_calls_gemini(client, monkeypatch):
+    monkeypatch.setenv("GEMINI_API_KEY", "test-key")
+    monkeypatch.setenv("GEMINI_MODEL", "gemini-test")
+
+    def refuse(*_args, **_kwargs):
+        raise AssertionError("provider was called")
+
+    monkeypatch.setattr("app.requests.post", refuse)
+    blocked = client.post("/api/chat", json={"message": "hello"})
+    assert blocked.status_code == 403
+    assert blocked.get_json()["source"] == "saved"
+
+    captured = {}
+
+    class Reply:
+        def raise_for_status(self):
+            return None
+
+        def json(self):
+            return {"candidates": [{"content": {"parts": [{"text": "Press C to cycle captions."}]}}]}
+
+    def fake_post(url, headers=None, json=None, **_kwargs):
+        captured["url"] = url
+        captured["headers"] = headers
+        captured["json"] = json
+        return Reply()
+
+    monkeypatch.setattr("app.requests.post", fake_post)
+    allowed = client.post(
+        "/api/chat",
+        json={"message": "How do I turn on captions?", "context": "Captions: press C.", "history": [{"role": "user", "content": "hi"}, {"role": "assistant", "content": "hello"}]},
+        headers={"X-LearnAble-Consent": "yes"},
+    ).get_json()
+    assert allowed["source"] == "gemini"
+    assert allowed["reply"] == "Press C to cycle captions."
+    assert allowed["model"] == "gemini-test"
+    assert "models/gemini-test:generateContent" in captured["url"]
+    assert captured["headers"]["x-goog-api-key"] == "test-key"
+    assert "key=" not in captured["url"]
+    roles = [turn["role"] for turn in captured["json"]["contents"]]
+    assert roles == ["user", "model", "user"]
+    assert "Captions: press C." in captured["json"]["contents"][-1]["parts"][0]["text"]
+
+
+@pytest.fixture
+def issuer_client(monkeypatch, tmp_path):
+    monkeypatch.setenv("LEARNABLE_DATA_DIR", str(tmp_path))
+    monkeypatch.setenv("LEARNABLE_PUBLIC_BASE", "http://learnable.test")
+    monkeypatch.setenv("LEARNABLE_ADMIN_TOKEN", "admin-test")
+    return create_app().test_client()
+
+
+def test_issue_fetch_verify_revoke_and_missing(issuer_client):
+    from credentials import signature_ok
+
+    refused = issuer_client.post("/api/credentials", json={"courseId": "not-a-course"})
+    assert refused.status_code == 400
+    anonymous = issuer_client.post(
+        "/api/credentials",
+        json={"courseId": "slow-connection", "displayName": "Should Not Be Stored", "consent": False},
+    )
+    assert anonymous.status_code == 201
+    hidden = anonymous.get_json()["credential"]["credentialSubject"]
+    assert "name" not in hidden
+    assert hidden["id"].startswith("urn:uuid:")
+
+    issued = issuer_client.post(
+        "/api/credentials",
+        json={"courseId": "slow-connection", "displayName": "Hana Bekele", "consent": True},
+    )
+    assert issued.status_code == 201
+    body = issued.get_json()
+    credential_id = body["id"]
+    assert body["verifyUrl"] == f"/verify/{credential_id}"
+    assert "learnable.local" not in json.dumps(body)
+    assert body["credential"]["type"] == ["VerifiableCredential", "OpenBadgeCredential"]
+    assert body["credential"]["credentialSubject"]["name"] == "Hana Bekele"
+
+    fetched = issuer_client.get(f"/api/credentials/{credential_id}")
+    assert fetched.status_code == 200
+    assert fetched.get_json()["jwt"] == body["jwt"]
+
+    issuer = issuer_client.get("/api/issuer").get_json()
+    assert issuer["id"] == "http://learnable.test/api/issuer"
+    assert issuer["publicKey"]["crv"] == "Ed25519"
+    assert signature_ok(body["jwt"], issuer["publicKey"]) is True
+    tampered = body["jwt"][:-4] + "AAAA"
+    assert signature_ok(tampered, issuer["publicKey"]) is False
+
+    verified = issuer_client.get(f"/api/credentials/{credential_id}/verify").get_json()
+    assert verified == {
+        "valid": True,
+        "issuedAt": body["credential"]["validFrom"],
+        "issuer": "http://learnable.test/api/issuer",
+        "revoked": False,
+    }
+
+    missing = issuer_client.get("/api/credentials/00000000-0000-4000-8000-000000000000")
+    assert missing.status_code == 404
+    assert missing.get_json()["error"] == "No credential with that id."
+    missing_verify = issuer_client.get("/api/credentials/00000000-0000-4000-8000-000000000000/verify")
+    assert missing_verify.status_code == 404
+    assert missing_verify.get_json()["valid"] is False
+
+    blocked = issuer_client.post(f"/api/credentials/{credential_id}/revoke")
+    assert blocked.status_code == 403
+    revoked = issuer_client.post(
+        f"/api/credentials/{credential_id}/revoke",
+        headers={"Authorization": "Bearer admin-test"},
+    )
+    assert revoked.status_code == 200
+    after = issuer_client.get(f"/api/credentials/{credential_id}/verify").get_json()
+    assert after["valid"] is False
+    assert after["revoked"] is True
+
+    spec = issuer_client.get("/api/openapi.yaml").get_data(as_text=True)
+    assert "/api/issuer" in spec
+    assert "/api/credentials:" in spec or "/api/credentials" in spec
+    assert "/api/credentials/{id}/verify" in spec
+    assert "/api/credentials/{id}/revoke" in spec
+
+
+def test_sign_video_is_unavailable_and_downloads_nothing(client, monkeypatch):
+    def refuse(*_args, **_kwargs):
+        raise AssertionError("a model host was called")
+
+    monkeypatch.setattr("app.requests.post", refuse)
+    monkeypatch.setattr("app.requests.get", refuse)
+    missing = client.post("/api/sign-video")
+    assert missing.status_code == 400
+    assert missing.get_json()["source"] == "unavailable"
+    assert "No model was downloaded" in missing.get_json()["message"]
+
+    response = client.post(
+        "/api/sign-video",
+        data={"video": (BytesIO(b"tiny-mp4"), "sign.mp4")},
+        content_type="multipart/form-data",
+    )
+    body = response.get_json()
+    assert response.status_code == 200
+    assert body["source"] == "unavailable"
+    assert body["text"] is None
+    assert body["label"] == "Computer-generated. ASL, not Ethiopian Sign Language."
+    assert "none is downloaded" in body["message"]
+    dumped = json.dumps(body)
+    assert "api_key" not in dumped.lower()
+    assert "AIza" not in dumped
+
+    huge = client.post(
+        "/api/sign-video",
+        data={"video": (BytesIO(b"x" * 1_500_001), "big.mp4")},
+        content_type="multipart/form-data",
+    )
+    assert huge.status_code == 413
+    assert "1.5 MB" in huge.get_json()["message"]
+
+
+def test_sign_video_opt_in_still_does_not_download(client, monkeypatch):
+    monkeypatch.setenv("LEARNABLE_SIGN_VIDEO", "1")
+
+    def refuse(*_args, **_kwargs):
+        raise AssertionError("a model host was called")
+
+    monkeypatch.setattr("app.requests.post", refuse)
+    response = client.post(
+        "/api/sign-video",
+        data={"video": (BytesIO(b"tiny-mp4"), "sign.mp4")},
+        content_type="multipart/form-data",
+    )
+    body = response.get_json()
+    assert response.status_code == 200
+    assert body["source"] == "unavailable"
+    assert "nothing was downloaded" in body["message"]
+    assert client.get("/api/health").get_json()["signVideo"] is True

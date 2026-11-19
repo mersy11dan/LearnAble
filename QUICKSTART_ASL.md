@@ -1,5 +1,9 @@
 # Quick Start: ASL Video-to-Text Recognition
 
+Off unless `LEARNABLE_ASL_VIDEO=1`. The commands below are not part of `npm ci`, `pip install -r server/requirements.txt`, or the 3G check. Nothing here is Ethiopian Sign Language.
+
+# Quick Start: ASL Video-to-Text Recognition
+
 Get the ASL (American Sign Language) video-to-text system running in **5 minutes**!
 
 ## ⚡ Super Quick Start

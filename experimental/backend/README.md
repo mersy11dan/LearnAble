@@ -1,3 +1,15 @@
+# Experimental backend
+
+This FastAPI app is not part of the LearnAble submission.
+
+- Docker Compose does not start it. The submission API is `server/app.py`.
+- Hugging Face, Torch, and Ollama downloads stay off unless `LEARNABLE_ASL_VIDEO=1`.
+- Do not put keys in the demo site. There is no `VITE_GEMINI_API_KEY`. A Gemini key, if any, is `GEMINI_API_KEY` on the server.
+- The gloss and video notes here are American Sign Language, not Ethiopian Sign Language.
+- Nothing here is verified against WCAG, a screen reader, or a Deaf or blind reviewer.
+
+The longer notes below describe the optional scripts. They do not run in the default install.
+
 # LearnAble Backend - ASL Video-to-Text API
 
 FastAPI backend for AI-powered ASL (American Sign Language) translation with multilingual support.
@@ -276,4 +288,4 @@ Part of LearnAble. See main repository LICENSE.
 
 ---
 
-Built with ❤️ for accessibility by the LearnAble team
+Built with care for accessibility by the LearnAble team.

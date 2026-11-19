@@ -11,6 +11,7 @@ from __future__ import annotations
 import base64
 import json
 import os
+import re
 from pathlib import Path
 
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
@@ -18,11 +19,19 @@ from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
 import requests
 from flask import Flask, jsonify, request
 
+from credentials import fetch_credential, issue_credential, issuer_profile, revoke_credential, verify_credential
+
 ROOT = Path(__file__).resolve().parents[1]
 LESSON_PATH = ROOT / "src" / "content" / "lesson.json"
 GLOSS_PATH = ROOT / "src" / "content" / "asl-gloss.json"
 GLOSS_MODEL = "Suyash2205/signbridge-t5-base-asl-gloss"
 GLOSS_PROMPT = "translate English to ASL gloss: "
+CHAT_MODEL_DEFAULT = "gemini-2.5-flash"
+CHAT_PROMPT = """You are the help assistant inside LearnAble, an accessible lesson player for Ethiopia.
+It has English and Amharic captions, a sign panel that shows ASL gloss and is not Ethiopian Sign Language,
+spoken audio description, a 3G offline pack, braille (.brf) and tagged PDF downloads, a recorded session viewer,
+job cards with spoken summaries, and Open Badges 3.0 certificate checks.
+Answer in two or three short paragraphs. If you are not sure about a LearnAble detail, say so."""
 
 
 def lesson() -> dict:
@@ -48,6 +57,10 @@ def badge_signature_ok(jwt: str, jwk: dict) -> bool:
         return True
     except Exception:  # noqa: BLE001 - any bad token is simply not valid
         return False
+
+
+def _credential_id(value: str) -> bool:
+    return bool(re.fullmatch(r"[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}", value))
 
 
 def consent_granted() -> bool:
@@ -99,6 +112,34 @@ def hasab_translate(text: str, source: str, target: str) -> str:
     if not found:
         raise ValueError("Hasab returned no translation text.")
     return found
+
+
+def chat_model() -> str:
+    return configured("GEMINI_MODEL") or CHAT_MODEL_DEFAULT
+
+
+def gemini_chat(message: str, context: str, history: list[dict]) -> str:
+    """Ask Gemini through its REST API. The key stays on this machine."""
+    contents = []
+    for turn in history[-6:]:
+        role = "model" if turn.get("role") == "assistant" else "user"
+        text = str(turn.get("content") or "").strip()
+        if text:
+            contents.append({"role": role, "parts": [{"text": text}]})
+    contents.append({"role": "user", "parts": [{"text": f"{context}\n\nQuestion: {message}".strip()}]})
+    response = requests.post(
+        f"https://generativelanguage.googleapis.com/v1beta/models/{chat_model()}:generateContent",
+        headers={"x-goog-api-key": configured("GEMINI_API_KEY"), "Content-Type": "application/json"},
+        json={"system_instruction": {"parts": [{"text": CHAT_PROMPT}]}, "contents": contents},
+        timeout=45,
+    )
+    response.raise_for_status()
+    body = response.json()
+    parts = body.get("candidates", [{}])[0].get("content", {}).get("parts", [])
+    text = " ".join(str(part.get("text") or "") for part in parts).strip()
+    if not text:
+        raise ValueError("Gemini returned no text.")
+    return text
 
 
 def gloss_table() -> dict:
@@ -206,12 +247,19 @@ def create_app() -> Flask:
 <li>GET /api/health</li>
 <li>POST /api/translate</li>
 <li>POST /api/gloss</li>
+<li>POST /api/chat</li>
+<li>POST /api/sign-video</li>
 <li>POST /api/transcribe</li>
 <li>POST /api/describe-image</li>
 <li>POST /api/speak</li>
 <li>POST /api/braille</li>
 <li>GET /api/offline-pack</li>
 <li>POST /api/certificates/verify</li>
+<li>GET /api/issuer</li>
+<li>POST /api/credentials</li>
+<li>GET /api/credentials/&lt;id&gt;</li>
+<li>GET /api/credentials/&lt;id&gt;/verify</li>
+<li>POST /api/credentials/&lt;id&gt;/revoke</li>
 </ul>
 <form method="get" action="/api/health"><button type="submit">Check health</button></form>
 </body></html>"""
@@ -220,6 +268,54 @@ def create_app() -> Flask:
     @app.get("/api/offline-pack")
     def offline_pack():
         return jsonify({"builtIn": "browser", "path": "/packs/demo/index.html", "message": "The 3G pack is assembled on the phone from the saved lesson files."})
+
+    @app.get("/api/issuer")
+    def issuer():
+        return jsonify(issuer_profile())
+
+    @app.post("/api/credentials")
+    def create_credential():
+        body = request.get_json(silent=True) or {}
+        course_id = str(body.get("courseId") or "").strip()
+        display_name = body.get("displayName")
+        consent = body.get("consent") is True
+        if not course_id:
+            return jsonify({"error": "Include a courseId."}), 400
+        try:
+            issued = issue_credential(course_id, display_name if isinstance(display_name, str) else None, consent)
+        except ValueError as exc:
+            return jsonify({"error": str(exc)}), 400
+        return jsonify(issued), 201
+
+    @app.get("/api/credentials/<credential_id>")
+    def read_credential(credential_id: str):
+        if not _credential_id(credential_id):
+            return jsonify({"error": "No credential with that id."}), 404
+        stored = fetch_credential(credential_id)
+        if stored is None:
+            return jsonify({"error": "No credential with that id."}), 404
+        return jsonify(stored)
+
+    @app.get("/api/credentials/<credential_id>/verify")
+    def read_credential_verify(credential_id: str):
+        if not _credential_id(credential_id):
+            return jsonify({"valid": False, "issuedAt": None, "issuer": None, "revoked": False, "error": "No credential with that id."}), 404
+        result = verify_credential(credential_id)
+        if result is None:
+            return jsonify({"valid": False, "issuedAt": None, "issuer": None, "revoked": False, "error": "No credential with that id."}), 404
+        return jsonify(result)
+
+    @app.post("/api/credentials/<credential_id>/revoke")
+    def revoke(credential_id: str):
+        admin = configured("LEARNABLE_ADMIN_TOKEN")
+        if not admin:
+            return jsonify({"error": "Revocation is disabled. Set LEARNABLE_ADMIN_TOKEN on the server."}), 403
+        provided = request.headers.get("Authorization", "")
+        if provided != f"Bearer {admin}":
+            return jsonify({"error": "The admin token was not accepted."}), 403
+        if not _credential_id(credential_id) or not revoke_credential(credential_id):
+            return jsonify({"error": "No credential with that id."}), 404
+        return jsonify({"revoked": True, "id": credential_id})
 
     @app.post("/api/certificates/verify")
     def verify_certificate():
@@ -251,8 +347,84 @@ def create_app() -> Flask:
                 "captionModel": configured("HF_CAPTION_MODEL") or "Salesforce/blip-image-captioning-base",
                 "glossModel": GLOSS_MODEL,
                 "glossLocal": bool(configured("LEARNABLE_GLOSS_LOCAL")),
+                "gemini": bool(configured("GEMINI_API_KEY")),
+                "chatModel": chat_model(),
+                "signVideo": configured("LEARNABLE_SIGN_VIDEO") == "1",
             }
         )
+
+    @app.post("/api/sign-video")
+    def sign_video():
+        """ASL video-to-text. Off by default, and this build never downloads a model."""
+        label = "Computer-generated. ASL, not Ethiopian Sign Language."
+        upload = request.files.get("video")
+        if upload is None or not (upload.filename or "").strip():
+            return jsonify(
+                {
+                    "source": "unavailable",
+                    "text": None,
+                    "label": label,
+                    "message": "Choose a short sign video. No model was downloaded.",
+                }
+            ), 400
+        payload = upload.read(1_500_001)
+        if len(payload) > 1_500_000:
+            return jsonify(
+                {
+                    "source": "unavailable",
+                    "text": None,
+                    "label": label,
+                    "message": "That video is too large for a slow connection. Keep it under 1.5 MB. No model was downloaded.",
+                }
+            ), 413
+        opted_in = configured("LEARNABLE_SIGN_VIDEO") == "1"
+        detail = (
+            "The optional sign-video switch is on, but this build does not include a recognition model, so nothing was downloaded."
+            if opted_in
+            else "Video-to-text is unavailable. No sign-recognition model is installed, and none is downloaded."
+        )
+        return jsonify({"source": "unavailable", "text": None, "label": label, "message": detail})
+
+    @app.post("/api/chat")
+    def chat():
+        body = request.get_json(silent=True) or {}
+        message = str(body.get("message") or "").strip()
+        context = str(body.get("context") or "").strip()
+        history = body.get("history") if isinstance(body.get("history"), list) else []
+        if not message:
+            return jsonify({"source": "unavailable", "reply": None, "model": chat_model(), "message": "Include the question."}), 400
+        if not configured("GEMINI_API_KEY"):
+            return jsonify(
+                {
+                    "source": "saved",
+                    "reply": None,
+                    "model": chat_model(),
+                    "message": "No Gemini key is set. The page shows a saved answer. No model is running.",
+                }
+            )
+        if not consent_granted():
+            return (
+                jsonify(
+                    {
+                        "source": "saved",
+                        "reply": None,
+                        "model": chat_model(),
+                        "message": "Gemini was not called. Send X-LearnAble-Consent: yes first.",
+                    }
+                ),
+                403,
+            )
+        try:
+            return jsonify({"source": "gemini", "reply": gemini_chat(message, context, history), "model": chat_model(), "message": f"Answered by {chat_model()}."})
+        except Exception as exc:  # noqa: BLE001
+            return jsonify(
+                {
+                    "source": "saved",
+                    "reply": None,
+                    "model": chat_model(),
+                    "message": f"Gemini did not answer ({exc.__class__.__name__}). The page shows a saved answer.",
+                }
+            )
 
     @app.post("/api/gloss")
     def gloss():

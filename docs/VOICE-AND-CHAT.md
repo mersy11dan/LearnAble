@@ -1,4 +1,8 @@
-# 🎤 Voice Agent & LLM Chat System
+# Voice Agent and LLM Chat System
+
+The support chat that ships is `server/app.py`. It reads `GEMINI_API_KEY` on the server only. The notes below are the unused experimental agent. Ollama is not called unless `LEARNABLE_ASL_VIDEO=1`.
+
+# Voice Agent and LLM Chat System
 
 ## Overview
 

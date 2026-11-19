@@ -4,6 +4,7 @@ import { verifyOpenBadge } from "../lib/badge";
 import { saveFile } from "../lib/pack";
 import { speak } from "../lib/speech";
 import { cuesToVtt } from "../lib/vtt";
+import { escapeHtml } from "../lib/guard";
 import { chromeCopy } from "./copy";
 import { LearnAblePlayer } from "./player";
 import { prepareImages } from "./images";
@@ -145,7 +146,7 @@ function mountGateway(): void {
   section.id = "learnable-gateway";
   section.className = "learnable-gateway";
   section.setAttribute("aria-label", "LearnAble lesson tools");
-  const chat = lesson.chat.map((line) => `<li>${line.speaker}: ${line.text}</li>`).join("");
+  const chat = lesson.chat.map((line) => `<li>${escapeHtml(line.speaker)}: ${escapeHtml(line.text)}</li>`).join("");
   section.innerHTML = `
     <h2 id="learnable-pipeline">Transcript</h2>
     <p>These are the lesson captions. English is the transcript. Amharic is the bundled translation. Nothing is sent off this page.</p>
@@ -158,9 +159,9 @@ function mountGateway(): void {
     </label>
     <p data-pipeline-note></p>
     <h2 id="learnable-job">Job card</h2>
-    <p>${job?.title ?? "Caption partner"}</p>
-    <p lang="am">${job?.titleAm ?? ""}</p>
-    <p data-job-summary>${job?.summary ?? ""}</p>
+    <p>${escapeHtml(job?.title ?? "Caption partner")}</p>
+    <p lang="am">${escapeHtml(job?.titleAm ?? "")}</p>
+    <p data-job-summary>${escapeHtml(job?.summary ?? "")}</p>
     <div class="learnable-row">
       <button type="button" data-job>Play audio summary</button>
       <button type="button" data-badge>Check certificate</button>

@@ -1,6 +1,25 @@
 # Sign language panel
 
-The sign panel sits beside the video and stacks under it when the page is narrow, including a 200 percent zoom of a laptop window. It is not a window dragged over the lesson.
+## Ethiopian Sign Language, and what this demo can honestly show
+
+Ethiopian Sign Language (EthSL) is the language used by Deaf communities in Ethiopia. It is not a code for Amharic, and it is not American Sign Language. A short public account is the [Ethiopian Sign Language](https://en.wikipedia.org/wiki/Ethiopian_Sign_Language) page and the work of the Ethiopian National Association of the Deaf.
+
+Two outside traditions show up in the history of deaf education that reached Ethiopia:
+
+- Andrew Foster, a Gallaudet graduate, opened schools for Deaf students across Africa and taught an ASL-based variety. That history is summarised on [Andrew Foster (educator)](https://en.wikipedia.org/wiki/Andrew_Foster_(educator)). It is one reason ASL fingerspelling is a familiar international fallback when an EthSL resource is missing. It is not a reason to call ASL fingerspelling EthSL.
+- Nordic deaf associations, especially Finnish partners, later worked with Ethiopian deaf schools and the national association. That contact is why some descriptions of EthSL mention Scandinavian influence as well as American influence. A Nordic sign system would be another candidate, and this project has no open Nordic sign clips or avatar either.
+
+Public EthSL text-to-sign models and openly licensed EthSL video are still too thin to ship. The sign window shows one public-domain ASL fingerspelling hand at a time, from `public/signs/fingerspell/`. There is no drawn person. The label on screen is “Computer-generated. ASL fingerspelling, not Ethiopian Sign Language.”
+
+A short sign video can be sent to `POST /api/sign-video` on the transcript service. The page does not download a model, and it does not hold an API key. The route is off unless `LEARNABLE_SIGN_VIDEO=1`. Even then this build does not download Torch, Ollama, or a Hugging Face sign model. The reply is computer-generated ASL, not Ethiopian Sign Language, or an honest “video-to-text is unavailable” message. Keep the file under 1.5 MB so a slow connection can send it.
+
+An optional real recording can still be added later. Put an H.264 file at `public/media/signs/<GLOSS>.mp4` and set `clip` on that gloss in `src/content/signs.json`. The demo does not require that file, and it does not invent one.
+
+Where there is no video, the toolbar button “Sign selection” signs the selected text, or the start of the main text, with the same generated fingerspelling, and reads that text aloud. The frozen Savanna reference pages in `public/reference/savanna/` contain no `<video>`, `<audio>`, or YouTube or Vimeo iframe. The with-LearnAble copies add one lesson video so the player can be tested. Signing on a text page does not depend on those copies.
+
+## Layout and the model gloss
+
+The hands sit in one 220 pixel square. The whole handshape is on a light plate, and the current letter is large under it. On a narrow screen the square sits below the player so it does not cover the video or the player controls. It can be dragged, or moved with the arrow keys while Move is focused. Escape closes it. Amharic captions stay on screen, and the hands keep spelling the English letters, with a note that Amharic is not fingerspelled.
 
 ## What is realistic
 
@@ -47,6 +66,31 @@ Each token of the corrected line is then looked up in `src/content/signs.json` (
 A caption that is not in the shipped file, while the model is off, shows the English words and says they are not model output.
 
 The six sample outputs, run on a 4-thread Intel Xeon with no GPU, are usable as a gloss line and not usable as sign. Word order stays English. `Addis Ababa` became `ADDUS ABRAHAM`, and `Amharic captions` became `AMHARAC` and `CAPTEXT`. Cold generate was 0.786 s after a 9.94 s load. Warm cues were 0.699–0.945 s.
+
+## How to add a real ESL recording
+
+The panel does not invent a signer. A recording appears only when you point `sign` at a file you host yourself.
+
+1. Record the lesson in Ethiopian Sign Language. Export H.264 Constrained Baseline, `yuv420p`, with no audio track (AAC-less is fine). Keep it muted. Match the lesson duration. Put the index at the front of the file (`-movflags +faststart`).
+2. Serve the file as `video/mp4` and answer `Range` requests with `206` and `Accept-Ranges: bytes`.
+3. Point both players at it. On the embed:
+
+```html
+<learnable-player
+  src="/media/lesson-en.mp4"
+  sign="/media/esl/lesson-1.mp4"
+  sign-lang="ethiopian"
+  sign-offset="0.0">
+</learnable-player>
+```
+
+`sign-offset` is seconds added to the lesson clock to find the matching frame. Use `0.0` when the recording starts with the lesson. A positive value plays further into the sign file.
+
+Set `sign-lang="ethiopian"` only for an Ethiopian Sign Language recording. If the attribute is empty, or the file is `esl-placeholder.mp4`, the panel says "Placeholder, not a sign language recording" and keeps the ASL gloss and fingerspelling as a labelled fallback. A missing or broken file shows "No Ethiopian Sign Language recording is available for this lesson yet" and does not stop the lesson audio or captions.
+
+The React lesson passes the same values as `signVideo`, `signLang`, and `signOffset` on `AccessiblePlayer`.
+
+The window can be dragged, or moved from the keyboard: Move, then arrow keys (20 pixels, Shift for 80), then Enter or Escape. Smaller, Larger, and Reset change the size. A corner grip resizes it with a pointer. The size stays inside the player, and the choice is stored in `localStorage` when storage works. On a narrow or stacked layout the Move control is hidden, because the panel is in normal flow there.
 
 ## Limits
 

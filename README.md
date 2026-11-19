@@ -13,7 +13,10 @@ English and Amharic captions, a sign window, audio description, and optional 3G 
   captions-en="/media/captions-en.vtt"
   captions-am="/media/captions-am.vtt"
   sign="/media/esl-placeholder.mp4"
+  sign-lang=""
+  sign-offset="0.0"
   describe="/media/descriptions.vtt"
+  descriptions-am="/media/descriptions-am.vtt"
   offline
   braille
   docs>
@@ -29,8 +32,13 @@ The lesson videos are H.264 Constrained Baseline, `yuv420p`, AAC, with the index
 | `lang` | `"en"` | `"en"` or `"am"` caption language |
 | `theme` | `"paper"` | `"paper"` or `"navy"` |
 | `features.toolbar` | on | Floating larger text, high contrast, stop motion, caption size and colour |
+| `sign` | none | Sign-recording URL, for example `sign="/media/esl/lesson-1.mp4"`. `esl-placeholder.mp4` is not a recording |
+| `sign-lang` | empty | Set `ethiopian` only when the file is an Ethiopian Sign Language recording. Any other value keeps the ASL gloss label |
+| `sign-offset` | `0` | Seconds added to the lesson time to line up the sign recording. `0.0` when both files start together |
 | `features.signWindow` | on | Sign window. Turn off with `sign="false"` |
-| `features.audioDescription` | on | Spoken description. Turn off with `describe="false"` |
+| `describe` | `/media/descriptions.vtt` when the feature is on | English audio-description cues |
+| `descriptions-am` | `/media/descriptions-am.vtt` when `describe` is set | Amharic audio-description cues. The lines need native-speaker review |
+| `features.audioDescription` | on | Description. The player offers Off, Spoken, or Text for a screen reader. Turn the control off with `describe="false"` |
 | `features.offlinePack` | off | 3G zip. Also on when the element has `offline` |
 | `features.braille` | off | `.brf` download. Also on when the element has `braille` |
 | `features.taggedDocs` | off | Tagged PDF. Also on when the element has `docs` |
@@ -39,66 +47,19 @@ The lesson videos are H.264 Constrained Baseline, `yuv420p`, AAC, with the index
 
 Events, on the element and on `window`: `learnable-ready`, `learnable-play`, `learnable-captions`, `learnable-settings`.
 
-Build both the site and the bundle with `npm run build`. The plug-in files are `dist/learnable.js` (IIFE, for the script tag) and `dist/learnable.es.js`, each with a sourcemap. The IIFE is about 44 KB, about 16 KB gzipped.
+Build both the site and the bundle with `npm run build`. The plug-in files are `dist/learnable.js` (IIFE, for the script tag) and `dist/learnable.es.js`, each with a sourcemap. The IIFE is about 143 KB, about 47 KB gzipped. The older “44 KB” figure was from before the sign window and description controls.
 
 Copy-paste snippets for HTML, React, WordPress, and an iframe fallback are on `/integrate`.
 
-## New Features
+## Integration
 
-### 🤟 ASL Video-to-Text Recognition (Latest)
+Implemented: Open Badges 3.0 credentials as VC-JWT, signed with Ed25519 by `POST /api/credentials` and checked at `/verify/<id>`, and `schema.org/JobPosting` JSON-LD on each job card. The job cards are fictional demo data. LTI 1.3 is not implemented. It is future work.
 
-**Revolutionary sign language recognition** with multilingual support and AI-powered accessibility:
+Optional ASL video experiments are in `experimental/backend/`. They stay off unless `LEARNABLE_ASL_VIDEO=1`, and they are American Sign Language, not Ethiopian Sign Language. The lesson uses `POST /api/sign-video`, which does not download a model.
 
-#### Core Capabilities:
-- **🎥 Video Input**: Process ASL videos (MP4, AVI, MOV)
-- **🤲 MediaPipe Extraction**: 54 hand & body landmarks per frame
-- **🌐 Dual Backend**: 
-  - **Local**: Ollama (llava, llama3.2-vision, qwen3.5:4b) for offline processing
-  - **Online**: Hugging Face models for cloud inference
-- **🌍 Multilingual Output**: 
-  - English translation
-  - Amharic (አማርኛ) translation
-- **🎤 Humanized Voice**: Natural speech with emotions (excited, calm, neutral)
-- **💬 LLM Chat**: AI assistant powered by qwen3.5:4b for ASL learning
-- **♿ Blind User Support**: Detailed audio descriptions for accessibility
-- **🎨 Humanized Text**: Natural, readable translations
-- **⚡ Real-time Processing**: ~30 FPS keypoint extraction
-- **💾 Smart Caching**: <100ms for repeated queries
-- **🔒 Privacy-First**: Videos processed and immediately deleted
+## Support chat
 
-**Quick Start**: See [`QUICKSTART_ASL.md`](QUICKSTART_ASL.md) for 5-minute setup!
-
-**Full Docs**: 
-- ASL Translation: [`docs/ASL-VIDEO-TO-TEXT.md`](docs/ASL-VIDEO-TO-TEXT.md)
-- Voice & Chat: [`docs/VOICE-AND-CHAT.md`](docs/VOICE-AND-CHAT.md)
-
-### 🤟 Pocket Sign (v0.3.0) - AI-Powered Accessibility Platform
-
-**Pocket Sign** transforms LearnAble into an advanced platform for deaf and blind users:
-
-#### Core Features:
-- **🤟 Smart ASL Interpreter**: Real-time translation to ASL gloss, synchronized with video playback
-- **🎤 Humanized Voice**: Natural Habesha accent for Amharic, smooth English synthesis
-- **🤖 AI Summaries**: Context-aware video content summaries
-- **⚡ FastAPI Backend**: RESTful API with Supabase database
-- **💾 Intelligent Caching**: Client and server-side caching for instant responses
-- **📱 Material UI**: Modern, responsive design with accessibility built-in
-
-#### ASL Interpreter:
-- Fixed position at bottom-right of video player
-- Only appears when video is playing
-- Resizable with drag handle
-- AI-generated summaries overlay
-- Fullscreen mode support
-
-#### Technical Stack:
-- **Frontend**: React + TypeScript + Material UI
-- **Backend**: FastAPI + Python
-- **Database**: Supabase (PostgreSQL)
-- **AI**: Google Gemini for embeddings, translations, and chat
-- **Caching**: In-memory + Service Worker
-
-See [docs/POCKET-SIGN.md](docs/POCKET-SIGN.md) for complete documentation.
+A chat button sits in the corner of the demo site. Tap the microphone and say a page such as sessions or jobs, or type in the box. With no key, every answer is saved text written by hand, and each one says so. When `GEMINI_API_KEY` is set on the transcript service, a question is sent to Google Gemini only after the consent box in the chat is ticked. The key never reaches the browser. Set `VITE_ENABLE_CHAT=false` to hide the chat. Sign language for Track 2 is the player sign window, not a chat panel. It is ASL gloss, not Ethiopian Sign Language. The unused FastAPI app and the unused ASL panel live in `experimental/`. See [docs/EXPERIMENTAL.md](docs/EXPERIMENTAL.md) and [docs/SIGN-LANGUAGE.md](docs/SIGN-LANGUAGE.md).
 
 ## Install in an hour
 
@@ -107,7 +68,6 @@ Prerequisites: Node.js 22, npm, Python 3.12, and a current browser. Docker is op
 ```bash
 git clone https://github.com/mersy11dan/LearnAble.git
 cd LearnAble
-git checkout cursor/learnable-track2-82be
 npm install
 npm test
 npm run lint
@@ -155,7 +115,7 @@ About four minutes. Leave the sound off for the first minute.
 
 `npm run preview` serves the production build on http://127.0.0.1:4173. The service worker is registered only in that build, so the app shell can be reopened after one online visit. With `.env` empty, known lesson sentences return the bundled caption and are marked `sample`. Other text is not invented.
 
-Rebuild the demo media (needs `espeak-ng` and `ffmpeg`) with `npm run media`.
+Rebuild the demo media (needs `espeak-ng` and `ffmpeg`) with `npm run media`. The 3G pack narration was 1,904,228 bytes of WAV per language (about 158 MB an hour). It is now mono Opus at 32 kbps, 137,270 bytes in English and 158,136 bytes in Amharic for the 43 second lesson, plus AAC fallbacks of 178,016 and 202,162 bytes. The downloadable pack is 703,942 bytes, about 704 KB.
 
 ## Design system
 
@@ -212,6 +172,8 @@ Copy `.env.example` to `.env`. Leave the secrets blank to use the fallbacks.
 | `HF_ASR_MODEL` | Default `waxal-benchmarking/whisper-small-waxal-amh` | Amharic speech recognition, CC-BY-4.0 |
 | `HF_MT_MODEL` | Empty. Set `facebook/nllb-200-distilled-600M` only to opt in | NLLB weights are CC-BY-NC-4.0 and stay off by default |
 | `HF_CAPTION_MODEL` | Default `Salesforce/blip-image-captioning-base` | English image captions to review before they become alt text. BSD-3-Clause |
+| `GEMINI_API_KEY` | Google Gemini for the support chat. Server-only, behind the consent header | https://aistudio.google.com/app/apikey |
+| `GEMINI_MODEL` | Defaults to `gemini-2.5-flash` | Only change it to another current Gemini model id |
 | `VITE_API_BASE` | Public URL of the transcript service | Empty in dev, because Vite proxies `/api`. Never put a key in a `VITE_` variable |
 
 Leyu is datasets and a Hugging Face model (`gheero-Leyu/amharic-omnivoice-tts`), not an inference API, so it is not called.

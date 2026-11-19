@@ -1,3 +1,5 @@
+// Archived. Not imported by the demo site or the embed. Not Ethiopian Sign Language.
+// The Material UI imports below are not installed for the default build.
 import { useState, useEffect, useRef } from "react";
 import { Box, IconButton, Typography, Paper, Tooltip, Fab } from "@mui/material";
 import {
@@ -9,8 +11,8 @@ import {
 } from "@mui/icons-material";
 import { Resizable } from "react-resizable";
 import "react-resizable/css/styles.css";
-import { translateToASL } from "../../utils/aslTranslation";
-import { generateASLSummary } from "../../utils/aslSummary";
+import { translateToASL } from "../../src/utils/aslTranslation";
+import { generateASLSummary } from "../../src/utils/aslSummary";
 import "./styles.css";
 
 interface ASLInterpreterProps {

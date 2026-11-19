@@ -6,6 +6,7 @@ import { setSignDictionary, type SignEntry } from "./signs";
 import { clearRepairs } from "./repair";
 import { enhancePart, type LearnAbleConfig } from "./settings";
 import { LearnAbleToolbar } from "./toolbar";
+import { startTextSign } from "./text-sign";
 import { startVoice } from "./voice";
 import {
   configure,
@@ -68,6 +69,7 @@ function startup(extra: LearnAbleConfig = {}): void {
   mountToolbar();
   if (enhance !== false) runEnhance();
   startVoice();
+  startTextSign();
   document.querySelectorAll("learnable-player").forEach((element) => {
     if (element instanceof LearnAblePlayer) element.refresh();
   });
@@ -108,7 +110,7 @@ const api = {
   setSignDictionary(next: SignEntry[]) {
     setSignDictionary(next);
   },
-  version: "0.3.0",
+  version: "0.4.0",
 };
 
 declare global {

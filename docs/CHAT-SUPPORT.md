@@ -1,261 +1,79 @@
-# Chat Support Feature
+# Chat support
 
-The LearnAble Chat Support feature provides an intelligent, accessible support assistant that helps users navigate the course and understand accessibility features.
+A support assistant for the demo site. It answers questions about the lesson, the player, and the accessibility
+controls, and it can take voice input to move around the site. Sign language for Track 2 lives on the lesson
+player, not in this chat.
 
-## Features
+## How an answer is produced
 
-### 🤖 AI-Powered Responses
-- **Gemini Integration**: Uses Google's Gemini API for intelligent responses
-- **Fallback Responses**: Works without API key using comprehensive fallback knowledge base
-- **Course Context**: Understands LearnAble features, navigation, and accessibility options
+1. Spoken or typed page names (`sessions`, `jobs`, `lesson`, `pack`, `verify`) are handled as navigation.
+2. Other questions are matched to notes in `src/utils/courseKnowledge.ts`.
+3. The page posts the question, the matched notes, and the last few turns to `POST /api/chat` on the transcript service.
+4. The service answers with Gemini when `GEMINI_API_KEY` is set **and** the request carries
+   `X-LearnAble-Consent: yes`. Otherwise it says a saved answer should be shown.
+5. The page shows either the Gemini reply, labelled with the model name, or a saved answer from
+   `src/utils/gemini.ts`, labelled "Saved answer. No model is running."
 
-### 🎤 Voice Support
-- **Voice Input**: Click the microphone button to speak your question
-- **Speech Recognition**: Uses Web Speech API for real-time transcription
-- **Browser Support**: Works in modern browsers that support Speech Recognition
-- **Accessibility**: Full keyboard navigation and screen reader support
+The consent box sits above the input. It stores `learnable-consent` in `sessionStorage`, the same flag the
+pipeline page uses. Nothing leaves the site until it is ticked. The key never reaches the browser.
 
-### 🤟 ASL Translation
-- **T5-Based Model**: Uses HuggingFace's Suyash2205/signbridge-t5-base-asl-gloss model
-- **English to ASL Gloss**: Translates English text to American Sign Language gloss notation
-- **Fallback Support**: Includes common phrase translations for offline use
-- **Interactive Panel**: Easy-to-use translation interface
+If the transcript service is not running, the chat still works. Every answer is then saved text, and says so.
 
-### 📱 Mobile Optimized
-- **Responsive Design**: Full-screen on mobile devices
-- **Touch Targets**: 44px minimum touch targets for accessibility
-- **Swipe Support**: Easy to open, minimize, and close
-- **Fixed Positioning**: Bottom-right corner on desktop, full-width on mobile
-
-### ♿ Accessibility Features
-- **Keyboard Navigation**: Full keyboard support with Tab, Enter, Escape
-- **Screen Reader Support**: Proper ARIA labels and live regions
-- **High Contrast Mode**: Follows LearnAble's high contrast settings
-- **Reduced Motion**: Respects prefers-reduced-motion setting
-- **Focus Indicators**: Clear 3px focus outlines matching LearnAble design
-
-## Usage
-
-### Basic Usage
-
-The chat support button appears in the bottom-right corner of every page. Click it to open the chat interface.
-
-**Common Questions:**
-- "How do I turn on captions?"
-- "Where can I download offline content?"
-- "How do I use keyboard shortcuts?"
-- "What accessibility features are available?"
-- "How do I verify my certificate?"
-
-### Voice Input
-
-1. Click the microphone button in the chat interface
-2. Speak your question clearly
-3. The question will be automatically sent when you stop speaking
-
-**Supported in:**
-- Chrome/Edge (desktop and mobile)
-- Safari (iOS 14.5+)
-- Firefox (requires preference enabled)
-
-### ASL Translation
-
-1. Click the "ASL" button in the chat interface
-2. Enter English text in the text area
-3. Click "Translate to ASL"
-4. View the ASL gloss notation
-
-**Example:**
-- Input: "The doctor will help you now"
-- Output: "DOCTOR WILL HELP YOU NOW"
+The chat is on the page unless the build sets `VITE_ENABLE_CHAT=false`.
 
 ## Configuration
 
-### Environment Variables
-
-Add to your `.env` file:
+On the machine that runs `server/app.py`:
 
 ```bash
-# Optional: Gemini API Key for enhanced AI responses
-VITE_GEMINI_API_KEY=your_api_key_here
+GEMINI_API_KEY=
+GEMINI_MODEL=gemini-2.5-flash
 ```
 
-**Getting a Gemini API Key:**
-1. Visit https://makersuite.google.com/app/apikey
-2. Sign in with your Google account
-3. Create a new API key (free tier available)
-4. Add to `.env` file
+Keys at https://aistudio.google.com/app/apikey. Leave the key blank for the no-model demo.
 
-**Note:** The chat works without an API key using intelligent fallback responses.
+## Voice and text
 
-## Design System
+The microphone is spoken input for people who cannot see the page. Tap it and say a page name such as `sessions` or
+`jobs`. The reply is spoken. The text field stays available for people who are Deaf or hard of hearing, or who
+prefer to type. There is no grid of command buttons.
 
-The chat support follows LearnAble's design system:
+Spoken answers still match local notes first. Gemini is only the optional online extra, behind the consent box.
 
-### Colors
-- **Primary**: Moss green (`#0e5a42`) for user messages and actions
-- **Background**: Paper (`#f2f0ea`) for messages area
-- **Accent**: Navy (`#1b3048`) for header
-- **Highlight**: Caption yellow (`#ffee00`) for header bar
+## Track 2 sign language
 
-### Typography
-- **Headings**: Literata (display font)
-- **Body**: Atkinson Hyperlegible (accessibility-focused)
-- **Size**: Responsive from 0.875rem to 1.125rem
+The sign window, captions, audio description, offline pack, and tagged documents are on the lesson player
+(`/lesson/slow-connection`). Press `S` for the sign window. That is ASL gloss, not Ethiopian Sign Language.
 
-### Spacing
-- Uses LearnAble's `--space-*` tokens (0.25rem to 5rem scale)
-- Consistent padding and margins throughout
-
-### Motion
-- **Fast**: 120ms transitions
-- **Ease**: ease-out easing
-- **Respects**: prefers-reduced-motion
-- **Animations**: Subtle slide-in effects
-
-## Technical Details
-
-### Components
+## Files
 
 ```
 src/components/ChatSupport/
-├── index.tsx              # Main chat container
-├── ChatMessage.tsx        # Individual message component
-├── ChatInput.tsx          # Text input form
-├── VoiceControl.tsx       # Voice input button and indicator
-├── ASLTranslator.tsx      # ASL translation panel
-├── useChatSupport.ts      # Chat state management hook
-└── styles.css             # Component styles
-```
+├── index.tsx              # Container, consent box
+├── ChatMessage.tsx        # One message, with its source label
+├── ChatInput.tsx          # Text field and send
+├── VoiceControl.tsx       # Microphone button
+├── useChatSupport.ts      # State, navigation, and the call to the service
+└── styles.css
 
-### Utilities
-
-```
 src/utils/
-├── gemini.ts              # Gemini API integration
-├── courseKnowledge.ts     # Fallback knowledge base
-├── speechRecognition.ts   # Web Speech API wrapper
-├── speechSynthesis.ts     # Text-to-speech wrapper
-└── aslTranslation.ts      # ASL translation with T5 model
+├── gemini.ts              # Calls /api/chat, holds the saved answers
+├── courseKnowledge.ts     # Notes matched to a question
+├── voiceNavigation.ts     # Page names
+├── speechRecognition.ts   # Spoken input
+└── speechSynthesis.ts     # Spoken replies
+
+src/lib/api.ts             # chat(), glossText(), consentHeaders()
+server/app.py              # POST /api/chat, POST /api/gloss
 ```
 
-### Dependencies
+## Accessibility
 
-- `@google/generative-ai`: Gemini API client
-- `@xenova/transformers`: HuggingFace Transformers.js for ASL
-- Web Speech API (native browser support)
+The chat is a non-modal dialog, so a screen reader can still reach the page behind it. Escape closes it. Messages
+are in a live `log` region. Every control has a name. The composer controls are 44px. Focus rings follow the site
+tokens. High contrast and reduced motion follow the site toggles.
 
-## Browser Support
+## Tests
 
-| Feature | Chrome | Firefox | Safari | Edge |
-|---------|--------|---------|--------|------|
-| Chat UI | ✅ | ✅ | ✅ | ✅ |
-| Gemini AI | ✅ | ✅ | ✅ | ✅ |
-| Voice Input | ✅ | ⚠️* | ✅** | ✅ |
-| ASL Translation | ✅ | ✅ | ✅ | ✅ |
-
-*Firefox requires `media.webspeech.recognition.enable` preference
-**Safari iOS 14.5+ only
-
-## Performance
-
-### Bundle Size
-- Main chat component: ~15KB (gzipped)
-- Gemini SDK: ~45KB (gzipped)
-- Transformers.js: Loaded on-demand (~200KB)
-
-### Loading Strategy
-- Chat button: Loaded immediately
-- ASL model: Lazy-loaded on first use
-- Gemini API: Only when API key is present
-
-## Accessibility Compliance
-
-The chat support meets WCAG 2.2 AA standards:
-
-- ✅ 4.5:1 color contrast ratios
-- ✅ Keyboard navigable
-- ✅ Screen reader compatible
-- ✅ Focus indicators
-- ✅ Touch target size (44px minimum)
-- ✅ Semantic HTML
-- ✅ ARIA labels and live regions
-- ✅ Skip links and landmarks
-
-## Testing
-
-### Manual Testing
-1. Open http://127.0.0.1:5173
-2. Click the chat support button (bottom-right)
-3. Type a question and press Enter
-4. Try voice input (microphone button)
-5. Open ASL translator and translate text
-6. Test keyboard navigation (Tab, Enter, Escape)
-7. Test on mobile device or responsive mode
-8. Test with screen reader
-9. Test high contrast mode
-10. Test with reduced motion enabled
-
-### Automated Tests
-```bash
-npm test  # Runs all existing tests
-```
-
-## Troubleshooting
-
-### Chat button doesn't appear
-- Check browser console for errors
-- Ensure React app is running
-- Verify ChatSupport component is mounted in App.tsx
-
-### Voice input not working
-- Check browser permissions for microphone
-- Verify browser supports Web Speech API
-- Check console for recognition errors
-
-### ASL translation shows "Translation unavailable"
-- Model may still be loading (first use takes ~10 seconds)
-- Check internet connection (model downloaded on first use)
-- Verify @xenova/transformers is installed
-
-### Gemini API not responding
-- Verify API key is correct in `.env`
-- Check API key has not exceeded quota
-- Fallback responses will be used automatically
-
-## Future Enhancements
-
-Planned features for future releases:
-
-- [ ] Multi-language support (Amharic voice input)
-- [ ] Voice output for responses (text-to-speech)
-- [ ] Chat history persistence
-- [ ] Export chat transcript
-- [ ] Video ASL translation integration
-- [ ] Custom training on course content
-- [ ] Real-time caption translation
-- [ ] Braille output support
-
-## Contributing
-
-When contributing to the chat support feature:
-
-1. Follow LearnAble's design system tokens
-2. Ensure WCAG 2.2 AA compliance
-3. Add proper TypeScript types
-4. Include ARIA labels for new elements
-5. Test with keyboard navigation
-6. Test with screen readers
-7. Test on mobile devices
-8. Update this documentation
-
-## License
-
-Same as LearnAble project (see LICENSE file in root).
-
-## Credits
-
-- **Gemini API**: Google AI
-- **ASL Model**: Suyash2205/signbridge-t5-base-asl-gloss
-- **Transformers.js**: Xenova
-- **Design System**: LearnAble team
+`npm test` runs `src/test/chat-support.test.tsx` and `src/test/speech-recognition.test.ts`. `pytest` covers
+`/api/chat` with no key, with a key but no consent, and with a mocked Gemini reply.

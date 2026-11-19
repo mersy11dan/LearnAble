@@ -1,5 +1,9 @@
 # ASL Video-to-Text Recognition System
 
+This path is off unless `LEARNABLE_ASL_VIDEO=1`. A default install does not download Torch, Hugging Face weights, or Ollama. The lesson uses `POST /api/sign-video`, which says video-to-text is unavailable and downloads nothing. This is computer-generated American Sign Language, not Ethiopian Sign Language. Do not put a Gemini key in the browser.
+
+# ASL Video-to-Text Recognition System
+
 ## 🎯 Overview
 
 LearnAble now includes a comprehensive **ASL (American Sign Language) Video-to-Text** recognition system that translates sign language gestures into text in both **English** and **Amharic**. The system works both **locally** (using Ollama) and **online** (using Hugging Face models).

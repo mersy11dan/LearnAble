@@ -438,6 +438,8 @@ Keep responses concise (2-3 sentences) unless asked for details."""
     
     def _call_llm(self, messages: List[Dict]) -> str:
         """Call Ollama LLM"""
+        if os.environ.get("LEARNABLE_ASL_VIDEO", "").strip() != "1":
+            return "Video-to-text is unavailable. No model was downloaded. This is computer-generated ASL, not Ethiopian Sign Language."
         try:
             import requests
             

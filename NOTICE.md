@@ -34,8 +34,10 @@ Copyright Google. See `public/fonts/Noto-copyright.txt`.
 
 ## ASL fingerspelling drawings
 
-`public/signs/fingerspell/A.svg` through `Z.svg` are the Wikimedia Commons files
-`Sign language A.svg` through `Sign language Z.svg`.
+`public/signs/fingerspell/A.svg` through `Z.svg` are simplified outlines of the
+Wikimedia Commons files `Sign language A.svg` through `Sign language Z.svg`.
+The paths are the same drawings with coordinates rounded and the Commons
+metadata removed, so the files stay small. The stroke is `currentColor`.
 
 The Commons licence field for each file is public domain. The file metadata
 names WPClipart as the publisher and Paul Sherman as the editor, dated

@@ -4,10 +4,11 @@
 
 ### Prerequisites
 ```bash
-cd /workspace
 npm install
 npm run dev
 ```
+
+Optional, in a second terminal, for Gemini and the gloss model: `python server/app.py` with keys in `.env`.
 
 Open http://127.0.0.1:5173 in your browser.
 
@@ -22,11 +23,14 @@ Open http://127.0.0.1:5173 in your browser.
 4. Type "How do I use captions?" in the input field
 5. Press Enter or click Send button
 6. Verify you receive a helpful response about captions
+7. Verify the answer carries a source line
 
 **Expected Result:**
 - Chat opens smoothly
 - Welcome message explains available features
 - Response explains how to use captions (press C key, toggle in player controls)
+- With no key the source line reads "Saved answer. No model is running."
+- With `GEMINI_API_KEY` set on the service and the consent box ticked, the source line names the model
 
 ### 2. Voice Input 🎤
 
@@ -47,21 +51,19 @@ Open http://127.0.0.1:5173 in your browser.
 
 **Note:** Voice input requires browser permission for microphone access.
 
-### 3. ASL Translation 🤟
+### 3. Track 2 sign language (player, not chat)
+
+Sign language is a Track 2 player control, not a chat panel.
 
 **Test Steps:**
-1. Open the chat
-2. Click the "ASL" button at the bottom
-3. Type "The doctor will help you now" in the text area
-4. Click "Translate to ASL"
-5. Verify the ASL gloss appears: "DOCTOR WILL HELP YOU NOW"
-6. Try another phrase: "How do I use this?"
+1. Open `/lesson/slow-connection`
+2. Press `S` or use the sign control
+3. Confirm the sign window, captions, audio description, and player stay usable together
 
 **Expected Result:**
-- ASL panel slides up smoothly
-- Translation completes in 1-2 seconds (first use may take 10 seconds to load model)
-- ASL gloss appears in uppercase with simplified grammar
-- Panel can be closed by clicking ASL button again
+- The chat has no ASL button
+- The sign window is ASL gloss, not Ethiopian Sign Language
+- Captions, audio description, the offline pack, and tagged documents remain available from the rest of the site
 
 ### 4. Keyboard Navigation ⌨️
 
@@ -69,7 +71,7 @@ Open http://127.0.0.1:5173 in your browser.
 1. Close the chat if open
 2. Press Tab multiple times until chat button is focused
 3. Press Enter to open chat
-4. Press Tab to navigate through: input field → send button → voice button → ASL button
+4. Press Tab to navigate through: microphone → input field → send button
 5. Type a question and press Enter
 6. Press Escape to close chat
 
@@ -156,7 +158,7 @@ Open http://127.0.0.1:5173 in your browser.
    - Should list main sections and navigation
 
 **Expected Result:**
-All questions receive relevant, helpful responses even without Gemini API key.
+All questions receive relevant saved answers without a Gemini key, each labelled as saved.
 
 ### 8. Minimize/Expand 📐
 
@@ -208,12 +210,12 @@ All questions receive relevant, helpful responses even without Gemini API key.
 
 Test in these browsers if available:
 
-| Browser | Version | Chat | Voice | ASL |
-|---------|---------|------|-------|-----|
-| Chrome  | Latest  | ✅   | ✅    | ✅  |
-| Firefox | Latest  | ✅   | ⚠️*   | ✅  |
-| Safari  | Latest  | ✅   | ✅    | ✅  |
-| Edge    | Latest  | ✅   | ✅    | ✅  |
+| Browser | Version | Chat | Voice |
+|---------|---------|------|-------|
+| Chrome  | Latest  | ✅   | ✅    |
+| Firefox | Latest  | ✅   | ⚠️*   |
+| Safari  | Latest  | ✅   | ✅    |
+| Edge    | Latest  | ✅   | ✅    |
 
 *Firefox voice input requires `media.webspeech.recognition.enable` to be set to `true` in about:config
 
@@ -225,9 +227,8 @@ Test in these browsers if available:
 - [ ] Messages render quickly (<50ms)
 
 ### Model Loading
-- [ ] First ASL translation may take 10 seconds (model download)
-- [ ] Subsequent translations are fast (<2 seconds)
-- [ ] No impact on page performance
+- [ ] No model is downloaded by the browser at any point
+- [ ] Lesson captions gloss instantly from the shipped file
 
 ### Memory Usage
 - [ ] Open DevTools → Performance → Memory
@@ -254,21 +255,22 @@ Run the full test suite:
 npm test
 ```
 
-Expected: 55 tests pass (including 10 chat support tests)
-
-Run specific chat tests:
+Run only the chat tests:
 ```bash
 npm test -- chat-support.test.tsx
 ```
 
-Expected: 10 tests pass
+Server side:
+```bash
+pytest server/test_app.py -k chat
+```
 
 ## Success Criteria
 
 Chat support is working correctly if:
 
 - ✅ All manual tests pass
-- ✅ All automated tests pass (55/55)
+- ✅ All automated tests pass
 - ✅ No console errors
 - ✅ Keyboard navigation works completely
 - ✅ Screen reader compatible
@@ -284,15 +286,14 @@ Chat support is working correctly if:
    - Requires microphone permission
    - May not work on older mobile devices
 
-2. **ASL Translation:**
-   - First use takes 10 seconds to download model
-   - Requires internet connection for first use
-   - Translations are gloss notation, not video
+2. **Sign language:**
+   - Lives on the lesson player, not in chat
+   - ASL gloss, not Ethiopian Sign Language, and not a recorded signer
 
-3. **Gemini API:**
-   - Optional - works without it
-   - Rate limits may apply on free tier
-   - Requires API key for enhanced responses
+3. **Gemini:**
+   - Optional. Saved answers are shown without it
+   - The key lives on the transcript service, never in the browser
+   - Nothing is sent until the consent box is ticked
 
 ## Support
 
