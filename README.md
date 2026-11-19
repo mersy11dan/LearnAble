@@ -61,6 +61,10 @@ Optional ASL video experiments are in `experimental/backend/`. They stay off unl
 
 A chat button sits in the corner of the demo site. Tap the microphone and say a page such as sessions or jobs, or type in the box. With no key, every answer is saved text written by hand, and each one says so. When `GEMINI_API_KEY` is set on the transcript service, a question is sent to Google Gemini only after the consent box in the chat is ticked. The key never reaches the browser. Set `VITE_ENABLE_CHAT=false` to hide the chat. Sign language for Track 2 is the player sign window, not a chat panel. It is ASL gloss, not Ethiopian Sign Language. The unused FastAPI app and the unused ASL panel live in `experimental/`. See [docs/EXPERIMENTAL.md](docs/EXPERIMENTAL.md) and [docs/SIGN-LANGUAGE.md](docs/SIGN-LANGUAGE.md).
 
+## Amharic Voice Navigation
+
+A voice-based navigation agent helps blind and visually impaired users navigate through courses using Amharic or English voice commands. A floating button appears in the bottom-left corner (or press `Alt+Shift+V`). Say "ወደ ትምህርት" (go to lesson), "የት ነኝ" (where am I), or "እገዛ" (help) in Amharic, or use English equivalents. The agent announces each location and responds with contextual guidance. It uses Hasab API for high-quality Amharic text-to-speech when configured, with browser TTS as a fallback. The interface is fully accessible: keyboard-only navigation, screen reader friendly, high contrast, and WCAG 2.2 AA compliant. Switch between languages with one click. See [docs/AMHARIC-VOICE-NAVIGATION.md](docs/AMHARIC-VOICE-NAVIGATION.md) for full documentation, commands, and examples.
+
 ## Install in an hour
 
 Prerequisites: Node.js 22, npm, Python 3.12, and a current browser. Docker is optional. No API key is required for core features.
