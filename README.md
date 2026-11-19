@@ -55,6 +55,8 @@ Copy-paste snippets for HTML, React, WordPress, and an iframe fallback are on `/
 
 Implemented: Open Badges 3.0 credentials as VC-JWT, signed with Ed25519 by `POST /api/credentials` and checked at `/verify/<id>`, and `schema.org/JobPosting` JSON-LD on each job card. The job cards are fictional demo data. LTI 1.3 is not implemented. It is future work.
 
+Optional ASL video experiments are in `experimental/backend/`. They stay off unless `LEARNABLE_ASL_VIDEO=1`, and they are American Sign Language, not Ethiopian Sign Language. The lesson uses `POST /api/sign-video`, which does not download a model.
+
 ## Support chat
 
 A chat button sits in the corner of the demo site. Tap the microphone and say a page such as sessions or jobs, or type in the box. With no key, every answer is saved text written by hand, and each one says so. When `GEMINI_API_KEY` is set on the transcript service, a question is sent to Google Gemini only after the consent box in the chat is ticked. The key never reaches the browser. Set `VITE_ENABLE_CHAT=false` to hide the chat. Sign language for Track 2 is the player sign window, not a chat panel. It is ASL gloss, not Ethiopian Sign Language. The unused FastAPI app and the unused ASL panel live in `experimental/`. See [docs/EXPERIMENTAL.md](docs/EXPERIMENTAL.md) and [docs/SIGN-LANGUAGE.md](docs/SIGN-LANGUAGE.md).
