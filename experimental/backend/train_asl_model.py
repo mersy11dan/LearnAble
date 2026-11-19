@@ -290,7 +290,10 @@ def train_asl_model(
         learning_rate: Learning rate
         use_real_data: Whether to use real datasets (requires HF token)
     """
-    print("🚀 Starting ASL Model Training")
+    if os.environ.get("LEARNABLE_ASL_VIDEO", "").strip() != "1":
+        print("Training is off. Set LEARNABLE_ASL_VIDEO=1 to opt in. Nothing was downloaded.")
+        return None, None
+    print("Starting ASL model training")
     print(f"Output directory: {output_dir}")
     
     # Load tokenizer
@@ -371,6 +374,9 @@ def train_asl_model(
 
 def evaluate_model(model_path: str, test_samples: List[Dict]):
     """Evaluate trained model on test samples"""
+    if os.environ.get("LEARNABLE_ASL_VIDEO", "").strip() != "1":
+        print("Evaluation is off. Set LEARNABLE_ASL_VIDEO=1 to opt in. Nothing was downloaded.")
+        return None
     tokenizer = AutoTokenizer.from_pretrained(model_path)
     model = AutoModelForSeq2SeqLM.from_pretrained(model_path)
     model.eval()
